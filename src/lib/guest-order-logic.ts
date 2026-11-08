@@ -237,6 +237,7 @@ export function qrOrderState(guest: Pick<GuestOrder, "status">, bill?: Pick<Orde
   if (guest.status === "cancelled") return { label: "Cancelled by guest", tone: "closed" };
   if (bill?.status === "settled") return { label: bill.billNo ? `Settled · ${bill.billNo}` : "Settled", tone: "settled" };
   if (bill?.status === "void") return { label: "Bill cancelled", tone: "closed" };
+  if (guest.status === "completed") return { label: "Closed", tone: "closed" };
   return { label: "Running", tone: "running" };
 }
 

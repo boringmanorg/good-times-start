@@ -89,6 +89,7 @@ describe("QR order series", () => {
     expect(qrOrderState({ status: "completed" }, { status: "settled", billNo: "POS/0005" })).toEqual({ label: "Settled · POS/0005", tone: "settled" });
     expect(qrOrderState({ status: "rejected" }).tone).toBe("closed");
     expect(qrOrderState({ status: "accepted" }, { status: "void", billNo: "" }).label).toBe("Bill cancelled");
+    expect(qrOrderState({ status: "completed" })).toEqual({ label: "Closed", tone: "closed" });
   });
 });
 
