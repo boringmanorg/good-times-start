@@ -123,3 +123,5 @@
 - [x] Guests list fills from names on running and settled bills; WhatsApp allows guests whose consent staff recorded.
 - [x] Exported live menu (131 items, 23 sections) for corrections.
 - [ ] Apply the owner's menu corrections once returned.
+
+- [x] Menu: only Export/Import + admin-only Add dish; remove TAB Bistro menu and printed-prices buttons
