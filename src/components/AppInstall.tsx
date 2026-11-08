@@ -103,7 +103,7 @@ export function AppInstall() {
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-title" content={meta.title} />
-      <meta name="apple-mobile-web-app-status-bar-style" content={app === "pos" ? "default" : "black-translucent"} />
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     </>
   );
 }
