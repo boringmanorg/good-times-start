@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.restaurant_records_cursor_idx;
