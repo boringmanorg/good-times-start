@@ -27,7 +27,7 @@ export const recordTerminalNetwork = createServerFn({ method: "POST" })
     let country = cf?.country || h.get("cf-ipcountry") || "";
     // The edge often only knows the country; fall back to an IP lookup for city/region.
     if (!city && ip && !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(ip)) {
-      const lookups: Array<() => Promise<{ city?: string; region?: string; country?: string } | null>> = [
+      const lookups: Array<() => Promise<{ city?: string | undefined; region?: string | undefined; country?: string | undefined } | null>> = [
         async () => {
           const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(4000) });
           if (!res.ok) return null;
