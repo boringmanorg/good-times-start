@@ -27,15 +27,33 @@ export const recordTerminalNetwork = createServerFn({ method: "POST" })
     let country = cf?.country || h.get("cf-ipcountry") || "";
     // The edge often only knows the country; fall back to an IP lookup for city/region.
     if (!city && ip && !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(ip)) {
-      try {
-        const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(4000) });
-        if (res.ok) {
-          const geo = (await res.json()) as { city?: string; region?: string; country_name?: string };
-          city = geo.city || city;
-          region = geo.region || region;
-          country = geo.country_name || country;
+      const lookups: Array<() => Promise<{ city?: string; region?: string; country?: string } | null>> = [
+        async () => {
+          const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(4000) });
+          if (!res.ok) return null;
+          const g = (await res.json()) as { city?: string; region?: string; country_name?: string };
+          return { city: g.city, region: g.region, country: g.country_name };
+        },
+        async () => {
+          const res = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { signal: AbortSignal.timeout(4000) });
+          if (!res.ok) return null;
+          const g = (await res.json()) as { success?: boolean; city?: string; region?: string; country?: string };
+          return g.success === false ? null : { city: g.city, region: g.region, country: g.country };
+        },
+      ];
+      for (const lookup of lookups) {
+        try {
+          const geo = await lookup();
+          if (geo && (geo.city || geo.region)) {
+            city = geo.city || city;
+            region = geo.region || region;
+            country = geo.country || country;
+            break;
+          }
+        } catch (err) {
+          console.warn("terminal geo lookup failed:", err instanceof Error ? err.message : String(err));
         }
-      } catch { /* lookup is best-effort; keep whatever the edge gave us */ }
+      }
     }
     const parts = [city, region, country].filter((p): p is string => !!p && p !== "XX");
     const location = parts.join(", ").slice(0, 160);
