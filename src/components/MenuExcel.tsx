@@ -70,7 +70,6 @@ export function MenuExcel({ restaurant, menuCount }: { restaurant: string; menuC
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => void download()} disabled={!menuCount}><Download />Excel</Button>
         <Button variant="outline" onClick={() => file.current?.click()} disabled={busy}><Upload />Import</Button>
-        <Button variant="outline" onClick={() => { setRemoveOthers(menuCount > 0); setTabOpen(true); }}><FileSpreadsheet />TAB Bistro menu</Button>
         <input ref={file} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
       </div>
 

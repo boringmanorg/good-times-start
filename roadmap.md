@@ -124,4 +124,4 @@
 - [x] Exported live menu (131 items, 23 sections) for corrections.
 - [ ] Apply the owner's menu corrections once returned.
 
-- [ ] Menu: only Export/Import + admin-only Add dish; remove TAB Bistro menu and printed-prices buttons
+- [x] Menu: only Export/Import + admin-only Add dish; remove TAB Bistro menu and printed-prices buttons
