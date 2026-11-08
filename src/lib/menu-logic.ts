@@ -209,9 +209,9 @@ export function orderCategories(used: Iterable<string>, preferred: string[] = []
 
 /** Changes applied to many dishes at once from the Menu bulk editor. Unset fields stay as they are. */
 export interface BulkMenuPatch {
-  category?: string;
-  station?: string;
-  gstRate?: GstRate;
+  category?: string | undefined;
+  station?: string | undefined;
+  gstRate?: GstRate | undefined;
   /** Added to every selected dish; a same-named add-on (any case) gets the new price instead of a duplicate. */
   upsertAddons?: { name: string; price: number }[];
   /** Add-on names removed from every selected dish (case-insensitive). */
