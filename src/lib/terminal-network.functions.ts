@@ -22,8 +22,40 @@ export const recordTerminalNetwork = createServerFn({ method: "POST" })
     const ip = (h.get("cf-connecting-ip") || h.get("x-real-ip") || h.get("x-forwarded-for")?.split(",")[0] || "").trim().slice(0, 64);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cf = (req as any).cf as { city?: string; region?: string; country?: string } | undefined;
-    const parts = [cf?.city || h.get("cf-ipcity"), cf?.region || h.get("cf-region"), cf?.country || h.get("cf-ipcountry")]
-      .filter((p): p is string => !!p && p !== "XX");
+    let city = cf?.city || h.get("cf-ipcity") || "";
+    let region = cf?.region || h.get("cf-region") || "";
+    let country = cf?.country || h.get("cf-ipcountry") || "";
+    // The edge often only knows the country; fall back to an IP lookup for city/region.
+    if (!city && ip && !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(ip)) {
+      const lookups: Array<() => Promise<{ city?: string | undefined; region?: string | undefined; country?: string | undefined } | null>> = [
+        async () => {
+          const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(4000) });
+          if (!res.ok) return null;
+          const g = (await res.json()) as { city?: string; region?: string; country_name?: string };
+          return { city: g.city, region: g.region, country: g.country_name };
+        },
+        async () => {
+          const res = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { signal: AbortSignal.timeout(4000) });
+          if (!res.ok) return null;
+          const g = (await res.json()) as { success?: boolean; city?: string; region?: string; country?: string };
+          return g.success === false ? null : { city: g.city, region: g.region, country: g.country };
+        },
+      ];
+      for (const lookup of lookups) {
+        try {
+          const geo = await lookup();
+          if (geo && (geo.city || geo.region)) {
+            city = geo.city || city;
+            region = geo.region || region;
+            country = geo.country || country;
+            break;
+          }
+        } catch (err) {
+          console.warn("terminal geo lookup failed:", err instanceof Error ? err.message : String(err));
+        }
+      }
+    }
+    const parts = [city, region, country].filter((p): p is string => !!p && p !== "XX");
     const location = parts.join(", ").slice(0, 160);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

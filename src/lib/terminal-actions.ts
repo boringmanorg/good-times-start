@@ -58,7 +58,7 @@ export async function touchTerminal(restaurantId: string, app: AppKind, kind: De
 }
 
 export async function loadTerminals(restaurantId: string): Promise<Terminal[]> {
-  const { data, error } = await db().from("terminals").select("device_id, series, description, app, device_kind, login_email, status, first_seen, last_seen")
+  const { data, error } = await db().from("terminals").select("device_id, series, description, app, device_kind, login_email, status, first_seen, last_seen, last_ip, last_location")
     .eq("restaurant_id", restaurantId).order("last_seen", { ascending: false });
   if (error) throw new Error(/does not exist|schema cache/i.test(error.message ?? "") ? "The database needs updating first (migration 0011)." : "Couldn't load terminals. Check the internet.");
   return (data ?? []) as Terminal[];
