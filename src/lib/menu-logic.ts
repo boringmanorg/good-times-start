@@ -116,7 +116,7 @@ export function draftFromItem(item?: MenuItem): MenuDraft {
     category: item?.category ?? "",
     station: item?.station ?? DEFAULT_STATIONS[0]!,
     price: item ? String(item.price) : "",
-    gstRate: item?.gstRate ?? 5,
+    gstRate: item?.gstRate ?? 0,
     veg: item?.veg ?? true,
     popular: item?.popular ?? false,
     available: item?.available ?? true,
@@ -205,4 +205,47 @@ export function orderCategories(used: Iterable<string>, preferred: string[] = []
   const out: string[] = [];
   for (const c of [...preferred, ...fallback]) if (set.has(c) && !out.includes(c)) out.push(c);
   return [...out, ...[...set].filter((c) => !out.includes(c)).sort((a, b) => a.localeCompare(b))];
+}
+
+/** Changes applied to many dishes at once from the Menu bulk editor. Unset fields stay as they are. */
+export interface BulkMenuPatch {
+  category?: string;
+  station?: string;
+  gstRate?: GstRate;
+  /** Added to every selected dish; a same-named add-on (any case) gets the new price instead of a duplicate. */
+  upsertAddons?: { name: string; price: number }[];
+  /** Add-on names removed from every selected dish (case-insensitive). */
+  removeAddons?: string[];
+}
+
+export function applyBulkPatch(item: MenuItem, patch: BulkMenuPatch, makeId: () => string): MenuItem {
+  const next: MenuItem = { ...item };
+  if (patch.category?.trim()) next.category = patch.category.trim();
+  if (patch.station?.trim()) next.station = patch.station.trim();
+  if (patch.gstRate !== undefined) next.gstRate = patch.gstRate;
+  const remove = new Set((patch.removeAddons ?? []).map((n) => n.trim().toLowerCase()).filter(Boolean));
+  const upserts = (patch.upsertAddons ?? []).filter((a) => a.name.trim() && Number.isFinite(a.price) && a.price >= 0);
+  if (remove.size || upserts.length) {
+    let addons = (item.addons ?? []).filter((a) => !remove.has(a.name.trim().toLowerCase()));
+    for (const u of upserts) {
+      const key = u.name.trim().toLowerCase();
+      const found = addons.find((a) => a.name.trim().toLowerCase() === key);
+      addons = found
+        ? addons.map((a) => (a === found ? { ...a, price: u.price } : a))
+        : [...addons, { id: makeId(), name: u.name.trim(), price: u.price }];
+    }
+    next.addons = addons;
+  }
+  return next;
+}
+
+/** Add-ons used across the menu, most common first, for the bulk editor's quick picks. */
+export function commonAddons(menu: MenuItem[]): { name: string; price: number; count: number }[] {
+  const map = new Map<string, { name: string; price: number; count: number }>();
+  for (const m of menu) for (const a of m.addons ?? []) {
+    const key = a.name.trim().toLowerCase();
+    const cur = map.get(key);
+    if (cur) cur.count++; else map.set(key, { name: a.name.trim(), price: a.price, count: 1 });
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
