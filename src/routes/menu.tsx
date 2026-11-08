@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { AppShell, useRestaurantSettings } from "@/components/AppShell";
 import { MenuExcel } from "@/components/MenuExcel";
+import { MenuBulkEdit } from "@/components/MenuBulkEdit";
+import { Checkbox } from "@/components/ui/checkbox";
 import { VegMark } from "@/components/VegMark";
 import { Switch } from "@/components/ui/switch";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -228,6 +230,11 @@ function MenuPage() {
   const canEdit = can(user, "menu.edit");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<MenuItem | "new" | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const pickToggle = (ids: string[], on: boolean) => setPicked((prev) => { const n = new Set(prev); ids.forEach((id) => (on ? n.add(id) : n.delete(id))); return n; });
+  const endSelect = () => { setSelecting(false); setPicked(new Set()); setBulkOpen(false); };
 
   const settings = useRestaurantSettings();
   const categories = useMemo(() => orderCategories(menu.map((m) => m.category), settings.categoryOrder, CATEGORIES), [menu, settings.categoryOrder]);
@@ -254,6 +261,7 @@ function MenuPage() {
               <ConfirmButton id="sync-printed-tab-prices" className={buttonVariants({ variant: "outline" })} armedClassName="!border-primary !text-primary"
                 onConfirm={() => void syncPrintedTabMenuPrices().then(({ dishesUpdated }) => toast.success(dishesUpdated ? `Updated ${dishesUpdated} menu items, sections and prices; repriced all running bills` : "Menu prices already match the printed menu")).catch(() => toast.error("Could not apply printed menu prices"))}
                 confirm="Tap again to update menu and running bills">Apply printed menu prices & sections</ConfirmButton>
+              <Button variant={selecting ? "secondary" : "outline"} onClick={() => (selecting ? endSelect() : setSelecting(true))}>{selecting ? "Done selecting" : "Bulk edit"}</Button>
               <Button onClick={() => setEditing("new")}><Plus />Add dish</Button>
             </div>
           ) : null}
@@ -262,6 +270,15 @@ function MenuPage() {
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a dish" className="w-full rounded-lg border border-input bg-card py-2.5 pl-9 pr-3 text-sm" />
         </div>
+
+        {selecting ? (
+          <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-card p-3 shadow-sm">
+            <span className="text-sm font-semibold">{picked.size} selected</span>
+            <Button size="sm" variant="ghost" onClick={() => pickToggle(shown.map((m) => m.id), true)}>Select all{q ? " shown" : ""} ({shown.length})</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())} disabled={!picked.size}>Clear</Button>
+            <Button size="sm" className="ml-auto" disabled={!picked.size} onClick={() => setBulkOpen(true)}>Edit selected</Button>
+          </div>
+        ) : null}
 
         {menu.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-8 text-center">
@@ -275,13 +292,17 @@ function MenuPage() {
           if (!rows.length) return null;
           return (
             <section key={c} className="mb-6">
-              <h2 className="mb-2 text-base font-bold">{c}</h2>
+              <h2 className="mb-2 flex items-center gap-2 text-base font-bold">
+                {selecting ? <Checkbox aria-label={`Select all in ${c}`} checked={rows.every((m) => picked.has(m.id))} onCheckedChange={(v) => pickToggle(rows.map((m) => m.id), v === true)} /> : null}
+                {c}
+              </h2>
               <div className="divide-y divide-border rounded-xl border border-border bg-card">
                 {rows.map((m) => {
                   const stock = stockFor(m.id);
                   const low = stock?.tracked && stock.quantity <= stock.lowStockThreshold;
                   return (
                     <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+                      {selecting ? <Checkbox aria-label={`Select ${m.name}`} checked={picked.has(m.id)} onCheckedChange={(v) => pickToggle([m.id], v === true)} /> : null}
                       <VegMark veg={m.veg} />
                       <div className="min-w-0 flex-1">
                         <div className={`truncate text-sm font-semibold ${m.available ? "" : "text-muted-foreground line-through"}`}>{m.name}</div>
@@ -329,6 +350,14 @@ function MenuPage() {
               materials={materials}
               onClose={() => setEditing(null)}
             />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={bulkOpen} onOpenChange={(open) => { if (!open) setBulkOpen(false); }}>
+        <DialogContent className="max-h-[92vh] max-w-xl overflow-y-auto">
+          <DialogTitle>Bulk edit dishes</DialogTitle>
+          {bulkOpen ? (
+            <MenuBulkEdit items={menu.filter((m) => picked.has(m.id))} menu={menu} categories={categories} stations={stations} onDone={endSelect} />
           ) : null}
         </DialogContent>
       </Dialog>
