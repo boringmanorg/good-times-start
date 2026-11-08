@@ -22,8 +22,22 @@ export const recordTerminalNetwork = createServerFn({ method: "POST" })
     const ip = (h.get("cf-connecting-ip") || h.get("x-real-ip") || h.get("x-forwarded-for")?.split(",")[0] || "").trim().slice(0, 64);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cf = (req as any).cf as { city?: string; region?: string; country?: string } | undefined;
-    const parts = [cf?.city || h.get("cf-ipcity"), cf?.region || h.get("cf-region"), cf?.country || h.get("cf-ipcountry")]
-      .filter((p): p is string => !!p && p !== "XX");
+    let city = cf?.city || h.get("cf-ipcity") || "";
+    let region = cf?.region || h.get("cf-region") || "";
+    let country = cf?.country || h.get("cf-ipcountry") || "";
+    // The edge often only knows the country; fall back to an IP lookup for city/region.
+    if (!city && ip && !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/.test(ip)) {
+      try {
+        const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          const geo = (await res.json()) as { city?: string; region?: string; country_name?: string };
+          city = geo.city || city;
+          region = geo.region || region;
+          country = geo.country_name || country;
+        }
+      } catch { /* lookup is best-effort; keep whatever the edge gave us */ }
+    }
+    const parts = [city, region, country].filter((p): p is string => !!p && p !== "XX");
     const location = parts.join(", ").slice(0, 160);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
