@@ -840,7 +840,7 @@ export async function getSyncSnapshot() {
   };
 }
 
-const KIND_WORDS: Record<string, string> = { settings: "restaurant details", menu: "menu", material: "stock items", supplier: "suppliers", order: "settled bills" };
+const KIND_WORDS: Record<string, string> = { settings: "restaurant details", menu: "menu", material: "purchase items", supplier: "suppliers", order: "settled bills" };
 
 /** Plain words for changes the cloud refused and this device put back. */
 export function describeNotice(value: unknown): string {
