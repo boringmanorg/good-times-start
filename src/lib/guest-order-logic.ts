@@ -86,10 +86,10 @@ export interface Storefront {
 }
 
 export const GUEST_STATUS_LABEL: Record<GuestStatus, string> = {
-  new: "Sent to the restaurant",
-  accepted: "Accepted, being prepared",
+  new: "Sent to the kitchen",
+  accepted: "Accepted. Cooking now.",
   ready: "Ready",
-  completed: "Done",
+  completed: "Served. Enjoy!",
   rejected: "Not accepted",
   cancelled: "Cancelled",
 };
@@ -275,6 +275,6 @@ export const GUEST_BUSY_AFTER_MS = 60_000;
 export function guestWaitMessage(createdAt: string, now: number): { busy: boolean; text: string } {
   const waited = now - Date.parse(createdAt);
   return waited >= GUEST_BUSY_AFTER_MS
-    ? { busy: true, text: "The kitchen is busy right now. Your order is in the queue and the staff will confirm it shortly. There's no need to order again." }
-    : { busy: false, text: "Waiting for the restaurant to confirm. This usually takes a minute." };
+    ? { busy: true, text: "The kitchen is busy right now. You're in the queue and the team will confirm your order shortly. No need to order again." }
+    : { busy: false, text: "Sent. The team confirms most orders within a minute." };
 }

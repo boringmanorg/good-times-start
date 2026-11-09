@@ -20,7 +20,7 @@ import menuCover from "@/assets/photography/bistro-menu.jpg";
 import { filterGuestMenu, guestChannel, type GuestDiet } from "@/lib/qr-ordering";
 import { Segmented } from "@/components/Segmented";
 import { Dropdown } from "@/components/Dropdown";
-import { activeOffers, brandPalette, cleanSource, waLink, LINK_LABELS, type BrandLinks, type Offer } from "@/lib/marketing-logic";
+import { activeOffers, brandPalette, guestTheme, cleanSource, waLink, LINK_LABELS, type BrandLinks, type Offer } from "@/lib/marketing-logic";
 import { logScan, recordGuestChoice } from "@/lib/marketing-actions";
 import type { CSSProperties } from "react";
 import { guestCanCancel } from "@/lib/guest-cancellation";
@@ -34,6 +34,11 @@ export const Route = createFileRoute("/order/$slug")({
     return out;
   },
   head: () => ({
+    links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Staatliches&display=swap" },
+    ],
     meta: [
       { title: "Order — XTSY POS" },
       { name: "description", content: "See the menu and order from your table or for pickup." },
@@ -89,8 +94,9 @@ function GuestOrderPage() {
   if (table && s.rooms && isRoomSection(table.section) && !roomOpen(table.id, s.rooms)) return <Frame store={s}><Notice icon={BedDouble} title={`Room service by QR is off for ${guestPlaceName(s, table)}`} body="Please call reception to order. We'll bring it to your room." /></Frame>;
   if (!channel) {
     if (!search.table && s.qr) return <Frame store={s}><section className="px-5 py-6" aria-label="Choose your table">
-      <h2 className="text-xl font-bold">Where are you sitting?</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Tap your table to see the menu. Your food comes to you there.</p>
+      <p className="xt-eyebrow text-primary">Dine in</p>
+      <h2 className="mt-1 text-xl font-bold">Pick your table.</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Tap your table to open the menu. We bring the food to you.</p>
       <h3 className="mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dining tables</h3>
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {guestTableChoices(s.tables).map((t) => <Button key={t.id} variant="outline" className="h-20 flex-col gap-1 rounded-2xl text-base font-bold active:scale-[0.98]" onClick={() => void navigate({ search: { ...search, table: t.id }, replace: true })}><UtensilsCrossed className="size-5 text-primary" />{placeName(t.label)}</Button>)}
@@ -108,21 +114,30 @@ function GuestOrderPage() {
 
 function Frame({ store, children }: { store?: Storefront; children: ReactNode }) {
   const brand = store?.branding ?? {};
-  // The owner's brand colour becomes this page's accent; text stays readable (see brandPalette).
-  const palette = brandPalette(brand.color);
+  const xtsy = guestTheme(brand) === "xtsy";
+  // XTSY look: xtsy.one palette and type on the whole page, dialogs included (they render in portals).
+  useEffect(() => {
+    if (!xtsy) return;
+    const root = document.documentElement;
+    root.classList.add("theme-xtsy");
+    return () => root.classList.remove("theme-xtsy");
+  }, [xtsy]);
+  // Classic look: the owner's brand colour becomes this page's accent; text stays readable (see brandPalette).
+  const palette = xtsy ? null : brandPalette(brand.color);
   return (
     <div className="min-h-screen bg-background text-foreground" style={(palette ?? undefined) as CSSProperties | undefined}>
       <div className="mx-auto min-h-screen max-w-3xl bg-background pb-28">
         {store ? (
           <header className="relative overflow-hidden bg-sidebar text-sidebar-foreground">
             <img src={brand.cover || menuCover} alt="" decoding="async" fetchPriority="high" width={1536} height={768} className="absolute inset-0 size-full object-cover" />
-            <div aria-hidden="true" className="absolute inset-0 bg-sidebar/65" />
-            <div className="relative px-5 pb-6 pt-24">
+            <div aria-hidden="true" className={xtsy ? "absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/75 to-sidebar/35" : "absolute inset-0 bg-sidebar/65"} />
+            <div className={`relative px-5 ${xtsy ? "pb-7 pt-20" : "pb-6 pt-24"}`}>
             <div className="flex items-end gap-3">
                 {brand.logo ? <img src={brand.logo} alt={`${store.name} logo`} width={64} height={64} className="size-16 shrink-0 rounded-2xl bg-white object-contain p-1 shadow-lg ring-2 ring-white/70" /> : null}
                 <div className="min-w-0">
-                  <h1 className="text-3xl font-extrabold leading-tight text-sidebar-foreground">{store.name}</h1>
-                  {brand.tagline ? <p className="mt-0.5 text-sm font-medium text-sidebar-foreground/90">{brand.tagline}</p> : null}
+                  {xtsy && brand.tagline ? <p className="xt-eyebrow text-[#e07a8b]">{brand.tagline}</p> : null}
+                  <h1 className={xtsy ? "mt-1 text-[2.6rem] text-sidebar-foreground sm:text-5xl" : "text-3xl font-extrabold leading-tight text-sidebar-foreground"}>{store.name}</h1>
+                  {!xtsy && brand.tagline ? <p className="mt-0.5 text-sm font-medium text-sidebar-foreground/90">{brand.tagline}</p> : null}
                 </div>
               </div>
               {store.address ? <p className="mt-3 flex items-start gap-1.5 text-sm text-sidebar-foreground/80"><MapPin className="mt-0.5 size-3.5 shrink-0" />{store.address}</p> : null}
@@ -131,11 +146,13 @@ function Frame({ store, children }: { store?: Storefront; children: ReactNode })
                 {brand.links?.instagram ? <a href={brand.links.instagram} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-sidebar-foreground/80"><Share className="size-3.5" />Instagram</a> : null}
               </div>
             </div>
+            {xtsy ? <p className="xt-eyebrow relative bg-primary px-5 py-1.5 text-center text-[0.7rem] text-primary-foreground">Travel. Sleep. Binge. Work. Explore. Repeat.</p> : null}
           </header>
         ) : null}
         {children}
         <footer className="px-5 pt-10 text-center text-[11px] text-muted-foreground">
           {store?.fssai ? <p>FSSAI {store.fssai}</p> : null}
+          {xtsy ? <p className="xt-eyebrow mt-2 text-xs text-foreground">XTSY<sup>®</sup> · New Shillong</p> : null}
           <p className="mt-1">Ordering by XTSY POS</p>
         </footer>
       </div>
@@ -226,7 +243,7 @@ function Menu({ store, channel, tableId, tableLabel, source }: { store: Storefro
                   <PlaceOptions store={store} currentId={tableId} />
                 </select>
               </label> : null}
-              <p className="text-xs text-muted-foreground">{channel === "table" ? "Your food comes to your table. Pay at the end." : `Usually ready in about ${store.prepMinutes} minutes.`}</p>
+              <p className="text-xs text-muted-foreground">{channel === "table" ? "We bring it to your table. Pay when you leave." : `Usually ready in about ${store.prepMinutes} minutes.`}</p>
             </div>
           </div>
           {store.paused ? <p role="status" className="mt-3 rounded-lg bg-gold/20 px-3 py-2 text-xs font-semibold text-gold-foreground">The kitchen isn't taking orders here for a little while. You can still look at the menu.</p> : null}
@@ -574,7 +591,7 @@ function OrderStatus({ store, id, token, table }: { store: Storefront; id: strin
             })}
           </ol>
         ) : null}
-        {o.channel === "table" && o.status === "accepted" ? <p className="mt-4 text-sm text-muted-foreground">The kitchen has your order. It comes to your table as soon as it's ready.</p> : null}
+        {o.channel === "table" && o.status === "accepted" ? <p className="mt-4 text-sm text-muted-foreground">The kitchen has your order. We'll bring it to your table as soon as it's ready.</p> : null}
         {o.status === "new" ? (() => {
           const wait = guestWaitMessage(o.createdAt, cancelClock);
           return <p className={`mt-4 text-sm ${wait.busy ? "rounded-lg bg-gold/15 p-3 font-medium text-foreground" : "text-muted-foreground"}`} role="status" aria-live="polite">{wait.text}</p>;

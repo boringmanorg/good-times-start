@@ -36,7 +36,7 @@ export interface PrintOptions {
 
 export type PrintTheme = "xtsy" | "classic";
 export const PRINT_THEMES: { id: PrintTheme; label: string; hint: string }[] = [
-  { id: "xtsy", label: "XTSY Pines", hint: "Night sky, pines and stars on warm sand, in the xtsy.one colours and type." },
+  { id: "xtsy", label: "XTSY Pines", hint: "Night sky and pines on xtsy.one cream, crimson table pills and the XTSY brand strap." },
   { id: "classic", label: "Classic", hint: "Clean white card with your brand colour bar." },
 ];
 
@@ -168,7 +168,13 @@ export function buildPrintSheet(design: PrintDesign, cards: PrintCard[], o: Prin
 
 /* ---------------- XTSY Pines theme (xtsy.one: sand, ink, night, pine, crimson; Staatliches + Manrope) ---------------- */
 
-export const XT = { sand: "#F6F1EA", cream: "#EFE6DA", line: "#E3D8C9", ink: "#1F2230", night: "#1F2438", slate: "#2E3548", pine: "#2F4A3F", crimson: "#A12444", mute: "#4F566A", white: "#FFFFFF", stone: "#CFC3B2" } as const;
+export const XT = { sand: "#F4EFE8", cream: "#FAF7F2", line: "#E4D9C8", ink: "#1F2230", night: "#1F2230", slate: "#2E3548", pine: "#2F4A3F", crimson: "#A12444", rose: "#E07A8B", mute: "#4F566A", white: "#FFFFFF", stone: "#CFC3B2" } as const;
+
+/** The xtsy.one brand line, set on an ink strap at the foot of every XTSY print. */
+export const XT_STRAP = "Travel. Sleep. Binge. Work. Explore. Repeat.";
+const strap = () => `<div class="strap">${XT_STRAP}</div>`;
+/** "XTSY" in a name gets its registered mark, as on xtsy.one. */
+const brandName = (name: string) => escapeHtml(name).replace(/\bXTSY\b/, "XTSY<sup>®</sup>");
 
 /** A ridge of pines, drawn as one SVG strip (deterministic so prints match the preview). */
 function pines(fill: string, back: string): string {
@@ -193,7 +199,7 @@ function stars(): string {
 
 function xtSky(o: PrintOptions, logo: string, big = false): string {
   return `<div class="sky${big ? " big" : ""}">${stars()}
-    <div class="brand">${logo ? `<img class="xlogo" src="${logo}" alt="" />` : ""}<div><div class="xname">${escapeHtml(o.restaurant)}</div>${o.brand.tagline ? `<div class="xtag">${escapeHtml(o.brand.tagline)}</div>` : ""}</div></div>
+    <div class="brand">${logo ? `<img class="xlogo" src="${logo}" alt="" />` : ""}<div>${o.brand.tagline ? `<div class="xtag">${escapeHtml(o.brand.tagline)}</div>` : ""}<div class="xname">${brandName(o.restaurant)}</div></div></div>
     ${pines(XT.sand, XT.pine)}</div>`;
 }
 
@@ -209,7 +215,7 @@ function xtFace(card: PrintCard, o: PrintOptions, logo: string, qrSize: string):
       ${xtQr(card, logo, qrSize)}
       ${card.label ? `<div class="xlabel">${escapeHtml(card.label)}</div>` : ""}
     </div>
-    ${footer(o)}`;
+    ${footer(o)}${strap()}`;
 }
 
 /** Table tent panels are short (A6 landscape): text on the left, QR on the right. */
@@ -222,8 +228,8 @@ function xtTentFace(card: PrintCard, o: PrintOptions, logo: string): string {
         ${card.label ? `<div class="xlabel">${escapeHtml(card.label)}</div>` : ""}
         ${footer(o)}
       </div>
-      ${xtQr(card, logo, "44mm")}
-    </div>`;
+      ${xtQr(card, logo, "36mm")}
+    </div>${strap()}`;
 }
 
 function buildXtsySheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions): string {
@@ -245,6 +251,7 @@ function buildXtsySheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions
           <ol class="xsteps"><li><b>1</b>Scan</li><li><b>2</b>Choose</li><li><b>3</b>Enjoy</li></ol>
           ${footer(o)}
         </div>
+        ${strap()}
       </div>`).join("");
   } else {
     pages = `<div class="standees">${cards.map((c) => `<div class="standee xcard">${xtFace(c, o, logo, "58mm")}${o.offer ? `<div class="xoffer small">${escapeHtml(o.offer)}</div>` : ""}</div>`).join("")}</div>`;
@@ -265,13 +272,14 @@ function buildXtsySheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions
   .brand { position: relative; display: flex; align-items: center; gap: 3mm; }
   .xlogo { width: 12mm; height: 12mm; border-radius: 3mm; background: ${XT.white}; object-fit: contain; padding: .7mm; }
   .sky.big .xlogo { width: 22mm; height: 22mm; border-radius: 5mm; }
-  .xname { font-family: Staatliches, Impact, sans-serif; font-size: 18pt; letter-spacing: .03em; line-height: 1; }
+  .xname { font-family: Staatliches, Impact, sans-serif; font-size: 20pt; letter-spacing: .03em; line-height: 1; }
+  .xname sup, .strap sup { font-family: Manrope, Arial, sans-serif; font-size: .38em; vertical-align: super; margin-left: .3mm; }
   .sky.big .xname { font-size: 34pt; }
-  .xtag { font-size: 8.5pt; opacity: .85; margin-top: 1mm; }
+  .xtag { font-family: Staatliches, Impact, sans-serif; color: ${XT.rose}; letter-spacing: .22em; text-transform: uppercase; font-size: 7.5pt; margin-bottom: 1mm; }
   .sky.big .xtag { font-size: 12pt; }
   .xbody, .pbody { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2mm 6mm 1mm; }
   .eyebrow { font-family: Staatliches, Impact, sans-serif; color: ${XT.crimson}; letter-spacing: .22em; font-size: 10pt; }
-  .xhead { font-family: Staatliches, Impact, sans-serif; font-size: 21pt; line-height: 1; letter-spacing: .01em; margin: 1mm 0 3mm; }
+  .xhead { font-family: Staatliches, Impact, sans-serif; font-size: 26pt; line-height: .95; letter-spacing: .01em; margin: 1mm 0 3.5mm; color: ${XT.ink}; }
   .xhead.big { font-size: 42pt; margin: 2mm 0 5mm; }
   .xqr { position: relative; background: ${XT.white}; border-radius: 4mm; padding: 3mm; box-shadow: 0 1.5mm 5mm rgba(31,34,48,.14); }
   .xqr .code { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
@@ -282,10 +290,14 @@ function buildXtsySheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions
   .xqr .br { right: -1.6mm; bottom: -1.6mm; border-width: 0 .9mm .9mm 0; border-bottom-right-radius: 3mm; }
   .xqr .badge { position: absolute; left: 50%; top: 50%; width: 21%; height: 21%; transform: translate(-50%, -50%); background: ${XT.white}; border-radius: 2mm; padding: 1.2%; display: flex; }
   .xqr .badge img { width: 100%; height: 100%; object-fit: contain; }
-  .xlabel { font-family: Manrope, "Helvetica Neue", Arial, sans-serif; font-weight: 800; color: ${XT.crimson}; font-size: 21pt; line-height: 1.05; margin-top: 3.5mm; letter-spacing: -.01em; }
-  .xbody.row { flex-direction: row; justify-content: space-between; gap: 8mm; padding: 3mm 12mm 4mm; text-align: left; }
+  .xlabel { display: inline-block; font-family: Manrope, "Helvetica Neue", Arial, sans-serif; font-weight: 800; background: ${XT.crimson}; color: ${XT.white}; font-size: 17pt; line-height: 1; padding: 2.2mm 6mm; border-radius: 99mm; margin-top: 3.5mm; letter-spacing: -.01em; }
+  .strap { background: ${XT.ink}; color: ${XT.sand}; font-family: Staatliches, Impact, sans-serif; letter-spacing: .2em; text-transform: uppercase; font-size: 7.5pt; text-align: center; padding: 1.8mm 4mm; }
+  .sticker .strap { font-size: 5.5pt; letter-spacing: .14em; padding: 1.4mm 2mm; }
+  .poster .strap { font-size: 11pt; padding: 4mm; }
+  .xbody.row { flex-direction: row; justify-content: space-between; align-items: center; gap: 8mm; padding: 2mm 14mm 2mm; text-align: left; min-height: 0; }
   .xtext { display: flex; flex-direction: column; align-items: flex-start; }
-  .row .xlabel { font-size: 26pt; margin-top: 2mm; }
+  .row .xlabel { font-size: 20pt; margin-top: 2.5mm; }
+  .row .xhead { font-size: 32pt; }
   .row .foot { padding: 3mm 0 0; text-align: left; }
   .tent .sky { padding: 3.5mm 6mm 10mm; } .tent .pines { height: 9mm; } .tent .xlogo { width: 10mm; height: 10mm; } .tent .xname { font-size: 15pt; }
   .foot { font-size: 8.5pt; color: ${XT.mute}; padding: 2mm 4mm 4mm; text-align: center; letter-spacing: .02em; }
@@ -301,7 +313,7 @@ function buildXtsySheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions
   .stickers { display: grid; grid-template-columns: repeat(2, 86mm); grid-auto-rows: 86mm; gap: 8mm; justify-content: center; padding: 12mm 0; }
   .sticker { border-radius: 7mm; border: .4mm solid ${XT.line}; break-inside: avoid; }
   .sticker .sky { padding: 3mm 4mm 9mm; } .sticker .pines { height: 8mm; } .sticker .xlogo { width: 8mm; height: 8mm; } .sticker .xname { font-size: 12pt; } .sticker .xtag, .sticker .foot { display: none; }
-  .sticker .xhead { font-size: 13pt; margin-bottom: 2mm; } .sticker .eyebrow { font-size: 7.5pt; } .sticker .xlabel { font-size: 13pt; margin-top: 2.5mm; }
+  .sticker .xhead { font-size: 15pt; margin-bottom: 2mm; } .sticker .eyebrow { font-size: 7.5pt; } .sticker .xlabel { font-size: 11pt; padding: 1.5mm 4.5mm; margin-top: 2.5mm; } .sticker .xtag { font-size: 6pt; }
   .poster { width: 210mm; height: 297mm; break-after: page; }
   .standees { display: flex; flex-direction: column; }
   .standee { width: 210mm; height: 148.5mm; border-bottom: .3mm dashed #CFC3B2; break-inside: avoid; }

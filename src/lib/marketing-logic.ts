@@ -40,6 +40,14 @@ export interface Branding {
   whatsapp?: string;
   /** Ask guests at checkout whether they want offers on WhatsApp. */
   askOptIn?: boolean;
+  /** Look of the guest ordering page: "xtsy" (xtsy.one style, the default) or "classic" (brand colour accent). */
+  theme?: GuestTheme;
+}
+
+export type GuestTheme = "xtsy" | "classic";
+/** The guest page wears the XTSY look unless the owner picked Classic. */
+export function guestTheme(branding: Pick<Branding, "theme"> | undefined): GuestTheme {
+  return branding?.theme === "classic" ? "classic" : "xtsy";
 }
 
 export const LINK_LABELS: Record<keyof BrandLinks, string> = {
@@ -83,6 +91,7 @@ export function sanitizeBranding(input: Branding): Branding {
   if (typeof input.logo === "string" && IMAGE.test(input.logo) && input.logo.length <= MAX_IMAGE_CHARS) out.logo = input.logo;
   if (typeof input.cover === "string" && IMAGE.test(input.cover) && input.cover.length <= MAX_IMAGE_CHARS) out.cover = input.cover;
   if (typeof input.color === "string" && HEX.test(input.color)) out.color = input.color.toLowerCase();
+  if (input.theme === "classic" || input.theme === "xtsy") out.theme = input.theme;
   const tagline = cleanText(input.tagline, 90);
   if (tagline) out.tagline = tagline;
   const welcome = cleanText(input.welcome, 160);

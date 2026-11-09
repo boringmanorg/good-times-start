@@ -53,3 +53,14 @@ describe("printable QR material", () => {
     expect(buildPrintSheet("poster", [card], { ...opts, theme: "xtsy", brand: { logo: "javascript:alert(1)" } })).not.toContain("javascript:");
   });
 });
+
+describe("XTSY print refresh", () => {
+  it("puts the brand strap, a crimson table pill and the registered mark on every XTSY card", async () => {
+    const { buildPrintSheet, XT_STRAP } = await import("./qr-print");
+    for (const design of ["tent", "sticker", "poster", "standee"] as const) {
+      const html = buildPrintSheet(design, [{ label: "Table D1", url: "https://x", qr: "data:image/png;base64,AA==" }], { restaurant: "TAB Bistro by XTSY", brand: { tagline: "Flavour. Food. Fusion" }, headline: "Scan to order", subline: "Scan · Order · Relax", theme: "xtsy" });
+      expect(html, design).toContain(XT_STRAP);
+      expect(html, design).toContain("XTSY<sup>®</sup>");
+    }
+  });
+});

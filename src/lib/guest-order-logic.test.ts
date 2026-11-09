@@ -130,6 +130,6 @@ describe("guestWaitMessage", () => {
     const m = guestWaitMessage(placed, Date.parse(placed) + 60_000);
     expect(m.busy).toBe(true);
     expect(m.text).toMatch(/kitchen is busy/);
-    expect(m.text).toMatch(/no need to order again/);
+    expect(m.text).toMatch(/no need to order again/i);
   });
 });

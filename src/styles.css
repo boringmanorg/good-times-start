@@ -198,3 +198,54 @@
 }
 
 /* Thermal printing is set up per device by PrintHost (src/components/PrintHost.tsx). */
+
+/* ---------------- Guest QR ordering: XTSY look (matches xtsy.one) ----------------
+   Applied to <html> only while a guest ordering page is open, so dialogs (rendered in portals)
+   share it. Staff screens are untouched. Palette and type taken from the live xtsy.one site. */
+.theme-xtsy {
+  --background: #faf7f2;      /* page */
+  --foreground: #1f2230;      /* ink */
+  --card: #ffffff;
+  --card-foreground: #1f2230;
+  --popover: #ffffff;
+  --popover-foreground: #1f2230;
+  --primary: #a12444;         /* crimson — pill CTAs (7.4:1 with white) */
+  --primary-foreground: #ffffff;
+  --primary-hover: #8a1d3a;
+  --primary-tint: #f6e4e8;
+  --secondary: #f4efe8;       /* cream */
+  --secondary-foreground: #1f2230;
+  --muted: #f4efe8;
+  --muted-foreground: #4f566a; /* slate */
+  --accent: #eaf0ea;          /* pine tint */
+  --accent-foreground: #2f4a3f;
+  --success: #2f4a3f;         /* pine */
+  --gold: #f4efe8;
+  --gold-foreground: #1f2230;
+  --border: #e4d9c8;          /* sand line */
+  --input: #e4d9c8;
+  --ring: #a12444;
+  --sidebar: #1f2230;         /* night header */
+  --sidebar-foreground: #f4efe8;
+  --radius: 1rem;
+  --font-sans: Manrope, "Helvetica Neue", Arial, system-ui, sans-serif;
+  color-scheme: light;
+}
+.theme-xtsy body { font-family: var(--font-sans); background: var(--background); }
+.theme-xtsy .font-display,
+.theme-xtsy h1, .theme-xtsy h2 {
+  font-family: Staatliches, Impact, "Arial Narrow", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.theme-xtsy h2 { font-size: 1.75rem; }
+.theme-xtsy .xt-eyebrow {
+  font-family: Staatliches, Impact, sans-serif;
+  letter-spacing: 0.22em;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+/* xtsy.one buttons are heavy pills; tall tiles keep their rounded-square shape. */
+.theme-xtsy button[data-slot="button"]:not(.rounded-2xl):not(.rounded-xl),
+.theme-xtsy a[data-slot="button"] { border-radius: 9999px; font-weight: 800; }

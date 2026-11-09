@@ -24,7 +24,7 @@ export function RoomPicker({ store, onPick }: { store: Storefront; onPick: (id: 
     <section className="mt-6 rounded-2xl border border-border bg-card p-4" aria-label="Order to your room">
       <div className="flex items-center gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary"><BedDouble className="size-5" /></span>
-        <div><h3 className="font-bold">Staying with us?</h3><p className="text-sm text-muted-foreground">Order to your room. Pay at checkout.</p></div>
+        <div><h3 className="font-bold">Staying at XTSY?</h3><p className="text-sm text-muted-foreground">Order to your room. Pay at checkout.</p></div>
       </div>
       <label className="mt-3 block text-sm font-medium">Your room
         <select aria-label="Choose your room" defaultValue="" onChange={(e) => { if (e.target.value) onPick(e.target.value); }}
