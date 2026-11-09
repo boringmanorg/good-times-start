@@ -47,3 +47,11 @@ describe("guest checkout rules", () => {
     expect(note).toBe("Q-1 delivery to House 4, NIFT Road");
   });
 });
+
+import { guestMenuItems } from "./guest-order-logic";
+describe("guest menu", () => {
+  it("leaves out dishes with no id so two dishes never share one cart counter", () => {
+    const menu = [{ id: "a", name: "Egg Dosa", price: 160, category: "B", veg: true }, { name: "Egg Dosa", price: 160, category: "B" }] as never;
+    expect(guestMenuItems(menu).map((i) => i.id)).toEqual(["a"]);
+  });
+});

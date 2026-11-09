@@ -13,7 +13,7 @@ import { VegMark } from "@/components/VegMark";
 import { computeTotals, formatINR, upiLink } from "@/lib/billing";
 import { needsOptions, orderCategories, outsideHours } from "@/lib/menu-logic";
 import {
-  GUEST_STATUS_LABEL, PUBLIC_ORDER_TYPES, addToGuestCart, guestEntry, guestRequired, cleanMapLink, mapPinUrl, pinCoords, publicTypeFrom, withMapPin, orderTypeFor, type PublicOrderType, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, pickupChoices, setGuestQty,
+  GUEST_STATUS_LABEL, PUBLIC_ORDER_TYPES, guestMenuItems, addToGuestCart, guestEntry, guestRequired, cleanMapLink, mapPinUrl, pinCoords, publicTypeFrom, withMapPin, orderTypeFor, type PublicOrderType, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, pickupChoices, setGuestQty,
   type GuestCartLine, type GuestChannel, type GuestLine, type GuestStatus, type Storefront, guestWaitMessage } from "@/lib/guest-order-logic";
 import type { CartLine, MenuItem } from "@/lib/types";
 import menuCover from "@/assets/photography/bistro-menu.jpg";
@@ -176,7 +176,7 @@ function Notice({ icon: Icon, title, body, action }: { icon: typeof Store; title
 
 function Menu({ store, channel, publicType, tableId, tableLabel, source, stay = false }: { store: Storefront; channel: GuestChannel; publicType?: PublicOrderType | null; tableId?: string | undefined; tableLabel?: string | undefined; source: string; stay?: boolean }) {
   const navigate = Route.useNavigate();
-  const items = useMemo(() => store.menu.map(asMenuItem), [store.menu]);
+  const items = useMemo(() => guestMenuItems(store.menu), [store.menu]);
   const categories = useMemo(() => orderCategories(items.map((i) => i.category), store.categoryOrder), [items, store.categoryOrder]);
   const [cart, setCart] = useState<GuestCartLine[]>([]);
   const [q, setQ] = useState("");
@@ -653,7 +653,7 @@ function OrderStatus({ store, id, token, table, back }: { store: Storefront; id:
   const o: StatusView | null | undefined = status.data;
   const [cancelClock, setCancelClock] = useState(() => Date.now());
   useEffect(() => { const timer = window.setInterval(() => setCancelClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
-  const items = useMemo(() => store.menu.map(asMenuItem), [store.menu]);
+  const items = useMemo(() => guestMenuItems(store.menu), [store.menu]);
   if (status.isLoading) return <div className="p-5"><div className="h-40 animate-pulse rounded-2xl bg-card" /></div>;
   if (status.isError) return <Notice icon={Clock} title="Order updates are unavailable" body="Your order may still be with the restaurant. Check your connection; do not place it again." action={<Button onClick={() => void status.refetch()}>Refresh status</Button>} />;
   if (!o) return <Notice icon={Store} title="Order not found" body="This order link has expired. Please ask the staff." />;

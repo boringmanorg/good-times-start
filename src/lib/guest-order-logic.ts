@@ -115,6 +115,11 @@ export function orderTypeFor(channel: GuestChannel, publicType?: PublicOrderType
 }
 
 /** Turn a public dish back into a menu item so the POS's own pricing and option screens work on it. */
+/** Dishes a guest can order: each needs its own id, or every id-less dish would share one cart counter. */
+export function guestMenuItems(menu: StorefrontItem[]): MenuItem[] {
+  return menu.filter((item) => typeof item.id === "string" && item.id.length > 0).map(asMenuItem);
+}
+
 export function asMenuItem(item: StorefrontItem): MenuItem {
   const { takeawayPrice, ...rest } = item;
   return {
