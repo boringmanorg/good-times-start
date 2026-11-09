@@ -8,7 +8,7 @@ import { taxOptionsFor } from "./billing-config";
 import { withCustomerId } from "./customer-logic";
 import { rememberCustomer } from "./customer-actions";
 import { setWhatsappConsent } from "./marketing-actions";
-import { billWithGuestLines, cartLinesFromGuest, needsTableOnAccept, orderTypeFor, publicOrderNote, qrSeriesLabel, type GuestOrder, type GuestStatus } from "./guest-order-logic";
+import { billWithGuestLines, cartLinesFromGuest, needsTableOnAccept, orderTypeFor, publicOrderNote, qrSeriesLabel, splitMapPin, type GuestOrder, type GuestStatus } from "./guest-order-logic";
 import { orderingSaveError } from "./qr-ordering";
 import { syncCloudData } from "./cloud-sync";
 
@@ -102,7 +102,7 @@ async function openBillFor(guest: GuestOrder, seatAt?: string): Promise<{ order:
     source: guest.channel === "table" || tableId ? "qr" : "online",
     ...(customer ? { customer } : {}),
     ...(guest.order_type === "delivery" && guest.delivery_address
-      ? { deliveryAddress: [guest.delivery_address, guest.delivery_landmark ? `near ${guest.delivery_landmark}` : ""].filter(Boolean).join(", ") }
+      ? { deliveryAddress: [splitMapPin(guest.delivery_address).address, guest.delivery_landmark ? `near ${guest.delivery_landmark}` : ""].filter(Boolean).join(", ") }
       : {}),
   }, guest.code));
   if (base && customer && !base.customer) order.customer = customer;

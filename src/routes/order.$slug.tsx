@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { placeName } from "@/lib/table-logic";
 import { isRoomSection, roomOpen } from "@/lib/room-logic";
-import { RoomPicker, guestPlaceName } from "@/components/GuestPlacePicker";
+import { RoomSelect, guestPlaceName, hasOpenRooms } from "@/components/GuestPlacePicker";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BadgePercent, BedDouble, CalendarDays, Truck, Users, Check, ChefHat, Clock, ExternalLink, MapPin, Minus, Phone, Plus, Search, Send, Share, ShoppingBag, Smartphone, Sparkles, Star, Store, UtensilsCrossed, X } from "lucide-react";
@@ -13,7 +13,7 @@ import { VegMark } from "@/components/VegMark";
 import { computeTotals, formatINR, upiLink } from "@/lib/billing";
 import { needsOptions, orderCategories, outsideHours } from "@/lib/menu-logic";
 import {
-  GUEST_STATUS_LABEL, PUBLIC_ORDER_TYPES, addToGuestCart, guestEntry, isPublicOrderType, orderTypeFor, type PublicOrderType, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, pickupChoices, setGuestQty,
+  GUEST_STATUS_LABEL, PUBLIC_ORDER_TYPES, addToGuestCart, guestEntry, guestRequired, cleanMapLink, mapPinUrl, pinCoords, publicTypeFrom, withMapPin, orderTypeFor, type PublicOrderType, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, pickupChoices, setGuestQty,
   type GuestCartLine, type GuestChannel, type GuestLine, type GuestStatus, type Storefront, guestWaitMessage } from "@/lib/guest-order-logic";
 import type { CartLine, MenuItem } from "@/lib/types";
 import menuCover from "@/assets/photography/bistro-menu.jpg";
@@ -84,7 +84,8 @@ function GuestOrderPage() {
   const s = store.data;
   if (!s) return <Frame><Notice icon={Store} title="Restaurant not found" body="This link may be mistyped or out of date. Please ask the staff." /></Frame>;
 
-  if (search.o && search.k) return <Frame><OrderStatus store={s} id={search.o} token={search.k} table={search.table} /></Frame>;
+  if (search.o && search.k) return <Frame><OrderStatus store={s} id={search.o} token={search.k} table={search.table}
+    back={search.for === "stay" ? { for: "stay" } : search.mode ? { mode: search.mode } : {}} /></Frame>;
 
   const table = search.table ? s.tables.find((t) => t.id === search.table) : undefined;
   const channel = guestChannel(s.qr, s.online, table?.id);
@@ -92,46 +93,22 @@ function GuestOrderPage() {
   if (search.table && !table && s.qr) return <Frame store={s}><Notice icon={UtensilsCrossed} title="This QR code is out of date" body="Please ask the staff for help with your order." /></Frame>;
   // A room that isn't switched on for room service (the server refuses its orders too).
   if (table && s.rooms && isRoomSection(table.section) && !roomOpen(table.id, s.rooms)) return <Frame store={s}><Notice icon={BedDouble} title={`Room service by QR is off for ${guestPlaceName(s, table)}`} body="Please call reception to order. We'll bring it to your room." /></Frame>;
-  const entry = guestEntry(search);
-  const goRoom = (id: string) => void navigate({ search: { ...search, table: id }, replace: true });
-  // In-house QR (hotel guests): just the room picker. No tables, and no room's status is shown.
-  if (!search.table && entry === "inhouse") {
-    return <Frame store={s}><section className="px-5 py-6" aria-label="Room service">
-      <p className="xt-eyebrow text-primary">Room service</p>
-      <h2 className="mt-1 text-xl font-bold">Order to your room.</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Choose your room to open the menu. We bring it up, and you pay at checkout.</p>
-      {s.qr ? <RoomPicker store={s} onPick={goRoom} /> : <Notice icon={BedDouble} title="Room service by QR is off" body="Please call reception to order." />}
-    </section></Frame>;
+  if (table) {
+    if (!channel) return <Frame store={s}><Notice icon={UtensilsCrossed} title="Table ordering is off" body="Please order with the staff." /></Frame>;
+    return <Frame store={s}><Menu store={s} channel={channel} tableId={table.id} tableLabel={guestPlaceName(s, table)} source={scanSource} /></Frame>;
   }
-  // Public QR (shared anywhere): book a table, or order dine-in, takeaway or delivery. No tables are listed;
-  // staff seat dine-in guests and allot tables to bookings.
-  const publicType = isPublicOrderType(search.mode) ? search.mode : null;
-  if (!search.table && !publicType) {
-    const choose = (mode: PublicOrderType) => void navigate({ search: { ...search, mode }, replace: false });
-    const tiles: { mode: PublicOrderType; icon: typeof Users }[] = [{ mode: "dine-in", icon: Users }, { mode: "takeaway", icon: ShoppingBag }, { mode: "delivery", icon: Truck }];
-    return <Frame store={s}><section className="px-5 py-6" aria-label="How would you like to eat with us?">
-      <p className="xt-eyebrow text-primary">Welcome</p>
-      <h2 className="mt-1 text-xl font-bold">How would you like to eat?</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Book a table, or order to eat here, take away or have it delivered.</p>
-      <div className="mt-5 grid gap-3">
-        <Button variant="outline" asChild className="h-auto justify-start gap-4 rounded-2xl px-4 py-4 text-left">
-          <Link to="/book/$slug" params={{ slug }}><span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary"><CalendarDays className="size-5" /></span>
-            <span><span className="block text-base font-bold">Book a table</span><span className="block text-sm font-normal text-muted-foreground">Up to 15 guests. We'll confirm and keep a table for you.</span></span></Link>
-        </Button>
-        {s.online ? tiles.map(({ mode, icon: Icon }) => {
-          const t = PUBLIC_ORDER_TYPES.find((x) => x.id === mode)!;
-          return <Button key={mode} variant="outline" onClick={() => choose(mode)} className="h-auto justify-start gap-4 rounded-2xl px-4 py-4 text-left">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary"><Icon className="size-5" /></span>
-            <span><span className="block text-base font-bold">{t.label}</span><span className="block text-sm font-normal text-muted-foreground">{t.hint}</span></span>
-          </Button>;
-        }) : <p className="rounded-xl bg-secondary p-3 text-sm text-muted-foreground">Online ordering is off right now. You can still book a table.</p>}
-      </div>
-    </section></Frame>;
+  // In-house QR (hotel guests): straight to the menu; the room is chosen at checkout. No room's status is shown.
+  if (guestEntry(search) === "inhouse") {
+    if (!s.qr || !hasOpenRooms(s)) return <Frame store={s}><Notice icon={BedDouble} title="Room service by QR is off" body="Please call reception to order. We'll bring it to your room." /></Frame>;
+    return <Frame store={s}><Menu store={s} channel="table" stay source={scanSource} /></Frame>;
   }
-  if (!channel && !publicType) {
-    return <Frame store={s}><Notice icon={UtensilsCrossed} title="Table ordering is off" body="Please order with the staff." /></Frame>;
+  // Public QR (shared anywhere): straight to the menu as dine-in, takeaway or delivery; booking a table is one tap away.
+  // No tables are listed: staff seat dine-in guests and allot tables to bookings.
+  if (!s.online) {
+    return <Frame store={s}><Notice icon={Store} title="Online ordering is off right now" body="You can still book a table, or order with the staff when you arrive."
+      action={<Button asChild><Link to="/book/$slug" params={{ slug }}><CalendarDays />Book a table</Link></Button>} /></Frame>;
   }
-  return <Frame store={s}><Menu store={s} channel={publicType && !table ? "online" : channel ?? "online"} publicType={table ? null : publicType} tableId={table?.id} tableLabel={table ? guestPlaceName(s, table) : undefined} source={scanSource} /></Frame>;
+  return <Frame store={s}><Menu store={s} channel="online" publicType={publicTypeFrom(search.mode)} source={scanSource} /></Frame>;
 }
 
 /* ---------------- layout ---------------- */
@@ -197,7 +174,7 @@ function Notice({ icon: Icon, title, body, action }: { icon: typeof Store; title
 
 /* ---------------- menu and cart ---------------- */
 
-function Menu({ store, channel, publicType, tableId, tableLabel, source }: { store: Storefront; channel: GuestChannel; publicType?: PublicOrderType | null; tableId?: string | undefined; tableLabel?: string | undefined; source: string }) {
+function Menu({ store, channel, publicType, tableId, tableLabel, source, stay = false }: { store: Storefront; channel: GuestChannel; publicType?: PublicOrderType | null; tableId?: string | undefined; tableLabel?: string | undefined; source: string; stay?: boolean }) {
   const navigate = Route.useNavigate();
   const items = useMemo(() => store.menu.map(asMenuItem), [store.menu]);
   const categories = useMemo(() => orderCategories(items.map((i) => i.category), store.categoryOrder), [items, store.categoryOrder]);
@@ -216,12 +193,14 @@ function Menu({ store, channel, publicType, tableId, tableLabel, source }: { sto
 
   useEffect(() => {
     setRestored(false);
-    setCart(readJson<GuestCartLine[]>(cartKey(store.slug, tableId), []));
+    setCart(readJson<GuestCartLine[]>(cartKey(store.slug, tableId ?? (stay ? "stay" : undefined)), []));
     setRestored(true);
     const day = Date.now() - 12 * 60 * 60 * 1000;
     setPlaced(readJson<PlacedRef[]>(placedKey(store.slug), []).filter((p) => p.at > day));
-  }, [store.slug, tableId]);
-  useEffect(() => { if (restored) writeJson(cartKey(store.slug, tableId), cart); }, [cart, store.slug, tableId, restored]);
+  }, [store.slug, tableId, stay]);
+  useEffect(() => { if (restored) writeJson(cartKey(store.slug, tableId ?? (stay ? "stay" : undefined)), cart); }, [cart, store.slug, tableId, stay, restored]);
+  const roomTable = !!tableId && isRoomSection(store.tables.find((t) => t.id === tableId)?.section ?? "");
+  const statusSearch = (ref: { id: string; token: string }) => ({ ...(tableId ? { table: tableId } : stay ? { for: "stay" } : publicType ? { mode: publicType } : {}), o: ref.id, k: ref.token });
 
   const qtyOf = (id: string) => cart.filter((l) => l.itemId === id).reduce((n, l) => n + l.qty, 0);
   const add = (item: MenuItem, variantId?: string, addonIds: string[] = []) => setCart((c) => addToGuestCart(c, guestLineFor(item, channel, variantId, addonIds, publicType)));
@@ -258,16 +237,17 @@ function Menu({ store, channel, publicType, tableId, tableLabel, source }: { sto
       <div className="px-4">
         <div className="relative border-b border-border bg-card px-4 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary">{channel === "table" ? <UtensilsCrossed className="size-5" /> : publicType === "delivery" ? <Truck className="size-5" /> : publicType === "dine-in" ? <Users className="size-5" /> : <ShoppingBag className="size-5" />}</span>
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary">{stay || roomTable ? <BedDouble className="size-5" /> : channel === "table" ? <UtensilsCrossed className="size-5" /> : publicType === "delivery" ? <Truck className="size-5" /> : publicType === "dine-in" ? <Users className="size-5" /> : <ShoppingBag className="size-5" />}</span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold">{channel === "table" ? `Ordering to ${placeName(tableLabel ?? "")}` : publicType === "delivery" ? "Delivery order" : publicType === "dine-in" ? "Dine-in order" : "Takeaway order"}</p>
-              <p className="text-xs text-muted-foreground">{channel === "table" ? "We bring it to you. Pay when you leave." : publicType === "dine-in" ? "Order now and we'll seat you. Pay when you leave." : publicType === "delivery" ? "We bring it to your door. Pay on delivery." : `Usually ready in about ${store.prepMinutes} minutes.`}</p>
+              <p className="text-sm font-bold">{stay ? "Room service" : channel === "table" ? `Ordering to ${tableLabel ?? ""}` : publicType === "delivery" ? "Delivery order" : publicType === "dine-in" ? "Dine-in order" : "Takeaway order"}</p>
+              <p className="text-xs text-muted-foreground">{stay || roomTable ? "We bring it to your room. It goes on your room bill: pay before check-out, or whenever the front desk asks." : channel === "table" ? "We bring it to you. Pay when you leave." : publicType === "dine-in" ? "Order now and we'll seat you. Pay when you leave." : publicType === "delivery" ? "We bring it to your door. Pay on delivery." : `Usually ready in about ${store.prepMinutes} minutes.`}</p>
               {channel === "online" ? (
                 <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Order type">
                   {PUBLIC_ORDER_TYPES.map((t) => <button key={t.id} type="button" role="radio" aria-checked={publicType === t.id} onClick={() => void navigate({ search: { s: source, mode: t.id }, replace: true })}
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${publicType === t.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{t.label}</button>)}
+                  <Link to="/book/$slug" params={{ slug: store.slug }} className="inline-flex items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary"><CalendarDays className="size-3.5" />Book a table</Link>
                 </div>
-              ) : tableId && isRoomSection(store.tables.find((t) => t.id === tableId)?.section ?? "") ? (
+              ) : roomTable ? (
                 <button type="button" className="mt-1 text-xs font-semibold text-primary underline" onClick={() => void navigate({ search: { s: source, for: "stay" }, replace: true })}>Change room</button>
               ) : null}
             </div>
@@ -278,7 +258,7 @@ function Menu({ store, channel, publicType, tableId, tableLabel, source }: { sto
           {placed.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {placed.slice(0, 4).map((p) => (
-                <button key={p.id} type="button" onClick={() => void navigate({ search: { ...(tableId ? { table: tableId } : {}), o: p.id, k: p.token } })}
+                <button key={p.id} type="button" onClick={() => void navigate({ search: statusSearch(p) })}
                   className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold"><Clock className="size-3.5" />Order {p.code}</button>
               ))}
             </div>
@@ -393,12 +373,12 @@ function Menu({ store, channel, publicType, tableId, tableLabel, source }: { sto
 
       <Dialog open={checkout} onOpenChange={setCheckout}>
         <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto">
-          {checkout ? <Checkout store={store} channel={channel} publicType={publicType ?? null} tableId={tableId} tableLabel={tableLabel} cart={cart} items={items} setCart={setCart} source={source}
+          {checkout ? <Checkout store={store} channel={channel} publicType={publicType ?? null} stay={stay} roomTable={roomTable} tableId={tableId} tableLabel={tableLabel} cart={cart} items={items} setCart={setCart} source={source}
             onPlaced={(ref) => {
               writeJson(placedKey(store.slug), [ref, ...readJson<PlacedRef[]>(placedKey(store.slug), [])].slice(0, 10));
               setCart([]);
               setCheckout(false);
-              void navigate({ search: { ...(tableId ? { table: tableId } : {}), o: ref.id, k: ref.token } });
+              void navigate({ search: statusSearch(ref) });
             }} /> : null}
         </DialogContent>
       </Dialog>
@@ -413,8 +393,8 @@ function estimate(store: Storefront, lines: { itemId: string; price: number; qty
   return computeTotals(cartLines, 0, 0, { inclusive: store.pricesIncludeGst, exempt: store.gstMode !== "regular", roundToRupee: true });
 }
 
-function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items, setCart, onPlaced, source }: {
-  store: Storefront; channel: GuestChannel; publicType: PublicOrderType | null; tableId?: string | undefined; tableLabel?: string | undefined; cart: GuestCartLine[]; items: MenuItem[]; source: string;
+function Checkout({ store, channel, publicType, stay, roomTable, tableId, tableLabel, cart, items, setCart, onPlaced, source }: {
+  store: Storefront; channel: GuestChannel; publicType: PublicOrderType | null; stay: boolean; roomTable: boolean; tableId?: string | undefined; tableLabel?: string | undefined; cart: GuestCartLine[]; items: MenuItem[]; source: string;
   setCart: (update: (c: GuestCartLine[]) => GuestCartLine[]) => void; onPlaced: (ref: PlacedRef) => void;
 }) {
   const saved = readJson<{ name?: string; phone?: string; optIn?: boolean }>("xtsy-guest-contact", {});
@@ -425,13 +405,24 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
   const [phone, setPhone] = useState(saved.phone ?? "");
   const [note, setNote] = useState("");
   const [payment, setPayment] = useState<"counter" | "upi">("counter");
-  const slots = useMemo(() => pickupChoices(new Date(), store.prepMinutes), [store.prepMinutes]);
+  // Takeaway guests pick when they'll arrive: a real time, not "as soon as possible".
+  const slots = useMemo(() => pickupChoices(new Date(), store.prepMinutes).filter((c) => c.at), [store.prepMinutes]);
   const [pickup, setPickup] = useState<string>("");
-  const savedAddress = readJson<{ address?: string; landmark?: string }>("xtsy-guest-address", {});
+  const savedAddress = readJson<{ address?: string; landmark?: string; pin?: string }>("xtsy-guest-address", {});
   const [address, setAddress] = useState(savedAddress.address ?? "");
   const [landmark, setLandmark] = useState(savedAddress.landmark ?? "");
+  const [pin, setPin] = useState(savedAddress.pin ?? "");
+  const [pinBusy, setPinBusy] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [pasted, setPasted] = useState("");
+  const roomKey = `xtsy-guest-room:${store.slug}`;
+  const [room, setRoom] = useState(() => {
+    const last = readJson<string>(roomKey, "");
+    return stay && last && roomOpen(last, store.rooms) && store.tables.some((t) => t.id === last) ? last : "";
+  });
   const [party, setParty] = useState("");
   const kind: PublicOrderType | null = channel === "online" ? publicType ?? "takeaway" : null;
+  const need = guestRequired({ stay, roomTable, channel, kind });
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const [error, setError] = useState("");
@@ -439,8 +430,34 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
   const digits = phone.replace(/\D/g, "");
   // The minimum order is for takeaway and delivery; a dine-in guest orders as they like.
   const short = (kind === "takeaway" || kind === "delivery") && store.minOrder > 0 && totals.subtotal < store.minOrder;
-  const missing = (channel === "online" && (name.trim().length < 2 || digits.length < 10)) || (optIn && digits.length < 10)
-    || (kind === "delivery" && address.trim().length < 10);
+  const gaps = [
+    need.room && !room ? "your room" : "",
+    need.name && name.trim().length < 2 ? "your name" : "",
+    (need.phone || optIn) && digits.length < 10 ? "your mobile number" : "",
+    need.party && !party ? "how many guests" : "",
+    need.pickup && !pickup ? "your arrival time" : "",
+    need.address && address.trim().length < 10 ? "your address" : "",
+    need.pin && !pin ? "your location pin" : "",
+  ].filter(Boolean);
+  const missing = gaps.length > 0;
+  const placeId = stay ? room : tableId;
+  const pinAt = pin ? pinCoords(pin) : null;
+
+  const locate = () => {
+    setPinError("");
+    if (!("geolocation" in navigator)) { setPinError("This phone can't share its location. Paste a Google Maps link instead."); return; }
+    setPinBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (p) => { setPin(mapPinUrl(p.coords.latitude, p.coords.longitude)); setPinBusy(false); },
+      () => { setPinError("Couldn't get your location. Allow location access, or paste a Google Maps link."); setPinBusy(false); },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
+    );
+  };
+  const takePasted = (text: string) => {
+    setPasted(text);
+    const link = cleanMapLink(text);
+    if (link) { setPin(link); setPinError(""); } else if (text.trim()) setPinError("That isn't a Google Maps link. In Google Maps, tap Share and copy the link.");
+  };
 
   const place = async () => {
     if (submitting.current || !cart.length || short || missing || store.paused) return;
@@ -448,15 +465,16 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
     setBusy(true);
     setError("");
     writeJson("xtsy-guest-contact", { name: name.trim(), phone: phone.trim(), optIn });
-    if (kind === "delivery") writeJson("xtsy-guest-address", { address: address.trim(), landmark: landmark.trim() });
+    if (kind === "delivery") writeJson("xtsy-guest-address", { address: address.trim(), landmark: landmark.trim(), pin });
+    if (stay) writeJson(roomKey, room);
     const fullNote = [kind === "dine-in" && party ? `Party of ${party}` : "", note.trim()].filter(Boolean).join(". ");
     try {
       const base = {
-        _slug: store.slug, _channel: channel, _table_id: tableId ?? "", _name: name.trim(), _phone: phone.trim(), _note: fullNote,
+        _slug: store.slug, _channel: channel, _table_id: placeId ?? "", _name: name.trim(), _phone: phone.trim(), _note: fullNote,
         _lines: guestOrderPayload(cart) as never, _payment: payment, ...(kind === "takeaway" && pickup ? { _pickup_at: pickup } : {}),
       };
       let { data, error: failure } = await supabase.rpc("place_guest_order_v2" as never, {
-        ...base, _order_type: kind ?? "", _address: kind === "delivery" ? address.trim() : "", _landmark: kind === "delivery" ? landmark.trim() : "",
+        ...base, _order_type: kind ?? "", _address: kind === "delivery" ? withMapPin(address, pin) : "", _landmark: kind === "delivery" ? landmark.trim() : "",
       } as never) as unknown as { data: unknown; error: { message: string; code?: string } | null };
       // Before the cloud update lands, fall back to the original call for table and takeaway orders.
       if (failure && (failure.code === "PGRST202" || /could not find the function/i.test(failure.message)) && (kind === null || kind === "takeaway")) {
@@ -478,7 +496,7 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
 
   return (
     <div>
-      <DialogTitle>{channel === "table" ? `Your order for ${placeName(tableLabel ?? "")}` : kind === "delivery" ? "Your delivery order" : kind === "dine-in" ? "Your dine-in order" : "Your takeaway order"}</DialogTitle>
+      <DialogTitle>{stay ? "Your room-service order" : channel === "table" ? `Your order for ${tableLabel ?? ""}` : kind === "delivery" ? "Your delivery order" : kind === "dine-in" ? "Your dine-in order" : "Your takeaway order"}</DialogTitle>
       <ul className="mt-3 divide-y divide-border">
         {cart.map((l) => (
           <li key={l.key} className="flex items-center gap-3 py-2.5">
@@ -502,10 +520,17 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
       </div>
 
       <div className="mt-4 space-y-3">
-        <label className="block text-sm font-medium">{channel === "table" ? "Your name (optional)" : "Your name"}
-          <input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} autoComplete="name" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
+        {need.room ? <label className="block text-sm font-medium">Room number
+          <RoomSelect store={store} value={room} onChange={setRoom} />
+        </label> : null}
+        <label className="block text-sm font-medium">{need.name ? "Your name" : "Your name (optional)"}
+          <input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} autoComplete="name" required={need.name} className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
         </label>
-        {channel === "table" && askOptIn ? (
+        {channel === "table" && need.phone ? (
+          <label className="block text-sm font-medium">Mobile number
+            <input value={phone} maxLength={15} inputMode="tel" autoComplete="tel" required onChange={(e) => setPhone(e.target.value.replace(/[^0-9+ ]/g, ""))} placeholder="98765 43210" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
+          </label>
+        ) : channel === "table" && askOptIn ? (
           <label className="block text-sm font-medium">Mobile number {optIn ? "" : "(optional)"}
             <input value={phone} maxLength={15} inputMode="tel" autoComplete="tel" onChange={(e) => setPhone(e.target.value.replace(/[^0-9+ ]/g, ""))} placeholder="98765 43210" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
           </label>
@@ -515,9 +540,11 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
             <input value={phone} maxLength={15} inputMode="tel" autoComplete="tel" onChange={(e) => setPhone(e.target.value.replace(/[^0-9+ ]/g, ""))} placeholder="98765 43210" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
             <span className="mt-1 block text-xs font-normal text-muted-foreground">The restaurant calls this number if anything changes.</span>
           </label>
-          {kind === "takeaway" ? <label className="block text-sm font-medium">Pickup time
-            <Dropdown ariaLabel="Pickup time" className="mt-1 h-11" value={pickup} onChange={setPickup} searchable={false}
-              options={slots.map((c) => ({ value: c.at ?? "", label: c.label }))} />
+          {kind === "takeaway" ? <label className="block text-sm font-medium">When will you arrive?
+            <select value={pickup} onChange={(e) => setPickup(e.target.value)} required aria-label="Arrival time" className="mt-1 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm">
+              <option value="" disabled>Choose a time</option>{slots.map((c) => <option key={c.at} value={c.at ?? ""}>{c.label}</option>)}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted-foreground">Your order will be packed and ready when you arrive.</span>
           </label> : null}
           {kind === "delivery" ? <>
             <label className="block text-sm font-medium">Delivery address
@@ -527,11 +554,33 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
             <label className="block text-sm font-medium">Landmark (optional)
               <input value={landmark} maxLength={120} onChange={(e) => setLandmark(e.target.value)} placeholder="Near NIFT gate" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
             </label>
+            <fieldset className="rounded-xl border border-border bg-card p-3">
+              <legend className="px-1 text-sm font-medium">Location pin on Google Maps</legend>
+              {pin ? (
+                <div className="space-y-2">
+                  {pinAt ? <iframe title="Your delivery location" loading="lazy" referrerPolicy="no-referrer" className="h-40 w-full rounded-lg border-0"
+                    src={`https://maps.google.com/maps?q=${pinAt.lat},${pinAt.lng}&z=17&output=embed`} /> : null}
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-success"><MapPin className="size-4" />Location pinned</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild size="sm" variant="outline"><a href={pin} target="_blank" rel="noreferrer"><ExternalLink />Check on Google Maps</a></Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setPin(""); setPasted(""); }}>Change</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Button type="button" className="w-full" onClick={locate} disabled={pinBusy}><MapPin />{pinBusy ? "Finding you…" : "Use my current location"}</Button>
+                  <input value={pasted} onChange={(e) => takePasted(e.target.value)} inputMode="url" placeholder="Or paste a Google Maps link"
+                    aria-label="Google Maps link" className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm" />
+                  <p className="text-xs text-muted-foreground">Our delivery team uses this pin to find you.</p>
+                </div>
+              )}
+              {pinError ? <p role="alert" className="mt-2 text-xs font-semibold text-destructive">{pinError}</p> : null}
+            </fieldset>
             <p className="text-xs text-muted-foreground">The restaurant confirms any delivery charge when they call to accept.</p>
           </> : null}
-          {kind === "dine-in" ? <label className="block text-sm font-medium">How many guests? (optional)
-            <select value={party} onChange={(e) => setParty(e.target.value)} className="mt-1 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm">
-              <option value="">Choose</option>{Array.from({ length: 15 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+          {kind === "dine-in" ? <label className="block text-sm font-medium">How many guests?
+            <select value={party} onChange={(e) => setParty(e.target.value)} required className="mt-1 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm">
+              <option value="" disabled>Choose</option>{Array.from({ length: 15 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
             </select>
             <span className="mt-1 block text-xs font-normal text-muted-foreground">We'll seat you at a table that fits.</span>
           </label> : null}
@@ -551,7 +600,7 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
           <fieldset>
             <legend className="text-sm font-medium">Payment</legend>
             <div className="mt-1 grid grid-cols-2 gap-2">
-              {([["counter", channel === "table" || kind === "dine-in" ? "Pay at the end" : kind === "delivery" ? "Pay on delivery" : "Pay at pickup", Store], ["upi", "Pay now by UPI", Smartphone]] as const).map(([v, l, Icon]) => (
+              {([["counter", stay || roomTable ? "Add to room bill" : channel === "table" || kind === "dine-in" ? "Pay at the end" : kind === "delivery" ? "Pay on delivery" : "Pay at pickup", Store], ["upi", "Pay now by UPI", Smartphone]] as const).map(([v, l, Icon]) => (
                 <button key={v} type="button" role="radio" aria-checked={payment === v} onClick={() => setPayment(v)}
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm font-semibold ${payment === v ? "border-primary bg-primary-tint" : "border-border"}`}><Icon className="size-4" />{l}</button>
               ))}
@@ -561,6 +610,7 @@ function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items
       </div>
 
       {short ? <p className="mt-3 text-sm font-semibold text-destructive">The minimum {kind === "delivery" ? "delivery" : "takeaway"} order is {formatINR(store.minOrder, 0)}.</p> : null}
+      {missing && !busy ? <p className="mt-3 text-sm text-muted-foreground">To place the order, add {gaps.join(", ")}.</p> : null}
       {error ? <p role="alert" className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
       <Button className="mt-4 h-12 w-full text-base" disabled={busy || !cart.length || short || missing || store.paused} onClick={() => void place()}>
         {busy ? "Sending…" : `Place order · ${formatINR(totals.total, 0)}`}
@@ -583,7 +633,7 @@ const STEPS: { status: GuestStatus; label: string; icon: typeof Check }[] = [
   { status: "ready", label: "Ready", icon: ShoppingBag },
 ];
 
-function OrderStatus({ store, id, token, table }: { store: Storefront; id: string; token: string; table?: string | undefined }) {
+function OrderStatus({ store, id, token, table, back }: { store: Storefront; id: string; token: string; table?: string | undefined; back: Record<string, string> }) {
   const navigate = Route.useNavigate();
   const [upiRef, setUpiRef] = useState("");
   const [sent, setSent] = useState(false);
@@ -611,7 +661,7 @@ function OrderStatus({ store, id, token, table }: { store: Storefront; id: strin
   const totals = estimate(store, o.lines, items);
   const stepIndex = o.status === "completed" ? 3 : STEPS.findIndex((s) => s.status === o.status);
   const ended = o.status === "rejected" || o.status === "cancelled";
-  const backToMenu = () => void navigate({ search: table ? { table } : {} });
+  const backToMenu = () => void navigate({ search: table ? { table } : back });
 
   const cancel = async () => {
     setError("");

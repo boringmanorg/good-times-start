@@ -296,13 +296,67 @@ export function guestWaitMessage(createdAt: string, now: number): { busy: boolea
 }
 
 /**
- * Which QR a guest scanned. In-house (hotel guests): only the room picker. Public (shared): book a
- * table, or order dine-in, takeaway or delivery; no tables or rooms are listed. A table or room QR
- * (?table=) goes straight to its menu.
+ * Which QR a guest scanned. Both open straight on the menu. In-house (hotel guests): the room is
+ * chosen at checkout (open rooms only, no status). Public (shared): dine-in, takeaway or delivery,
+ * with "Book a table" one tap away; no tables or rooms are listed. A table or room QR (?table=)
+ * goes straight to its menu.
  */
 export type GuestEntry = "inhouse" | "public";
 export function guestEntry(search: { for?: string | undefined }): GuestEntry {
   return search.for === "stay" ? "inhouse" : "public";
+}
+
+/** Both QRs open straight on the menu; the public one starts as dine-in until the guest switches. */
+export function publicTypeFrom(mode: unknown): PublicOrderType {
+  return isPublicOrderType(mode) ? mode : "dine-in";
+}
+
+/** Which details a guest must give before placing an order. */
+export interface GuestRequired { name: boolean; phone: boolean; room: boolean; party: boolean; pickup: boolean; address: boolean; pin: boolean }
+export function guestRequired(opts: { stay: boolean; roomTable: boolean; channel: GuestChannel; kind: PublicOrderType | null }): GuestRequired {
+  const roomGuest = opts.stay || opts.roomTable;
+  const online = opts.channel === "online";
+  return {
+    name: roomGuest || online,
+    phone: roomGuest || online,
+    room: opts.stay,
+    party: online && opts.kind === "dine-in",
+    pickup: online && opts.kind === "takeaway",
+    address: online && opts.kind === "delivery",
+    pin: online && opts.kind === "delivery",
+  };
+}
+
+/* ---- Delivery map pin (Google Maps) ---- */
+
+const MAP_LINE = "\nMap: ";
+/** A Google Maps link for a dropped pin. */
+export function mapPinUrl(lat: number, lng: number): string {
+  return `https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+}
+/** Coordinates from a pin link we made (or any ?q=lat,lng / @lat,lng Google Maps link), for the map preview. */
+export function pinCoords(url: string): { lat: number; lng: number } | null {
+  const m = /[?&]q=(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/.exec(url) ?? /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/.exec(url);
+  if (!m) return null;
+  const lat = Number(m[1]), lng = Number(m[2]);
+  return Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null;
+}
+/** A Google Maps link the guest pasted or shared (maps.app.goo.gl, goo.gl/maps, google.com/maps, maps.google.com). */
+export function cleanMapLink(text: string): string | null {
+  const m = /https?:\/\/(?:maps\.app\.goo\.gl\/[\w-]+|goo\.gl\/maps\/[\w-]+|(?:www\.)?google\.[a-z.]+\/maps[^\s]*|maps\.google\.[a-z.]+\/[^\s]*)/i.exec(text.trim());
+  return m && m[0].length <= 160 ? m[0] : null;
+}
+/** The delivery address as stored: what the guest typed, then the map pin on its own line (fits the 240-character column). */
+export function withMapPin(address: string, pin: string): string {
+  const line = `${MAP_LINE}${pin}`;
+  return `${address.trim().slice(0, Math.max(0, 240 - line.length))}${line}`;
+}
+/** Splits a stored delivery address back into the address and its map pin. */
+export function splitMapPin(stored: string | null | undefined): { address: string; pin: string | null } {
+  const text = stored ?? "";
+  const at = text.lastIndexOf(MAP_LINE);
+  if (at < 0) return { address: text, pin: null };
+  return { address: text.slice(0, at), pin: text.slice(at + MAP_LINE.length).trim() || null };
 }
 
 /** The kitchen-ticket note for an accepted public order: pickup time, delivery address or seating. */
@@ -310,7 +364,7 @@ export function publicOrderNote(guest: Pick<GuestOrder, "code" | "channel" | "or
   const extra = guest.note ? `: ${guest.note}` : "";
   if (guest.channel !== "online") return guest.note ? `${guest.code}${extra}` : "";
   if (guest.order_type === "delivery") {
-    const where = [guest.delivery_address, guest.delivery_landmark ? `near ${guest.delivery_landmark}` : ""].filter(Boolean).join(", ");
+    const where = [splitMapPin(guest.delivery_address).address, guest.delivery_landmark ? `near ${guest.delivery_landmark}` : ""].filter(Boolean).join(", ");
     return `${guest.code} delivery to ${where}${extra}`;
   }
   if (guest.order_type === "dine-in") return `${guest.code} dine-in${extra}`;

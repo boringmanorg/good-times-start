@@ -38,6 +38,29 @@ export function RoomPicker({ store, onPick }: { store: Storefront; onPick: (id: 
   );
 }
 
+/** In-house checkout: the guest's room or bed. Only rooms open for room service are listed, with no status. */
+export function RoomSelect({ store, value, onChange }: { store: Storefront; value: string; onChange: (id: string) => void }) {
+  const { privateRooms, dorms } = roomGroups(store.tables, store.rooms);
+  const open = (p: Place) => roomOpen(p.id, store.rooms);
+  const rooms = privateRooms.filter(open);
+  const beds = dorms.map((d) => ({ ...d, beds: d.beds.filter(open) })).filter((d) => d.beds.length);
+  return (
+    <select aria-label="Your room" value={value} onChange={(e) => onChange(e.target.value)} required
+      className="mt-1 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm">
+      <option value="" disabled>Choose your room or bed</option>
+      {rooms.length ? <optgroup label="Private rooms">{rooms.map((p) => <option key={p.id} value={p.id}>{roomLabel(p, store.rooms)}</option>)}</optgroup> : null}
+      {beds.map((d) => <optgroup key={d.room} label={`Dorm · ${d.room}`}>{d.beds.map((p) => <option key={p.id} value={p.id}>{roomLabel(p, store.rooms)}</option>)}</optgroup>)}
+    </select>
+  );
+}
+
+/** True when at least one room takes room-service orders. */
+export function hasOpenRooms(store: Storefront): boolean {
+  if (!store.rooms) return false;
+  const { privateRooms, dorms } = roomGroups(store.tables, store.rooms);
+  return [...privateRooms, ...dorms.flatMap((d) => d.beds)].some((p) => roomOpen(p.id, store.rooms));
+}
+
 /** Options for the "ordering to" switcher: dining tables, then open rooms; the current place is always kept. */
 export function PlaceOptions({ store, currentId }: { store: Storefront; currentId?: string | undefined }) {
   const tables = guestTableChoices(store.tables).filter((t) => !isRoomSection(t.section));

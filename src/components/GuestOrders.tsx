@@ -16,7 +16,7 @@ import { getDb } from "@/lib/db";
 import { useAccount } from "@/lib/use-account";
 import { formatINR } from "@/lib/billing";
 import { acceptGuestOrder, isActiveGuestOrder, loadGuestOrders, setGuestOrderStatus } from "@/lib/guest-order-actions";
-import { sortGuestOrders, type GuestOrder, guestOrderClosing, needsTableOnAccept, seatingChoices } from "@/lib/guest-order-logic";
+import { sortGuestOrders, splitMapPin, type GuestOrder, guestOrderClosing, needsTableOnAccept, seatingChoices } from "@/lib/guest-order-logic";
 import { Segmented } from "@/components/Segmented";
 import { fillTemplate, waLink } from "@/lib/marketing-logic";
 import { useRestaurantSettings } from "@/lib/use-settings";
@@ -300,7 +300,11 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
           <li key={i} className="flex items-start gap-2"><span className="mt-1"><VegMark veg={l.veg ?? false} /></span><span className="flex-1"><strong>{l.qty} ×</strong> {l.name}{l.note ? <span className="block text-xs text-muted-foreground">{l.note}</span> : null}</span></li>
         ))}
       </ul>
-      {delivery && order.delivery_address ? <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-secondary px-3 py-2 text-sm"><MapPin className="mt-0.5 size-4 shrink-0 text-primary" /><span>{order.delivery_address}{order.delivery_landmark ? <span className="block text-xs text-muted-foreground">Near {order.delivery_landmark}</span> : null}</span></p> : null}
+      {delivery && order.delivery_address ? (() => {
+        const where = splitMapPin(order.delivery_address);
+        return <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-secondary px-3 py-2 text-sm"><MapPin className="mt-0.5 size-4 shrink-0 text-primary" /><span className="min-w-0 flex-1">{where.address}{order.delivery_landmark ? <span className="block text-xs text-muted-foreground">Near {order.delivery_landmark}</span> : null}
+          {where.pin ? <a href={where.pin} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary underline">Open location pin in Google Maps</a> : null}</span></div>;
+      })() : null}
       {order.note ? <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-sm">“{order.note}”</p> : null}
       {seatNeeded && can(user, "guestOrders.handle") ? (
         <label className="mt-3 block text-sm font-semibold">Seat at
