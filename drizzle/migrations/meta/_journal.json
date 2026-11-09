@@ -204,6 +204,13 @@
       "when": 1794160817474,
       "tag": "0028_drop_duplicate_records_cursor_index",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794203871411,
+      "tag": "0029_protect_purchase_ledger_and_supplier_returns",
+      "breakpoints": true
     }
   ]
 }
