@@ -6,11 +6,22 @@ let actions: typeof import("@/lib/stock-actions");
 beforeAll(async () => { db = await import("@/lib/db"); actions = await import("@/lib/stock-actions"); });
 beforeEach(() => fakeDevices.reset());
 describe("immutable purchase records", () => {
-  it("adds a standard-priced item without quantity and refuses later modifications", async () => {
+  it("adds a standard-priced item without quantity; adding the same id twice is refused", async () => {
     const material = { id: "rice", name: "Rice", unit: "kg" as const, costPerUnit: 80, lowStockLevel: 0 };
     await actions.saveMaterial(material);
     await expect(actions.saveMaterial({ ...material, costPerUnit: 90 })).rejects.toThrow(/cannot be modified/);
     expect(await db.getDb().materials.get("rice")).toEqual(material);
+  });
+  it("edits an item's name, price, low-stock level and visibility, and its unit until it is bought", async () => {
+    const material = { id: "dal", name: "Dal", unit: "kg" as const, costPerUnit: 100, lowStockLevel: 0 };
+    await actions.saveMaterial(material);
+    await actions.updateMaterial({ ...material, name: "Toor dal ", costPerUnit: 120, lowStockLevel: 5, unit: "g" });
+    expect(await db.getDb().materials.get("dal")).toMatchObject({ name: "Toor dal", costPerUnit: 120, lowStockLevel: 5, unit: "g" });
+    await actions.recordStockEntry({ type: "purchase", items: [{ materialId: "dal", qty: 500, unitCost: 0.12 }] });
+    await expect(actions.updateMaterial({ ...material, unit: "kg" })).rejects.toThrow(/unit can't change/);
+    await actions.updateMaterial({ ...material, name: "Toor dal", unit: "g", costPerUnit: 0.13, archived: true });
+    expect(await db.getDb().materials.get("dal")).toMatchObject({ archived: true, costPerUnit: 0.13 });
+    await expect(actions.updateMaterial({ ...material, unit: "g", costPerUnit: -1 })).rejects.toThrow(/valid standard price/);
   });
   it("preserves the original invoice when an item is returned", async () => {
     const purchase = await actions.recordStockEntry({ id: "p1", type: "purchase", items: [{ materialId: "rice", qty: 5, unitCost: 80 }] });

@@ -48,6 +48,26 @@ export async function saveMaterial(material: Material): Promise<void> {
   await markDirty(["material", material.id]);
 }
 
+/**
+ * Edit a purchase item: name, standard price, low-stock level, hidden or shown. The unit is fixed once the
+ * item has been bought, so recorded quantities keep their meaning. Purchase bills themselves never change.
+ */
+export async function updateMaterial(material: Material): Promise<void> {
+  const db = getDb();
+  await db.transaction("rw", db.materials, db.stockEntries, async () => {
+    const prior = await db.materials.get(material.id);
+    if (!prior) throw new Error("This purchase item no longer exists.");
+    if (!material.name.trim() || !Number.isFinite(material.costPerUnit) || (material.costPerUnit ?? -1) < 0) throw new Error("Enter an item name and a valid standard price.");
+    if (!Number.isFinite(material.lowStockLevel) || material.lowStockLevel < 0) throw new Error("The low-stock level must be 0 or more.");
+    if (material.unit !== prior.unit) {
+      const bought = (await db.stockEntries.toArray()).some((e) => e.items.some((i) => i.materialId === material.id));
+      if (bought) throw new Error(`The unit can't change after purchases are recorded in ${prior.unit}. Add a new item instead.`);
+    }
+    await db.materials.put({ ...prior, ...material, name: material.name.trim().slice(0, 60) });
+  });
+  await markDirty(["material", material.id]);
+}
+
 export async function saveSupplier(supplier: Supplier): Promise<void> {
   await getDb().suppliers.put(supplier);
   await markDirty(["supplier", supplier.id]);
