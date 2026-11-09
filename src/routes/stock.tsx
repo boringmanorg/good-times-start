@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 import { Download, Pencil, Plus, Trash2, X } from "lucide-react";
@@ -7,11 +7,12 @@ import { AppShell } from "@/components/AppShell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getDb } from "@/lib/db";
-import { isAdmin, useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/auth-context";
 import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
-import { STOCK_UNITS, countAdjustment, formatQty, isLow, purchaseTotal, stockValue } from "@/lib/stock-logic";
+import { STOCK_UNITS, formatQty, purchaseTotal } from "@/lib/stock-logic";
 import { deleteSupplier, recordStockEntry, saveMaterial, saveSupplier } from "@/lib/stock-actions";
+import { canReturnPurchase, remainingPurchaseQty, purchaseItemSummary } from "@/lib/purchase-logic";
 import { gstinError } from "@/lib/validation";
 import { downloadXlsx } from "@/lib/xlsx";
 import { dayKey } from "@/lib/report-logic";
@@ -25,124 +26,58 @@ import { can } from "@/lib/permissions";
 export const Route = createFileRoute("/stock")({
   head: () => ({
     meta: [
-      { title: "Stock — XTSY POS" },
-      { name: "description", content: "Raw material stock, purchases, wastage and suppliers, shared across your devices." }, { property: "og:title", content: "Stock — XTSY POS" }, { property: "og:description", content: "Raw material stock, purchases, wastage and suppliers, shared across your devices." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },],
+      { title: "Purchase — XTSY POS" },
+      { name: "description", content: "Purchase items, supplier invoices, returns and purchase history across your devices." }, { property: "og:title", content: "Purchase — XTSY POS" }, { property: "og:description", content: "Purchase items, supplier invoices, returns and purchase history across your devices." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },],
   }),
   component: StockPage,
 });
 
 const inputClass = "mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm";
-const ENTRY_LABEL: Record<StockEntry["type"], string> = { purchase: "Purchase", sale: "Used in bill", wastage: "Wastage", count: "Stock count", return: "Returned (void bill)" };
-type Tab = "stock" | "purchases" | "suppliers" | "history";
-
+type Tab = "items" | "purchases" | "suppliers" | "history";
 function num(raw: string): number | null {
   const value = Number(raw.trim());
   return raw.trim() !== "" && Number.isFinite(value) ? value : null;
 }
-
-function MaterialForm({ material, onDone }: { material: Material | null; onDone: () => void }) {
-  const [name, setName] = useState(material?.name ?? "");
-  const [unit, setUnit] = useState<StockUnit>(material?.unit ?? "kg");
-  const [low, setLow] = useState(String(material?.lowStockLevel ?? 1));
-  const [cost, setCost] = useState(material?.costPerUnit !== undefined ? String(material.costPerUnit) : "");
-  const [opening, setOpening] = useState("");
+function MaterialForm({ onDone }: { onDone: () => void }) {
+  const [name, setName] = useState("");
+  const [unit, setUnit] = useState<StockUnit>("kg");
+  const [price, setPrice] = useState("");
   const [error, setError] = useState("");
-  const { user } = useStaff();
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const lowLevel = num(low);
-    const costValue = cost.trim() ? num(cost) : undefined;
-    const openingQty = opening.trim() ? num(opening) : 0;
-    if (!name.trim()) { setError("Enter the material name, like Paneer."); return; }
-    if (lowLevel === null || lowLevel < 0 || costValue === null || (costValue ?? 0) < 0 || openingQty === null || openingQty < 0) {
-      setError("Quantities and cost must be numbers, 0 or more.");
-      return;
-    }
-    const id = material?.id ?? newUid();
-    await saveMaterial({ id, name: name.trim().slice(0, 60), unit, lowStockLevel: lowLevel, ...(costValue !== undefined ? { costPerUnit: costValue } : {}) });
-    if (!material && openingQty > 0) {
-      await recordStockEntry({ type: "count", items: [{ materialId: id, qty: openingQty }], note: "Opening stock", ...(user ? { by: user.displayName } : {}) });
-    }
-    toast.success(material ? `${name.trim()} updated` : `${name.trim()} added`);
-    onDone();
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const costPerUnit = num(price);
+      if (costPerUnit === null || costPerUnit < 0) throw new Error("Enter a standard unit price, 0 or more.");
+      await saveMaterial({ id: newUid(), name: name.trim(), unit, costPerUnit, lowStockLevel: 0 });
+      toast.success("Item added"); onDone();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not add item"); }
   };
-
-  return (
-    <form className="space-y-3" onSubmit={(event) => void submit(event)}>
-      <label className="block text-sm font-medium">Name<input autoFocus maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder="Paneer" className={inputClass} /></label>
-      <div className="grid grid-cols-3 gap-3">
-        <label className="block text-sm font-medium">Unit
-          <Dropdown<StockUnit> ariaLabel="Unit" className="mt-1" value={unit} onChange={setUnit} options={STOCK_UNITS.map((u) => ({ value: u.v, label: u.l }))} />
-        </label>
-        <label className="block text-sm font-medium">Warn at<input inputMode="decimal" value={low} onChange={(e) => setLow(e.target.value)} className={inputClass} /></label>
-        <label className="block text-sm font-medium">Cost / {unit}<input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="₹" className={inputClass} /></label>
-      </div>
-      {!material ? <label className="block text-sm font-medium">Stock on hand now ({unit})<input inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value)} placeholder="0" className={inputClass} /></label> : null}
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-      <div className="flex gap-2">
-        <Button type="submit">{material ? "Save material" : "Add material"}</Button>
-        <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
-      </div>
-    </form>
-  );
-}
-
-function MovementForm({ material, kind, onBooks, onDone }: { material: Material; kind: "count" | "wastage"; onBooks: number; onDone: () => void }) {
-  const { user } = useStaff();
-  const [qty, setQty] = useState("");
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  const value = num(qty);
-  const delta = value === null ? null : kind === "count" ? countAdjustment(onBooks, value) : -value;
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (value === null || value < 0 || (kind === "wastage" && value === 0)) { setError(kind === "count" ? "Enter what you counted, 0 or more." : "Enter how much was wasted."); return; }
-    if (delta === 0) { toast.success("Stock already matches"); onDone(); return; }
-    await recordStockEntry({ type: kind, items: [{ materialId: material.id, qty: delta ?? 0 }], ...(note.trim() ? { note: note.trim() } : {}), ...(user ? { by: user.displayName } : {}) });
-    toast.success(kind === "count" ? `${material.name} count saved` : `${material.name} wastage recorded`);
-    onDone();
-  };
-
-  return (
-    <form className="space-y-3" onSubmit={(event) => void submit(event)}>
-      <p className="text-sm text-muted-foreground">On the books: {formatQty(onBooks, material.unit)}</p>
-      <label className="block text-sm font-medium">{kind === "count" ? `Counted now (${material.unit})` : `Wasted (${material.unit})`}
-        <input autoFocus inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} className={inputClass} />
-      </label>
-      {kind === "count" && delta !== null && delta !== 0 ? <p className="text-sm">{delta > 0 ? "Adds" : "Removes"} {formatQty(Math.abs(delta), material.unit)}</p> : null}
-      <label className="block text-sm font-medium">{kind === "wastage" ? "Why" : "Note (optional)"}
-        <input maxLength={120} value={note} onChange={(e) => setNote(e.target.value)} placeholder={kind === "wastage" ? "Spoiled, dropped, expired…" : ""} className={inputClass} />
-      </label>
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-      <div className="flex gap-2">
-        <ConfirmButton id={`stock-${kind}`} submit className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again to save">{kind === "count" ? "Save count" : "Record wastage"}</ConfirmButton>
-        <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
-      </div>
-    </form>
-  );
+  return <form className="space-y-4" onSubmit={(e) => void submit(e)}>
+    <label className="block text-sm font-medium">Item name<input required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className={inputClass}/></label>
+    <label className="block text-sm font-medium">Unit<Dropdown ariaLabel="Unit" value={unit} onChange={setUnit} options={STOCK_UNITS.map((u) => ({ value: u.v, label: u.l }))}/></label>
+    <label className="block text-sm font-medium">Standard price / {unit}<input required aria-label="Standard price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClass}/></label>
+    {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+    <Button type="submit">Add item</Button>
+  </form>;
 }
 
 function PurchaseForm({ materials, suppliers, onDone }: { materials: Material[]; suppliers: Supplier[]; onDone: () => void }) {
   const { user } = useStaff();
   const [supplierId, setSupplierId] = useState("");
   const [reference, setReference] = useState("");
-  const [rows, setRows] = useState([{ key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: "" }]);
+  const [rows, setRows] = useState([{ key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }]);
   const [error, setError] = useState("");
-  const parsed = rows.map((r) => ({ materialId: r.materialId, qty: num(r.qty), unitCost: r.cost.trim() ? num(r.cost) : undefined }));
+  const parsed = rows.map((r) => ({ materialId: r.materialId, qty: num(r.qty), unitCost: num(r.cost) }));
   const valid = parsed.filter((p) => p.materialId && p.qty !== null && p.qty > 0);
   const total = purchaseTotal(valid.map((p) => ({ materialId: p.materialId, qty: p.qty ?? 0, unitCost: p.unitCost ?? 0 })));
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!valid.length || parsed.some((p) => p.unitCost === null)) { setError("Add at least one material with a quantity. Costs must be numbers."); return; }
+    if (valid.length !== rows.length || parsed.some((p) => p.unitCost === null || (p.unitCost ?? -1) < 0)) { setError("Add all items with a quantity. Costs must be numbers."); return; }
     const items = valid.map((p) => ({ materialId: p.materialId, qty: p.qty ?? 0, ...(p.unitCost !== undefined && p.unitCost !== null ? { unitCost: p.unitCost } : {}) }));
-    await recordStockEntry({ type: "purchase", items, ...(supplierId ? { supplierId } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) });
-    for (const item of items) {
-      const material = materials.find((m) => m.id === item.materialId);
-      if (material && item.unitCost !== undefined && item.unitCost !== material.costPerUnit) await saveMaterial({ ...material, costPerUnit: item.unitCost });
-    }
+    try {
+      await recordStockEntry({ type: "purchase", items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) });
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not record purchase"); return; }
     toast.success(`Purchase of ${formatINR(total, 0)} recorded`);
     onDone();
   };
@@ -162,7 +97,7 @@ function PurchaseForm({ materials, suppliers, onDone }: { materials: Material[];
           const update = (change: Partial<typeof row>) => setRows(rows.map((r, i) => (i === index ? { ...r, ...change } : r)));
           return (
             <div key={row.key} className="flex gap-2">
-              <Dropdown ariaLabel="Material" className="min-w-0 flex-1" value={row.materialId} onChange={(materialId) => update({ materialId })} placeholder="Choose material"
+              <Dropdown ariaLabel="Item" className="min-w-0 flex-1" value={row.materialId} onChange={(materialId) => update({ materialId, cost: String(materials.find((m) => m.id === materialId)?.costPerUnit ?? 0) })} placeholder="Choose item"
                 options={materials.map((m) => ({ value: m.id, label: m.name, hint: m.unit }))} />
               <input aria-label="Quantity" inputMode="decimal" value={row.qty} onChange={(e) => update({ qty: e.target.value })} placeholder={unit || "Qty"} className="w-20 rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
               <input aria-label="Cost per unit" inputMode="decimal" value={row.cost} onChange={(e) => update({ cost: e.target.value })} placeholder={`₹/${unit}`} className="w-20 rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
@@ -171,7 +106,7 @@ function PurchaseForm({ materials, suppliers, onDone }: { materials: Material[];
           );
         })}
       </div>
-      <Button type="button" size="sm" variant="ghost" onClick={() => setRows([...rows, { key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: "" }])}><Plus />Add line</Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => setRows([...rows, { key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }])}><Plus />Add line</Button>
       <p className="text-right text-sm font-semibold">Total {formatINR(total)}</p>
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
       <div className="flex gap-2">
@@ -220,221 +155,75 @@ function SupplierForm({ supplier, onDone }: { supplier: Supplier | null; onDone:
   );
 }
 
-function CountAllForm({ materials, levels, onDone }: { materials: Material[]; levels: Map<string, number>; onDone: () => void }) {
+function ReturnForm({ purchase, entries, materials, onDone }: { purchase: StockEntry; entries: StockEntry[]; materials: Material[]; onDone: () => void }) {
   const { user } = useStaff();
-  const [counts, setCounts] = useState<Record<string, string>>({});
-  const [q, setQ] = useState("");
-  const filled = materials.filter((m) => (counts[m.id] ?? "").trim() !== "");
-  const shown = q.trim() ? materials.filter((m) => m.name.toLowerCase().includes(q.trim().toLowerCase())) : materials;
-
-  const save = async () => {
-    const items: StockEntry["items"] = [];
-    for (const m of filled) {
-      const value = num(counts[m.id] ?? "");
-      if (value === null || value < 0) { toast.error(`${m.name}: enter 0 or more.`); return; }
-      const delta = countAdjustment(levels.get(m.id) ?? 0, value);
-      if (delta !== 0) items.push({ materialId: m.id, qty: delta });
-    }
-    if (items.length) await recordStockEntry({ type: "count", items, note: `Stock count of ${filled.length} items`, ...(user ? { by: user.displayName } : {}) });
-    toast.success(items.length ? `${items.length} item${items.length === 1 ? "" : "s"} adjusted` : "Stock already matches your count");
-    onDone();
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault(); if (busy) return; setBusy(true);
+    try {
+      const items = [...new Set(purchase.items.map((i) => i.materialId))].flatMap((id) => {
+        const raw = quantities[id] ?? "";
+        if (!raw.trim()) return [];
+        const qty = num(raw);
+        if (qty === null || qty <= 0) throw new Error("Enter a positive return quantity.");
+        return [{ materialId: id, qty: -qty }];
+      });
+      await recordStockEntry({ type: "return", purchaseId: purchase.id, items, ...(purchase.supplierId ? { supplierId: purchase.supplierId } : {}), ...(purchase.reference ? { reference: purchase.reference } : {}), ...(user ? { by: user.displayName } : {}) });
+      toast.success("Supplier return recorded"); onDone();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not record return"); } finally { setBusy(false); }
   };
-
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Enter what's on the shelf now. Leave an item blank to skip it. Use this for opening stock too.</p>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find an ingredient" className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" />
-      <ul className="max-h-[52vh] divide-y divide-border overflow-y-auto rounded-lg border border-border">
-        {shown.map((m) => (
-          <li key={m.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-            <span className="min-w-0 flex-1 truncate">{m.name}<span className="block text-xs text-muted-foreground">On the books {formatQty(levels.get(m.id) ?? 0, m.unit)}</span></span>
-            <input aria-label={`Counted ${m.name}`} inputMode="decimal" value={counts[m.id] ?? ""} onChange={(e) => setCounts({ ...counts, [m.id]: e.target.value })}
-              className="w-24 rounded-lg border border-input bg-card px-2 py-1.5 text-right" />
-            <span className="w-10 text-xs text-muted-foreground">{m.unit}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="flex gap-2">
-        <Button disabled={!filled.length} onClick={() => void save()}>Save count of {filled.length} item{filled.length === 1 ? "" : "s"}</Button>
-        <Button variant="ghost" onClick={onDone}>Cancel</Button>
-      </div>
-    </div>
-  );
+  return <form onSubmit={(e) => void submit(e)} className="space-y-4">
+    <p className="text-sm text-muted-foreground">Return deadline: {new Date(purchase.at + 48 * 3600000).toLocaleString("en-IN")}</p>
+    {[...new Set(purchase.items.map((i) => i.materialId))].map((id) => {
+      const material = materials.find((m) => m.id === id);
+      const remaining = remainingPurchaseQty(purchase, entries, id);
+      return <label key={id} className="block text-sm font-medium">{material?.name ?? id}<span className="block text-xs text-muted-foreground">Remaining {formatQty(remaining, material?.unit ?? "pcs")}</span>
+        <input aria-label={`Return quantity ${material?.name ?? id}`} disabled={remaining <= 0} inputMode="decimal" value={quantities[id] ?? ""} onChange={(e) => setQuantities({ ...quantities, [id]: e.target.value })} className={inputClass}/>
+      </label>;
+    })}
+    {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+    <Button type="submit" disabled={busy}>Record return</Button>
+  </form>;
 }
 
-type Sheet =
-  | { kind: "material"; material: Material | null }
-  | { kind: "count" | "wastage"; material: Material }
-  | { kind: "purchase" }
-  | { kind: "count-all" }
-  | { kind: "supplier"; supplier: Supplier | null };
-
+type Sheet = { kind: "item" } | { kind: "purchase" } | { kind: "supplier"; supplier: Supplier | null } | { kind: "return"; purchase: StockEntry };
 function StockPage() {
   const { user } = useStaff();
-  const admin = can(user, "stock.setup");
+  const admin = can(user, "stock.purchase");
   const materials = useLiveQuery(() => getDb().materials.toArray(), [], []);
   const suppliers = useLiveQuery(() => getDb().suppliers.toArray(), [], []);
-  // Recent movements only; the ledger grows with every bill, so screens never load all of it.
-  const recent = useLiveQuery(() => getDb().stockEntries.orderBy("at").reverse().limit(100).toArray(), [], []);
-  const purchaseEntries = useLiveQuery(async () => (await getDb().stockEntries.where("type").equals("purchase").toArray()).sort((a, b) => b.at - a.at), [], []);
-  const levelRows = useLiveQuery(() => getDb().materialLevels.toArray(), [], []);
-  const [tab, setTab] = useState<Tab>("stock");
-  const [sheet, setSheet] = useState<Sheet | null>(null);
-
+  const entries = useLiveQuery(() => getDb().stockEntries.orderBy("at").reverse().toArray(), [], []);
+  const purchases = entries.filter((e) => e.type === "purchase");
+  const history = entries.filter((e) => e.type === "purchase" || e.purchaseId);
   const active = materials.filter((m) => !m.archived).sort((a, b) => a.name.localeCompare(b.name));
-  const levels = useMemo(() => new Map(levelRows.map((l) => [l.materialId, l.qty])), [levelRows]);
-  const low = active.filter((m) => isLow(m, levels.get(m.id) ?? 0));
-  const purchases = purchaseEntries.slice(0, 60);
-  const history = recent;
-  const nameOf = (id: string) => materials.find((m) => m.id === id)?.name ?? "Removed material";
-  const unitOf = (id: string): StockUnit => materials.find((m) => m.id === id)?.unit ?? "pcs";
+  const [tab, setTab] = useState<Tab>("items");
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
   const close = () => setSheet(null);
-  const exportStock = async () => {
-    const entries = await getDb().stockEntries.toArray();
-    const supplierName = (id?: string) => suppliers.find((x) => x.id === id)?.name ?? "";
-    const levelRows = active.map((m) => {
-      const level = levels.get(m.id) ?? 0;
-      return [m.name, m.unit, level, m.lowStockLevel, m.costPerUnit ?? null, Math.max(0, level) * (m.costPerUnit ?? 0), level < 0 ? "Below zero — count it" : isLow(m, level) ? "Low" : "OK"];
-    });
-    downloadXlsx(`stock-${dayKey(Date.now())}`, [
-      { name: "Stock", title: "Stock on hand", subtitle: new Date().toLocaleString("en-IN"), totals: true,
-        columns: [{ header: "Ingredient", width: 40 }, { header: "Unit" }, { header: "On hand", format: "qty" }, { header: "Warn at", format: "qty" }, { header: "Cost per unit", format: "inr" }, { header: "Stock value", format: "inr", total: true }, { header: "Status" }],
-        rows: levelRows },
-      { name: "Purchases", title: "Purchases", totals: true,
-        columns: [{ header: "Date", format: "datetime" }, { header: "Supplier", width: 28 }, { header: "Invoice" }, { header: "Ingredient", width: 34 }, { header: "Qty", format: "qty" }, { header: "Unit" }, { header: "Cost per unit", format: "inr" }, { header: "Amount", format: "inr", total: true }],
-        rows: entries.filter((e) => e.type === "purchase").sort((a, b) => b.at - a.at).flatMap((e) => e.items.map((i) => [e.at, supplierName(e.supplierId), e.reference ?? "", nameOf(i.materialId), i.qty, unitOf(i.materialId), i.unitCost ?? null, Math.round(i.qty * (i.unitCost ?? 0) * 100) / 100])) },
-      { name: "Movements", title: "Every stock movement",
-        columns: [{ header: "Date", format: "datetime" }, { header: "Type" }, { header: "Ingredient", width: 34 }, { header: "Change", format: "qty" }, { header: "Unit" }, { header: "Reference" }, { header: "Note", width: 30 }, { header: "By" }],
-        rows: [...entries].sort((a, b) => b.at - a.at).flatMap((e) => e.items.map((i) => [e.at, ENTRY_LABEL[e.type], nameOf(i.materialId), i.qty, unitOf(i.materialId), e.reference ?? "", e.note ?? "", e.by ?? ""])) },
-      { name: "Suppliers", title: "Suppliers",
-        columns: [{ header: "Supplier", width: 30 }, { header: "Phone" }, { header: "GSTIN" }, { header: "Supplies", width: 40 }],
-        rows: suppliers.map((x) => [x.name, x.phone ?? "", x.gstin ?? "", x.note ?? ""]) },
-    ], { title: "Stock" });
-  };
-
-  const tabs: { v: Tab; l: string }[] = [
-    { v: "stock", l: "Stock" },
-    { v: "purchases", l: "Purchases" },
-    { v: "suppliers", l: "Suppliers" },
-    { v: "history", l: "History" },
-  ];
-
-  return (
-    <AppShell>
-      <div className="mx-auto max-w-5xl p-4 lg:p-6">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">Stock</h1>
-            <p className="text-sm text-muted-foreground">
-              {active.length} materials, worth {formatINR(stockValue(active, levels), 0)}{low.length ? `. ${low.length} running low.` : "."}
-            </p>
-          </div>
-          {admin ? (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setSheet({ kind: "material", material: null })}><Plus />Material</Button>
-              <Button variant="outline" disabled={!active.length} onClick={() => void exportStock()}><Download />Excel</Button>
-              <Button variant="outline" disabled={!active.length} onClick={() => setSheet({ kind: "count-all" })}>Count all</Button>
-              <Button disabled={!active.length} onClick={() => setSheet({ kind: "purchase" })}><Plus />Purchase</Button>
-            </div>
-          ) : null}
-        </div>
-
-        <Segmented ariaLabel="Stock view" stretch className="mb-5" value={tab} onChange={setTab} options={tabs.map((t) => ({ value: t.v, label: t.l }))} />
-
-        {tab === "stock" ? (
-          active.length ? (
-            <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-              {[...low, ...active.filter((m) => !low.includes(m))].map((m) => {
-                const level = levels.get(m.id) ?? 0;
-                const isLowNow = low.includes(m);
-                return (
-                  <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">{m.name}</div>
-                      <div className="text-xs text-muted-foreground">Warn at {formatQty(m.lowStockLevel, m.unit)}{m.costPerUnit ? `, ${formatINR(m.costPerUnit)} per ${m.unit}` : ""}</div>
-                    </div>
-                    <span className={`rounded-md px-2 py-1 text-sm font-bold ${isLowNow ? "bg-gold/25 text-gold-foreground" : ""} ${level < 0 ? "text-destructive" : ""}`}>{formatQty(level, m.unit)}</span>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setSheet({ kind: "wastage", material: m })}>Wastage</Button>
-                      {admin ? <Button size="sm" variant="ghost" onClick={() => setSheet({ kind: "count", material: m })}>Count</Button> : null}
-                      {admin ? <Button size="icon" variant="ghost" aria-label={`Edit ${m.name}`} onClick={() => setSheet({ kind: "material", material: m })}><Pencil /></Button> : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center">
-              <p className="font-semibold">No materials yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">Add what you buy, then give dishes recipes in Menu. Every bill uses stock up automatically.</p>
-            </div>
-          )
-        ) : null}
-
-        {tab === "purchases" ? (
-          purchases.length ? (
-            <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-              {purchases.map((p) => (
-                <li key={p.id} className="px-4 py-3 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <span className="font-semibold">{suppliers.find((s) => s.id === p.supplierId)?.name ?? "Supplier not recorded"}{p.reference ? <span className="ml-2 font-normal text-muted-foreground">Invoice {p.reference}</span> : null}</span>
-                    <span className="font-semibold">{formatINR(purchaseTotal(p.items), 0)}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{new Date(p.at).toLocaleDateString("en-IN")}: {p.items.map((i) => `${nameOf(i.materialId)} ${formatQty(i.qty, unitOf(i.materialId))}`).join(", ")}</div>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No purchases recorded yet.</p>
-        ) : null}
-
-        {tab === "suppliers" ? (
-          <div>
-            {admin ? <Button variant="outline" className="mb-3" onClick={() => setSheet({ kind: "supplier", supplier: null })}><Plus />Add supplier</Button> : null}
-            {suppliers.length ? (
-              <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-                {[...suppliers].sort((a, b) => a.name.localeCompare(b.name)).map((s) => (
-                  <li key={s.id} className="flex items-center gap-3 px-4 py-3 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold">{s.name}</div>
-                      <div className="text-xs text-muted-foreground">{[s.phone, s.gstin && `GSTIN ${s.gstin}`, s.note].filter(Boolean).join(", ") || "No details"}</div>
-                    </div>
-                    {admin ? <Button size="icon" variant="ghost" aria-label={`Edit ${s.name}`} onClick={() => setSheet({ kind: "supplier", supplier: s })}><Pencil /></Button> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No suppliers yet.</p>}
-          </div>
-        ) : null}
-
-        {tab === "history" ? (
-          history.length ? (
-            <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-              {history.map((e) => (
-                <li key={e.id} className="px-4 py-2.5 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <span className="font-semibold">{ENTRY_LABEL[e.type]}{e.reference ? <span className="ml-2 font-normal text-muted-foreground">{e.reference}</span> : null}</span>
-                    <span className="text-xs text-muted-foreground">{new Date(e.at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}{e.by ? `, ${e.by}` : ""}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {e.items.map((i) => `${nameOf(i.materialId)} ${i.qty > 0 ? "+" : ""}${formatQty(i.qty, unitOf(i.materialId))}`).join(", ")}{e.note ? `. ${e.note}` : ""}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Nothing has moved yet.</p>
-        ) : null}
-      </div>
-
-      <Dialog open={!!sheet} onOpenChange={(open) => { if (!open) close(); }}>
-        <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto">
-          {sheet?.kind === "material" ? <><DialogTitle>{sheet.material ? `Edit ${sheet.material.name}` : "Add material"}</DialogTitle><MaterialForm material={sheet.material} onDone={close} /></> : null}
-          {sheet?.kind === "count" || sheet?.kind === "wastage" ? <><DialogTitle>{sheet.kind === "count" ? `Count ${sheet.material.name}` : `${sheet.material.name} wastage`}</DialogTitle>
-            <MovementForm material={sheet.material} kind={sheet.kind} onBooks={levels.get(sheet.material.id) ?? 0} onDone={close} /></> : null}
-          {sheet?.kind === "count-all" ? <><DialogTitle>Count stock</DialogTitle><CountAllForm materials={active} levels={levels} onDone={close} /></> : null}
-          {sheet?.kind === "purchase" ? <><DialogTitle>Record purchase</DialogTitle><PurchaseForm materials={active} suppliers={suppliers} onDone={close} /></> : null}
-          {sheet?.kind === "supplier" ? <><DialogTitle>{sheet.supplier ? `Edit ${sheet.supplier.name}` : "Add supplier"}</DialogTitle><SupplierForm supplier={sheet.supplier} onDone={close} /></> : null}
-        </DialogContent>
-      </Dialog>
-    </AppShell>
-  );
+  const nameOf = (id: string) => materials.find((m) => m.id === id)?.name ?? "Unknown item";
+  const unitOf = (id: string) => materials.find((m) => m.id === id)?.unit ?? "pcs";
+  const exportPurchase = () => downloadXlsx(`purchase-${dayKey(Date.now())}`, [
+    { name: "Items", title: "Purchase items", columns: [{ header: "Item" }, { header: "Unit" }, { header: "Standard price", format: "inr" }, { header: "Last quantity", format: "qty" }, { header: "Last unit price", format: "inr" }, { header: "Purchases" }, { header: "Average days between" }], rows: active.map((m) => { const p = purchaseItemSummary(m, purchases); return [m.name, m.unit, m.costPerUnit ?? null, p.lastQty ?? null, p.lastPrice ?? null, p.count, p.averageDays ?? null]; }) },
+    { name: "History", title: "Purchase and return history", columns: [{ header: "Date", format: "datetime" }, { header: "Type" }, { header: "Supplier" }, { header: "Invoice" }, { header: "Item" }, { header: "Quantity", format: "qty" }, { header: "Unit price", format: "inr" }, { header: "Purchase ID" }], rows: history.flatMap((e) => e.items.map((i) => [e.at, e.purchaseId ? "Supplier return" : "Purchase", e.supplierName ?? suppliers.find((s) => s.id === e.supplierId)?.name ?? "", e.reference ?? "", nameOf(i.materialId), i.qty, i.unitCost ?? null, e.purchaseId ?? e.id])) },
+  ], { title: "Purchase" });
+  const shown = active.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
+  return <AppShell><div className="mx-auto max-w-6xl p-4 lg:p-6">
+    <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Purchase</h1><p className="text-sm text-muted-foreground">{active.length} items · {purchases.length} purchase bills</p></div>
+      {admin ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSheet({ kind: "item" })}><Plus/>Item</Button><Button variant="outline" onClick={exportPurchase}><Download/>Excel</Button><Button disabled={!active.length} onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase</Button></div> : null}
+    </header>
+    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[{ value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, { value: "suppliers", label: "Suppliers" }, { value: "history", label: "History" }]}/>
+    {tab === "items" ? <div className="mt-4"><input aria-label="Find purchase item" placeholder="Find item" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"/>
+      <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr>{["Item", "Standard price / unit", "Last purchased qty", "Last unit price", "Purchase frequency"].map((h) => <th key={h} className="p-3">{h}</th>)}</tr></thead><tbody className="divide-y divide-border">{shown.map((m) => { const p = purchaseItemSummary(m, purchases); return <tr key={m.id}><td className="p-3 font-semibold"><Button variant="ghost" onClick={() => setSelected(selected === m.id ? null : m.id)}>{m.name}</Button>{selected === m.id ? <ul className="mt-2 space-y-2 text-xs font-normal text-muted-foreground">{purchases.filter((e) => e.items.some((i) => i.materialId === m.id)).map((e) => <li key={e.id}>{new Date(e.at).toLocaleString("en-IN")} · {e.reference || "No invoice"} · {e.items.filter((i) => i.materialId === m.id).map((i) => `${formatQty(i.qty, m.unit)} at ${formatINR(i.unitCost ?? 0)}`).join(", ")}</li>)}{!p.count ? <li>No purchases yet</li> : null}</ul> : null}</td><td className="p-3">{m.costPerUnit !== undefined ? formatINR(m.costPerUnit) : "—"} / {m.unit}</td><td className="p-3">{p.lastQty !== undefined ? formatQty(p.lastQty, m.unit) : "—"}{p.lastAt ? <span className="block text-xs text-muted-foreground">{new Date(p.lastAt).toLocaleDateString("en-IN")}</span> : null}</td><td className="p-3">{p.lastPrice !== undefined ? formatINR(p.lastPrice) : "—"}</td><td className="p-3">{p.count} purchases{p.averageDays !== undefined ? <span className="block text-xs text-muted-foreground">Every {p.averageDays.toFixed(1)} days on average</span> : null}</td></tr>; })}</tbody></table></div>{!shown.length ? <p className="py-8 text-center text-sm text-muted-foreground">No items found</p> : null}
+    </div> : null}
+    {tab === "purchases" || tab === "history" ? <ul className="mt-4 divide-y divide-border">{(tab === "purchases" ? purchases : history).map((p) => <li key={p.id} className="py-4 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold">{p.purchaseId ? "Supplier return" : "Purchase"} · {p.supplierName ?? suppliers.find((s) => s.id === p.supplierId)?.name ?? "Supplier not recorded"}<span className="ml-2 font-normal text-muted-foreground">{p.reference ? `Invoice ${p.reference}` : ""}</span></div><span className="font-semibold">{formatINR(p.items.reduce((n, i) => n + Math.abs(i.qty) * (i.unitCost ?? 0), 0))}</span></div><p className="mt-1 text-xs text-muted-foreground">{new Date(p.at).toLocaleString("en-IN")}{p.by ? ` · ${p.by}` : ""}</p><ul className="mt-2 space-y-1">{p.items.map((i, index) => <li key={index}>{nameOf(i.materialId)} · {formatQty(Math.abs(i.qty), unitOf(i.materialId))} · {i.unitCost !== undefined ? formatINR(i.unitCost) : "—"} / {unitOf(i.materialId)}</li>)}</ul>{admin && canReturnPurchase(p) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0) ? <Button size="sm" variant="outline" className="mt-3" onClick={() => setSheet({ kind: "return", purchase: p })}>Return items</Button> : null}{p.purchaseId ? <p className="mt-2 text-xs text-muted-foreground">Original purchase: {p.reference || p.purchaseId}</p> : null}</li>)}{!(tab === "purchases" ? purchases : history).length ? <li className="py-8 text-center text-muted-foreground">No purchase history yet</li> : null}</ul> : null}
+    {tab === "suppliers" ? <div className="mt-4">{admin ? <Button variant="outline" onClick={() => setSheet({ kind: "supplier", supplier: null })}><Plus/>Add supplier</Button> : null}<ul className="mt-3 divide-y divide-border">{suppliers.map((s) => <li key={s.id} className="flex items-center justify-between gap-3 py-3"><div><p className="text-sm font-semibold">{s.name}</p><p className="text-xs text-muted-foreground">{[s.phone, s.gstin, s.note].filter(Boolean).join(" · ")}</p></div>{admin ? <Button size="icon" variant="ghost" aria-label={`Edit ${s.name}`} onClick={() => setSheet({ kind: "supplier", supplier: s })}><Pencil/></Button> : null}</li>)}</ul></div> : null}
+  </div><Dialog open={!!sheet} onOpenChange={(open) => { if (!open) close(); }}><DialogContent className="max-h-[85dvh] max-w-lg overflow-y-auto">
+    {sheet?.kind === "item" ? <><DialogTitle>Add purchase item</DialogTitle><MaterialForm onDone={close}/></> : null}
+    {sheet?.kind === "purchase" ? <><DialogTitle>Record purchase</DialogTitle><PurchaseForm materials={active} suppliers={suppliers} onDone={close}/></> : null}
+    {sheet?.kind === "return" ? <><DialogTitle>Return purchased items</DialogTitle><ReturnForm purchase={sheet.purchase} entries={entries} materials={materials} onDone={close}/></> : null}
+    {sheet?.kind === "supplier" ? <><DialogTitle>{sheet.supplier ? "Edit supplier" : "Add supplier"}</DialogTitle><SupplierForm supplier={sheet.supplier} onDone={close}/></> : null}
+  </DialogContent></Dialog></AppShell>;
 }
