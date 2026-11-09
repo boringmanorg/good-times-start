@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addToGuestCart, asMenuItem, billWithGuestLines, cartLinesFromGuest, guestLineFor, guestOrderPayload, guestSubtotal, orderPageUrl, pickupChoices, guestTableChoices, qrOrderState, qrSeriesLabel, setGuestQty, sortGuestOrders, type GuestOrder } from "./guest-order-logic";
+import { addToGuestCart, asMenuItem, billWithGuestLines, cartLinesFromGuest, guestLineFor, guestOrderPayload, guestSubtotal, orderPageUrl, pickupChoices, guestTableChoices, guestOrderClosing, qrOrderState, qrSeriesLabel, setGuestQty, sortGuestOrders, type GuestOrder } from "./guest-order-logic";
 import type { MenuItem, Order } from "./types";
 
 const momo: MenuItem = {
@@ -106,3 +106,17 @@ describe("QR table choices", () => {
   });
 });
 
+
+describe("guestOrderClosing", () => {
+  it("closes an accepted QR order with its POS number when the bill is settled on any terminal", () => {
+    expect(guestOrderClosing({ status: "accepted" }, { status: "settled", billNo: "POS/0012" })).toEqual({ status: "completed", reason: "", billNo: "POS/0012" });
+    expect(guestOrderClosing({ status: "ready" }, { status: "settled", billNo: "POS/0013" })?.billNo).toBe("POS/0013");
+  });
+  it("cancels it when the bill is cancelled or removed", () => {
+    expect(guestOrderClosing({ status: "accepted" }, { status: "void", billNo: "" })).toEqual({ status: "cancelled", reason: "Bill cancelled by restaurant", billNo: "" });
+  });
+  it("leaves running bills and already-finished orders alone", () => {
+    expect(guestOrderClosing({ status: "accepted" }, undefined)).toBeNull();
+    for (const status of ["new", "completed", "rejected", "cancelled"] as const) expect(guestOrderClosing({ status }, { status: "settled", billNo: "POS/0001" })).toBeNull();
+  });
+});

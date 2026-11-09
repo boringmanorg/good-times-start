@@ -132,13 +132,17 @@ async function openBillFor(guest: GuestOrder): Promise<{ order: Order; kots: Kot
   // A guest who ticked "send me offers on WhatsApp" is recorded as agreeing.
   if (guest.whatsapp_opt_in && guest.customer_phone) await setWhatsappConsent(guest.customer_phone, true, guest.source || (guest.channel === "table" ? "qr" : "online"), guest.customer_name || undefined);
 
-  await supabase.from("guest_orders").update({ order_uid: order.uid ?? null, bill_no: order.billNo || null }).eq("id", guest.id);
+  // Link the QR order to its bill so it closes (and gets its POS number) when the bill is settled.
+  // The bill and KOTs are already saved locally; a lost link is retried once rather than failing the accept.
+  const link = { order_uid: order.uid ?? null, bill_no: order.billNo || null };
+  const { error: linkError } = await supabase.from("guest_orders").update(link).eq("id", guest.id);
+  if (linkError) await supabase.from("guest_orders").update(link).eq("id", guest.id);
   return { order, kots, missing };
 }
 
-export async function setGuestOrderStatus(guest: GuestOrder, status: GuestStatus, staffName: string, reason = ""): Promise<void> {
+export async function setGuestOrderStatus(guest: GuestOrder, status: GuestStatus, staffName: string, reason = "", extra?: { bill_no?: string }): Promise<void> {
   const { data, error } = await supabase.from("guest_orders")
-    .update({ status, handled_by: staffName, ...(reason ? { reason } : {}) })
+    .update({ status, handled_by: staffName, ...(reason ? { reason } : {}), ...(extra?.bill_no ? { bill_no: extra.bill_no } : {}) })
     .eq("id", guest.id).eq("restaurant_id", guest.restaurant_id).eq("status", guest.status).select("id");
   if (error) throw new Error("Couldn't update the order. Check the internet and try again.");
   if (!data?.length) throw new Error("This guest order changed on another device. Refresh before continuing.");

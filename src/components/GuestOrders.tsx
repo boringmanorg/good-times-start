@@ -16,7 +16,7 @@ import { getDb } from "@/lib/db";
 import { useAccount } from "@/lib/use-account";
 import { formatINR } from "@/lib/billing";
 import { acceptGuestOrder, isActiveGuestOrder, loadGuestOrders, setGuestOrderStatus } from "@/lib/guest-order-actions";
-import { sortGuestOrders, type GuestOrder } from "@/lib/guest-order-logic";
+import { sortGuestOrders, type GuestOrder, guestOrderClosing } from "@/lib/guest-order-logic";
 import { Segmented } from "@/components/Segmented";
 import { fillTemplate, waLink } from "@/lib/marketing-logic";
 import { useRestaurantSettings } from "@/lib/use-settings";
@@ -97,6 +97,7 @@ export function GuestOrdersButton() {
   const bookings = useReservations();
   const bookingRequests = bookings.rows.filter((r) => r.status === "pending" && Date.parse(r.end_at) > Date.now());
   const requestCount = waiting.length;
+  const finished = useFinishedGuestBills(orders, user?.displayName ?? "Counter");
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingView, setBookingView] = useState<"qr" | "tables">("qr");
   const [open, setOpen] = useState(false);
@@ -143,7 +144,7 @@ export function GuestOrdersButton() {
       <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto"><DialogTitle>Bookings</DialogTitle>
           <Segmented ariaLabel="Bookings view" stretch value={bookingView} onChange={setBookingView} options={[{ value: "qr", label: "QR orders", badge: requestCount }, { value: "tables", label: "Table bookings", badge: bookingRequests.length }]} />
-          {bookingView === "qr" ? <GuestOrdersPanel orders={orders} onDone={() => setBookingOpen(false)} /> : <ReservationsPanel upcoming onOpenOrder={() => setBookingOpen(false)} />}
+          {bookingView === "qr" ? <GuestOrdersPanel orders={orders} closed={finished} onDone={() => setBookingOpen(false)} /> : <ReservationsPanel upcoming onOpenOrder={() => setBookingOpen(false)} />}
         </DialogContent>
       </Dialog>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)} aria-label="Orders">
@@ -159,43 +160,56 @@ export function GuestOrdersButton() {
   );
 }
 
-type View = "requests" | "accepted" | "history";
+type FinishedBill = { status: "settled" | "void"; billNo: string };
 
-function GuestOrdersPanel({ orders, onDone }: { orders: GuestOrder[]; onDone: () => void }) {
-  const [view, setView] = useState<View>("requests");
-  const staffName = useStaff().user?.displayName ?? "Counter";
-  // A QR order whose bill was cancelled or settled is finished, whatever its stored status.
-  const uids = orders.map((o) => o.order_uid).filter((u): u is string => !!u);
+/**
+ * A QR order whose bill was settled or cancelled is finished. Runs wherever the Bookings button is
+ * shown (every signed-in screen), not only while the dialog is open, so the guest's page and the
+ * Accepted list close as soon as any terminal settles the bill, and the order keeps its POS number.
+ */
+function useFinishedGuestBills(orders: GuestOrder[], staffName: string): Map<string, FinishedBill> {
+  // Only orders still open need their bill checked.
+  const uids = orders.filter((o) => o.status === "accepted" || o.status === "ready").map((o) => o.order_uid).filter((u): u is string => !!u);
   const closed = useLiveQuery(async () => {
+    const map = new Map<string, FinishedBill>();
+    if (!uids.length) return map;
     const bills = await getDb().orders.where("uid").anyOf(uids).toArray();
-    const map = new Map(bills.filter((b) => b.status === "void" || b.status === "settled").map((b) => [b.uid ?? "", b.status as string]));
+    for (const b of bills) if (b.status === "void" || b.status === "settled") map.set(b.uid ?? "", { status: b.status, billNo: b.billNo ?? "" });
     // Removed bills are no longer on this device; ask the cloud so their QR order still closes.
     const found = new Set(bills.map((b) => b.uid));
     const missing = uids.filter((u) => !found.has(u));
     if (missing.length && navigator.onLine) {
       const { data } = await supabase.from("restaurant_records").select("record_id, deleted, payload").eq("kind", "order").in("record_id", missing);
       for (const r of data ?? []) {
-        const s = (r.payload as { status?: string } | null)?.status;
-        if (s === "settled") map.set(r.record_id, "settled");
-        else if (r.deleted || s === "void") map.set(r.record_id, "void");
+        const p = (r.payload as { status?: string; billNo?: string } | null) ?? {};
+        if (!r.deleted && p.status === "settled") map.set(r.record_id, { status: "settled", billNo: p.billNo ?? "" });
+        else if (r.deleted || p.status === "void") map.set(r.record_id, { status: "void", billNo: "" });
       }
     }
     return map;
-  }, [uids.join(",")]) ?? new Map<string, string>();
+  }, [uids.join(",")]) ?? new Map<string, FinishedBill>();
+  const closing = useRef(new Set<string>());
+  useEffect(() => {
+    for (const o of orders) {
+      const next = guestOrderClosing(o, closed.get(o.order_uid ?? ""));
+      if (!next || closing.current.has(o.id)) continue;
+      closing.current.add(o.id);
+      const done = setGuestOrderStatus(o, next.status, staffName, next.reason, next.billNo ? { bill_no: next.billNo } : undefined);
+      // Another terminal may have closed it first (its status no longer matches); otherwise try again later.
+      void done.catch(() => { closing.current.delete(o.id); });
+    }
+  }, [orders, closed, staffName]);
+  return closed;
+}
+
+type View = "requests" | "accepted" | "history";
+
+function GuestOrdersPanel({ orders, closed, onDone }: { orders: GuestOrder[]; closed: Map<string, FinishedBill>; onDone: () => void }) {
+  const [view, setView] = useState<View>("requests");
   const groups: Record<Exclude<View, "history">, GuestOrder[]> = {
     requests: orders.filter((o) => o.status === "new"),
     accepted: orders.filter((o) => (o.status === "accepted" || o.status === "ready") && !closed.has(o.order_uid ?? "")),
   };
-  const closing = useRef(new Set<string>());
-  useEffect(() => {
-    for (const o of orders) {
-      const billStatus = closed.get(o.order_uid ?? "");
-      if (!billStatus || (o.status !== "accepted" && o.status !== "ready") || closing.current.has(o.id)) continue;
-      closing.current.add(o.id);
-      void setGuestOrderStatus(o, billStatus === "void" ? "cancelled" : "completed", staffName, billStatus === "void" ? "Bill cancelled by restaurant" : "")
-        .then(onDone, () => { /* another terminal already updated it */ });
-    }
-  }, [orders, closed, staffName, onDone]);
   const list = view === "history" ? [] : sortGuestOrders(groups[view]);
   return (
     <div>

@@ -253,3 +253,17 @@ export function guestTableChoices<T extends { id: string; label: string; section
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
 }
 
+
+/**
+ * What a still-open QR order (accepted or ready) becomes once its bill is finished on any terminal:
+ * settled → completed with the bill's POS number; cancelled or removed → cancelled. Null = leave it.
+ */
+export function guestOrderClosing(
+  guest: Pick<GuestOrder, "status">,
+  bill: { status: "settled" | "void"; billNo: string } | undefined,
+): { status: "completed" | "cancelled"; reason: string; billNo: string } | null {
+  if (!bill || (guest.status !== "accepted" && guest.status !== "ready")) return null;
+  return bill.status === "void"
+    ? { status: "cancelled", reason: "Bill cancelled by restaurant", billNo: "" }
+    : { status: "completed", reason: "", billNo: bill.billNo };
+}
