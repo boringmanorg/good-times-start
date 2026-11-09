@@ -322,6 +322,21 @@ describe("rollout compatibility", () => {
     expect(server.fakeServer.requests.upsert).toBeGreaterThan(0);
   });
 
+  it("sends this terminal's device id with every push, so the audit log names the device", async () => {
+    await on("counter", () => save(order("o-0001")));
+    await syncNow("counter");
+    expect(serverRow("order", "o-0001")).toBeDefined();
+    expect(server.fakeServer.pushDevices.length).toBeGreaterThan(0);
+    expect(server.fakeServer.pushDevices.every((d) => typeof d === "string" && /^[a-z0-9-]{8,64}$/.test(d))).toBe(true);
+  });
+
+  it("still syncs through the plain push on a cloud without the device-aware call", async () => {
+    server.fakeServer.deviceAware = false;
+    await on("counter", () => save(order("o-0002")));
+    await syncNow("counter");
+    expect(serverRow("order", "o-0002")).toBeDefined();
+  });
+
   it("keeps offline sales queued and pushes them through the versioned path when back online", async () => {
     server.fakeServer.offline = true;
     await on("counter", () => save(order("o-0001", { status: "settled", payments: [{ mode: "cash", amount: 210 }] })));

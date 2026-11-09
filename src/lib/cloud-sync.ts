@@ -1,3 +1,4 @@
+import { getDeviceId } from "./terminal-actions";
 import { supabase } from "@/integrations/supabase/client";
 import { flushOfflineClaims, freshRestaurantNumber } from "@/lib/restaurant-numbering";
 import { SyncScheduler } from "./sync-scheduler";
@@ -280,6 +281,21 @@ const mergeAttempts = new Map<string, number>();
  * the function yet, "stalled" when nothing could leave the outbox this round
  * (e.g. a unit waiting on a conflict), otherwise "done".
  */
+
+/** Push with this terminal's device id, so the cloud audit log names the device; older clouds get the plain push. */
+let deviceAwarePush = true;
+async function pushUnits(restaurantId: string, units: unknown) {
+  if (deviceAwarePush) {
+    let device: string | null = null;
+    try { device = await getDeviceId(); } catch { /* storage unavailable */ }
+    const res = await supabase.rpc("push_restaurant_records_from" as never, { _restaurant_id: restaurantId, _units: units, _device: device } as never);
+    // Only an older cloud without the device-aware call turns it off; any other error is the push's own.
+    if (!(res.error && isMissingRpc(res.error) && /push_restaurant_records_from/.test(res.error.message ?? ""))) return res;
+    deviceAwarePush = false;
+  }
+  return supabase.rpc("push_restaurant_records" as never, { _restaurant_id: restaurantId, _units: units } as never);
+}
+
 async function pushVersioned(restaurantId: string, entries: OutboxEntry[], rows: PushRow[]): Promise<"legacy" | "stalled" | "done"> {
   const db = getDb();
   const unitRows: UnitRow[] = [];
@@ -295,7 +311,7 @@ async function pushVersioned(restaurantId: string, entries: OutboxEntry[], rows:
     for (const k of keys) siblingsOf.set(k, keys.filter((x) => x !== k));
   }
   const rowByKey = new Map(rows.map((r) => [outboxKey(r.kind as RecordKind, r.record_id), r]));
-  const { data, error } = await supabase.rpc("push_restaurant_records" as never, { _restaurant_id: restaurantId, _units: units } as never);
+  const { data, error } = await pushUnits(restaurantId, units);
   if (error && isMissingRpc(error)) { versionedServer = false; return "legacy"; }
   if (error) throw error;
   if (!isPushResults(data)) { versionedServer = false; return "legacy"; }

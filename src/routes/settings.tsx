@@ -22,6 +22,7 @@ import { OrderingSettings } from "@/components/OrderingSettings";
 import { LoginsSettings } from "@/components/LoginsSettings";
 import { RolesSettings } from "@/components/RolesSettings";
 import { TerminalsSettings } from "@/components/TerminalsSettings";
+import { AuditLogSettings } from "@/components/AuditLogSettings";
 import { cn } from "@/lib/utils";
 import { Dropdown } from "@/components/Dropdown";
 import { Segmented } from "@/components/Segmented";
@@ -355,13 +356,14 @@ function ThisDevice() {
   );
 }
 
-type Tab = "restaurant" | "billing" | "ordering" | "printing" | "logins" | "roles" | "terminals" | "device";
+type Tab = "restaurant" | "billing" | "ordering" | "printing" | "logins" | "roles" | "terminals" | "audit" | "device";
 
 interface SettingCard { v: Tab | null; to?: string; hash?: string; l: string; d: string; group: string; staff?: boolean }
 
 /** Settings grouped like a back office: outlet, staff and access, marketing, this device. */
 const CARDS: SettingCard[] = [
   { v: "terminals", l: "Terminals", d: "See, rename, block or release each device and its bill series", group: "Outlet settings" },
+  { v: "audit", l: "Audit log", d: "Every change to bills, KOTs, menu, purchases and settings: who, which terminal and when", group: "Outlet settings" },
   { v: null, to: "/tables", l: "Sections & Tables", d: "Manage the seating layout", group: "Outlet settings" },
   { v: "billing", l: "Invoice & GST", d: "GST, payment modes, discounts, service charge, loyalty and bill footer", group: "Outlet settings" },
   { v: "printing", l: "Printing & KOT", d: "Printers, KOT copies and kitchen stations", group: "Outlet settings", staff: true },
@@ -427,6 +429,7 @@ function SettingsPage() {
               {visibleTab === "logins" ? <LoginsSettings /> : null}
               {visibleTab === "roles" ? <RolesSettings /> : null}
               {visibleTab === "terminals" ? <TerminalsSettings /> : null}
+              {visibleTab === "audit" ? <AuditLogSettings /> : null}
               {visibleTab === "device" ? <ThisDevice /> : null}
             </div>
           </> : <>

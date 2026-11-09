@@ -28,6 +28,9 @@ export const fakeServer = {
   staffOnly: new Set<string>(),
   /** Like migration 0012: bills, tickets and stock made before this moment are refused. */
   launchedAt: null as number | null,
+  /** The cloud has push_restaurant_records_from (device id for the audit log). */
+  deviceAware: true,
+  pushDevices: [] as (string | null)[],
   requests: { upsert: 0, select: 0, rowsReturned: 0, rpc: 0 } as { upsert: number; select: number; rowsReturned: number; rpc?: number },
   /** Like migration 0020 being applied: push_restaurant_records exists and rows carry versions. */
   versioned: false,
@@ -57,6 +60,8 @@ export const fakeServer = {
     this.staffOnly.clear();
     this.launchedAt = null;
     this.requests = { upsert: 0, select: 0, rowsReturned: 0, rpc: 0 };
+    this.deviceAware = true;
+    this.pushDevices = [];
   },
   /** Write a row directly with a chosen timestamp (e.g. one that committed late). */
   insertAt(row: Omit<ServerRow, "updated_at">, at: number) {
@@ -223,6 +228,11 @@ export const supabase = {
         fakeServer.allocations.set(key, n);
       }
       return { data: `${a._series}/${String(n).padStart(4, "0")}`, error: null };
+    }
+    if (name === "push_restaurant_records_from") {
+      if (!fakeServer.deviceAware) return { data: null, error: { code: "PGRST202", message: "Could not find the function public.push_restaurant_records_from" } };
+      fakeServer.pushDevices.push((args as unknown as { _device: string | null })._device);
+      name = "push_restaurant_records";
     }
     if (name !== "push_restaurant_records") return { data: null, error: null };
     fakeServer.requests.rpc = (fakeServer.requests.rpc ?? 0) + 1;
