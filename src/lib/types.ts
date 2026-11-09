@@ -36,7 +36,7 @@ export interface MenuItem {
   addons?: MenuOption[];
   /** Price overrides by order type, e.g. a higher Swiggy price. Ignored for dishes with portions. */
   prices?: Partial<Record<OrderType, number>>;
-  /** Raw materials used per portion; deducted from stock when the bill settles. */
+  /** Saved recipe for future recipe management; not deducted at settlement. */
   recipe?: { materialId: string; qty: number }[];
   /** What comes with the dish, e.g. a breakfast platter's contents. */
   description?: string;
@@ -264,6 +264,9 @@ export interface StockEntry {
   reference?: string;
   note?: string;
   by?: string;
+  /** Original supplier purchase; only linked returns use this field. */
+  purchaseId?: string;
+  supplierName?: string;
 }
 
 export interface Customer {
