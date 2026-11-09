@@ -22,3 +22,25 @@ describe("supplier purchase rules", () => {
     expect(purchaseItemSummary(material, [])).toMatchObject({ count: 0, lastQty: undefined, lastPrice: undefined });
   });
 });
+import { entryAmount, itemPurchaseLines, itemTotals, supplierHistories } from "./purchase-logic";
+describe("purchase history views", () => {
+  const day = (d: number, h = 10) => new Date(2026, 10, d, h).getTime();
+  const entries = [
+    { id: "p1", type: "purchase" as const, at: day(8), supplierId: "s1", supplierName: "Lyngdoh Traders", reference: "INV-1", items: [{ materialId: "rice", qty: 10, unitCost: 100 }, { materialId: "dal", qty: 2, unitCost: 120 }] },
+    { id: "p2", type: "purchase" as const, at: day(9, 9), supplierId: "s1", supplierName: "Lyngdoh Traders", items: [{ materialId: "rice", qty: 5, unitCost: 110 }] },
+    { id: "r1", type: "return" as const, at: day(9, 12), purchaseId: "p2", items: [{ materialId: "rice", qty: -1, unitCost: 110 }] },
+    { id: "p3", type: "purchase" as const, at: day(9, 15), items: [{ materialId: "dal", qty: 1, unitCost: 130 }] },
+  ];
+  const suppliers = [{ id: "s1", name: "Lyngdoh Traders" }];
+  it("lists an item's purchases and returns newest first, with net totals", () => {
+    const lines = itemPurchaseLines("rice", entries, suppliers);
+    expect(lines.map((l) => [l.kind, l.qty, l.amount, l.supplier])).toEqual([["return", 1, -110, "Lyngdoh Traders"], ["purchase", 5, 550, "Lyngdoh Traders"], ["purchase", 10, 1000, "Lyngdoh Traders"]]);
+    expect(itemTotals(lines)).toEqual({ qty: 14, amount: 1440, bills: 2 });
+  });
+  it("totals each vendor net of returns and splits it into days", () => {
+    const v = supplierHistories(entries, suppliers);
+    expect(v.map((x) => [x.name, x.amount, x.bills, x.returns])).toEqual([["Supplier not recorded", 130, 1, 0], ["Lyngdoh Traders", 1680, 2, 1]]);
+    expect(v[1]?.days.map((d) => d.amount)).toEqual([440, 1240]);
+    expect(entryAmount(entries[2]!)).toBe(-110);
+  });
+});

@@ -7,7 +7,7 @@ import type { CartLine, Material, StockEntry, Supplier } from "./types";
 export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { id?: string; at?: number }): Promise<StockEntry> {
   const db = getDb();
   const saved: StockEntry = { ...entry, id: entry.id ?? newUid(), at: entry.at ?? Date.now(), items: entry.items.filter((i) => i.qty !== 0) };
-  await db.transaction("rw", db.stockEntries, db.materialLevels, async () => {
+  await db.transaction("rw", db.stockEntries, db.materialLevels, db.materials, async () => {
     const existing = await db.stockEntries.get(saved.id);
     if (existing) {
       if (JSON.stringify(existing) !== JSON.stringify(saved)) throw new Error("Recorded purchase entries cannot be modified.");
@@ -21,9 +21,20 @@ export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { 
       const purchase = await db.stockEntries.get(saved.purchaseId);
       if (!purchase) throw new Error("Original supplier purchase not found.");
       validatePurchaseReturn(purchase, await db.stockEntries.toArray(), saved.items);
-      saved.items = saved.items.map((i) => ({ ...i, unitCost: purchase.items.find((p) => p.materialId === i.materialId)?.unitCost ?? 0 }));
+      saved.items = saved.items.map((i) => {
+        const bought = purchase.items.find((p) => p.materialId === i.materialId);
+        return { ...i, unitCost: bought?.unitCost ?? 0, ...(bought?.name ? { name: bought.name } : {}), ...(bought?.unit ? { unit: bought.unit } : {}) };
+      });
+      if (!saved.supplierName && purchase.supplierName) saved.supplierName = purchase.supplierName;
     } else {
       throw new Error("Only purchases and linked supplier returns can be recorded.");
+    }
+    if (saved.type === "purchase") {
+      const materials = new Map((await db.materials.toArray()).map((m) => [m.id, m]));
+      saved.items = saved.items.map((i) => {
+        const m = materials.get(i.materialId);
+        return m ? { ...i, name: i.name ?? m.name, unit: i.unit ?? m.unit } : i;
+      });
     }
     await applyEntryToLevels(db, saved.id, saved);
     await db.stockEntries.add(saved);
@@ -49,23 +60,25 @@ export async function saveMaterial(material: Material): Promise<void> {
 }
 
 /**
- * Edit a purchase item: name, standard price, low-stock level, hidden or shown. The unit is fixed once the
- * item has been bought, so recorded quantities keep their meaning. Purchase bills themselves never change.
+ * Edit a purchase item's name and standard price. The unit is set when the item is added and never changes.
+ * Purchase bills themselves never change; they keep the name, unit and price they were recorded with.
  */
 export async function updateMaterial(material: Material): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", db.materials, db.stockEntries, async () => {
+  await db.transaction("rw", db.materials, async () => {
     const prior = await db.materials.get(material.id);
     if (!prior) throw new Error("This purchase item no longer exists.");
     if (!material.name.trim() || !Number.isFinite(material.costPerUnit) || (material.costPerUnit ?? -1) < 0) throw new Error("Enter an item name and a valid standard price.");
-    if (!Number.isFinite(material.lowStockLevel) || material.lowStockLevel < 0) throw new Error("The low-stock level must be 0 or more.");
-    if (material.unit !== prior.unit) {
-      const bought = (await db.stockEntries.toArray()).some((e) => e.items.some((i) => i.materialId === material.id));
-      if (bought) throw new Error(`The unit can't change after purchases are recorded in ${prior.unit}. Add a new item instead.`);
-    }
-    await db.materials.put({ ...prior, ...material, name: material.name.trim().slice(0, 60) });
+    if (material.unit !== prior.unit) throw new Error("The unit is fixed when an item is added. Add a new item for a different unit.");
+    await db.materials.put({ ...prior, name: material.name.trim().slice(0, 60), costPerUnit: material.costPerUnit ?? 0 });
   });
   await markDirty(["material", material.id]);
+}
+
+/** Delete a purchase item from the list. Recorded purchases and returns keep their own copy of its name and unit. */
+export async function deleteMaterial(id: string): Promise<void> {
+  await getDb().materials.delete(id);
+  await markDirty(["material", id]);
 }
 
 export async function saveSupplier(supplier: Supplier): Promise<void> {

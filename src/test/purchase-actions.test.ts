@@ -12,16 +12,22 @@ describe("immutable purchase records", () => {
     await expect(actions.saveMaterial({ ...material, costPerUnit: 90 })).rejects.toThrow(/cannot be modified/);
     expect(await db.getDb().materials.get("rice")).toEqual(material);
   });
-  it("edits an item's name, price, low-stock level and visibility, and its unit until it is bought", async () => {
+  it("edits only name and standard price; the unit never changes; delete keeps history readable", async () => {
     const material = { id: "dal", name: "Dal", unit: "kg" as const, costPerUnit: 100, lowStockLevel: 0 };
     await actions.saveMaterial(material);
-    await actions.updateMaterial({ ...material, name: "Toor dal ", costPerUnit: 120, lowStockLevel: 5, unit: "g" });
-    expect(await db.getDb().materials.get("dal")).toMatchObject({ name: "Toor dal", costPerUnit: 120, lowStockLevel: 5, unit: "g" });
-    await actions.recordStockEntry({ type: "purchase", items: [{ materialId: "dal", qty: 500, unitCost: 0.12 }] });
-    await expect(actions.updateMaterial({ ...material, unit: "kg" })).rejects.toThrow(/unit can't change/);
-    await actions.updateMaterial({ ...material, name: "Toor dal", unit: "g", costPerUnit: 0.13, archived: true });
-    expect(await db.getDb().materials.get("dal")).toMatchObject({ archived: true, costPerUnit: 0.13 });
-    await expect(actions.updateMaterial({ ...material, unit: "g", costPerUnit: -1 })).rejects.toThrow(/valid standard price/);
+    await expect(actions.updateMaterial({ ...material, unit: "g" })).rejects.toThrow(/unit is fixed/);
+    await actions.updateMaterial({ ...material, name: "Toor dal ", costPerUnit: 120 });
+    expect(await db.getDb().materials.get("dal")).toMatchObject({ name: "Toor dal", costPerUnit: 120, unit: "kg" });
+    const bill = await actions.recordStockEntry({ type: "purchase", supplierName: "Lyngdoh Traders", items: [{ materialId: "dal", qty: 5, unitCost: 118 }] });
+    expect(bill.items[0]).toMatchObject({ name: "Toor dal", unit: "kg" });
+    const back = await actions.recordStockEntry({ type: "return", purchaseId: bill.id, items: [{ materialId: "dal", qty: -1 }] });
+    expect(back.items[0]).toMatchObject({ name: "Toor dal", unit: "kg", unitCost: 118 });
+    expect(back.supplierName).toBe("Lyngdoh Traders");
+    await actions.updateMaterial({ ...material, name: "Arhar dal", costPerUnit: 125 });
+    expect((await db.getDb().stockEntries.get(bill.id))?.items[0]?.name).toBe("Toor dal");
+    await actions.deleteMaterial("dal");
+    expect(await db.getDb().materials.get("dal")).toBeUndefined();
+    expect(await db.getDb().stockEntries.get(bill.id)).toBeDefined();
   });
   it("preserves the original invoice when an item is returned", async () => {
     const purchase = await actions.recordStockEntry({ id: "p1", type: "purchase", items: [{ materialId: "rice", qty: 5, unitCost: 80 }] });

@@ -260,7 +260,8 @@ export interface StockEntry {
   id: string;
   type: "purchase" | "sale" | "wastage" | "count" | "return";
   at: number;
-  items: { materialId: string; qty: number; unitCost?: number }[];
+  /** name and unit are copied when the entry is recorded, so history still reads correctly after an item is renamed or deleted. */
+  items: { materialId: string; qty: number; unitCost?: number; name?: string; unit?: StockUnit }[];
   supplierId?: string;
   /** Supplier invoice number, or the bill number for sales. */
   reference?: string;
