@@ -227,6 +227,8 @@ export interface RestaurantSettings {
   rolePolicy?: import("./role-policy").SavedRolePolicy;
   /** Admin PIN for "On with PIN" actions: a salted slow hash, never the PIN. */
   adminPin?: import("./role-policy").PinHash;
+  /** Terminals (device ids) the admin has enabled for Marketing; no other terminal may open it. */
+  marketingDevices?: string[];
   updatedAt?: number;
 }
 

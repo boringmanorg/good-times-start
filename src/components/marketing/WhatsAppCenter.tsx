@@ -336,7 +336,7 @@ function AutoSetup({ restaurantId, settings, configured }: { restaurantId: strin
 /* --------------------------------------------------------------- history */
 
 function History({ restaurantId }: { restaurantId: string }) {
-  const campaigns = useQuery({ queryKey: ["campaigns", restaurantId], queryFn: () => loadCampaigns(restaurantId), staleTime: 30_000 });
+  const campaigns = useQuery({ queryKey: ["campaigns", restaurantId], queryFn: () => loadCampaigns(restaurantId), staleTime: 30_000, networkMode: "always" });
   return (
     <section className="border-t border-border pt-8">
       <h2 className="text-base font-bold">Past campaigns</h2>

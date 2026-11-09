@@ -61,14 +61,32 @@ DROP TRIGGER IF EXISTS restaurant_records_audit ON public.restaurant_records;
 CREATE TRIGGER restaurant_records_audit AFTER INSERT OR UPDATE ON public.restaurant_records
   FOR EACH ROW EXECUTE FUNCTION public.write_record_audit();
 
--- Sync with the terminal's device id, so each logged change names the device it came from.
+-- Sync with the terminal's device id, so each logged change names the device it came from, and blocked terminals are refused.
+-- Staff can't read the terminals list, so the blocked check runs with the database's rights.
+CREATE OR REPLACE FUNCTION public.terminal_is_blocked(_restaurant_id uuid, _device text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (SELECT 1 FROM public.terminals t WHERE t.restaurant_id = _restaurant_id AND t.device_id = _device AND t.status = 'blocked')
+$function$;
+REVOKE EXECUTE ON FUNCTION public.terminal_is_blocked(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.terminal_is_blocked(uuid, text) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.push_restaurant_records_from(_restaurant_id uuid, _units jsonb, _device text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SET search_path TO 'public'
 AS $function$
 BEGIN
-  IF _device IS NOT NULL AND _device ~ '^[a-z0-9-]{8,64}$' THEN PERFORM set_config('xtsy.device', _device, true); END IF;
+  IF _device IS NOT NULL AND _device ~ '^[a-z0-9-]{8,64}$' THEN
+    -- A terminal the admin blocked can't change anything, even if its app keeps running.
+    IF public.terminal_is_blocked(_restaurant_id, _device) THEN
+      RAISE EXCEPTION 'This terminal is blocked by the admin.' USING ERRCODE = '42501';
+    END IF;
+    PERFORM set_config('xtsy.device', _device, true);
+  END IF;
   RETURN public.push_restaurant_records(_restaurant_id, _units);
 END $function$;
 REVOKE EXECUTE ON FUNCTION public.push_restaurant_records_from(uuid, jsonb, text) FROM PUBLIC, anon;

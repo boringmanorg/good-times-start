@@ -11,7 +11,7 @@ export function MarketingResults({ restaurantId }: { restaurantId: string }) {
   const [days, setDays] = useState<7 | 30 | 90>(30);
   const tables = useLiveQuery(() => getDb().restTables.toArray(), [], []);
   const optedIn = useLiveQuery(async () => (await getDb().customers.toArray()).filter((c) => c.whatsapp?.optIn).length, [], 0);
-  const q = useQuery({ queryKey: ["scans", restaurantId, days], queryFn: () => loadScans(restaurantId, days), staleTime: 60_000 });
+  const q = useQuery({ queryKey: ["scans", restaurantId, days], queryFn: () => loadScans(restaurantId, days), staleTime: 60_000, networkMode: "always" });
   const rows = useMemo(() => (q.data ? scanSummary(q.data.scans, q.data.ordersBySource) : []), [q.data]);
   const totalScans = rows.reduce((n, r) => n + r.scans, 0);
   const totalOrders = rows.reduce((n, r) => n + r.orders, 0);
@@ -32,6 +32,7 @@ export function MarketingResults({ restaurantId }: { restaurantId: string }) {
     <div className="space-y-6">
       <Segmented ariaLabel="Period" value={days} onChange={setDays} options={[{ value: 7, label: "7 days" }, { value: 30, label: "30 days" }, { value: 90, label: "90 days" }]} />
       {q.isError ? <p className="text-sm text-muted-foreground">{q.error instanceof Error ? q.error.message : "Couldn't load results."}</p> : null}
+      {q.data?.offline ? <p className="text-sm text-muted-foreground">Offline: these are the results this terminal last loaded, {new Date(q.data.savedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.</p> : null}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Tile icon={QrCode} label="Menu opens from QR & links" value={totalScans} />
         <Tile icon={ShoppingBag} label="Guest orders" value={totalOrders} />

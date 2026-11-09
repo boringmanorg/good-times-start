@@ -1,4 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { useMarketingAccess, useMarketingOutbox } from "@/lib/marketing-access";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChefHat, ClipboardList, LayoutGrid, BarChart3, UtensilsCrossed, Settings, Package, Users, Tablet, Wifi, WifiOff, RefreshCw, AlertTriangle, Sparkles, LogIn, LogOut, Store, ShieldCheck, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ArrowRightLeft } from "lucide-react";
@@ -65,7 +66,8 @@ function policyAllows(role: string, to: NavPath): boolean {
 /** Screens each app shows, in menu order. */
 const APP_SCREENS: Record<AppKind, NavPath[]> = {
   manager: ["/dashboard", "/menu", "/stock", "/customers", "/reports", "/marketing", "/settings"],
-  pos: ["/tables", "/customers", "/menu", "/stock", "/reports", "/dashboard", "/kitchen", "/settings"],
+  // Marketing shows on a POS terminal only after the admin enables that terminal (Settings → Terminals).
+  pos: ["/tables", "/customers", "/menu", "/stock", "/reports", "/dashboard", "/kitchen", "/marketing", "/settings"],
   waiter: ["/waiter"],
 };
 
@@ -349,7 +351,9 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   const needsRestaurant = !!user && !user.restaurantId && pathname !== "/settings";
   const app = useAppMode(user);
   usePolicy();
-  const allowed = screensFor(user?.role, app);
+  const marketing = useMarketingAccess(user?.role);
+  useMarketingOutbox(marketing.denied === null); // queued marketing changes upload even when Marketing isn't open
+  const allowed = screensFor(user?.role, app).filter((to) => to !== "/marketing" || marketing.denied === null || marketing.denied === "loading");
   const nav = NAV.filter((n) => allowed.includes(n.to)).sort((a, b) => allowed.indexOf(a.to) - allowed.indexOf(b.to));
   const otherApps = (appsFor(user?.login ?? null, user?.role) as AppKind[]).filter((a) => a !== app && a !== "waiter");
   // A bill ("/") belongs to Tables: it only opens from a table or a counter order there.
@@ -415,8 +419,13 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
           <SyncConflictAlert />
           {needsRestaurant ? <NotLinked /> : blocked ? (
             <div className="mx-auto max-w-md p-8 text-center">
-              <p className="font-semibold">This screen isn't part of {APPS[app].name}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{app === "manager" ? "Open tables and printing from Restro POS by XTSY." : "Ask the admin if you need it."}</p>
+              {current?.to === "/marketing" && marketing.denied === "terminal" ? <>
+                <p className="font-semibold">Marketing isn't enabled on this terminal</p>
+                <p className="mt-1 text-sm text-muted-foreground">It's an admin tool that opens only on terminals the admin switches on in Settings → Terminals → Marketing.</p>
+              </> : <>
+                <p className="font-semibold">This screen isn't part of {APPS[app].name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{app === "manager" ? "Open tables and printing from Restro POS by XTSY." : "Ask the admin if you need it."}</p>
+              </>}
               <Link to={home} className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Go to {NAV.find((n) => n.to === home)?.label}</Link>
             </div>
           ) : children}

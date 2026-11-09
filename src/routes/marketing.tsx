@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell, useRestaurantSettings } from "@/components/AppShell";
@@ -8,8 +8,7 @@ import { QrKit } from "@/components/marketing/QrKit";
 import { WhatsAppCenter } from "@/components/marketing/WhatsAppCenter";
 import { MarketingResults } from "@/components/marketing/MarketingResults";
 import { useStaff } from "@/lib/auth-context";
-import { can } from "@/lib/permissions";
-import { useAccount } from "@/lib/use-account";
+import { useMarketingAccess, useMarketingOutbox } from "@/lib/marketing-access";
 import { loadBrandingAndMarketing } from "@/lib/marketing-actions";
 import { cn } from "@/lib/utils";
 
@@ -33,37 +32,55 @@ function MarketingPage() {
   const navigate = Route.useNavigate();
   const tab = search.tab ?? "brand";
   const settings = useRestaurantSettings();
-  const account = useAccount();
+  const { denied } = useMarketingAccess(user?.role);
   const restaurantId = user?.restaurantId ?? null;
+  const pending = useMarketingOutbox(!denied && !!restaurantId);
   const data = useQuery({
     queryKey: ["branding", restaurantId],
-    enabled: !!restaurantId && can(user, "marketing.manage"),
+    enabled: !!restaurantId && !denied,
     queryFn: () => loadBrandingAndMarketing(restaurantId ?? ""),
     staleTime: 5 * 60_000,
+    networkMode: "always",
   });
+  useEffect(() => {
+    const again = () => void data.refetch();
+    window.addEventListener("online", again);
+    return () => window.removeEventListener("online", again);
+  }, [data]);
 
-  if (!can(user, "marketing.manage")) {
+  if (denied === "role") {
     return <AppShell><p className="mx-auto max-w-md p-8 text-center text-sm text-muted-foreground">Marketing is for the owner and managers.</p></AppShell>;
   }
-  const outlet = account.data?.outlet;
-  const name = settings.name || outlet?.name || "";
+  if (denied === "terminal") {
+    return <AppShell><div className="mx-auto max-w-md p-8 text-center"><p className="font-semibold">Marketing isn't enabled on this terminal</p>
+      <p className="mt-1 text-sm text-muted-foreground">The admin can switch it on in Settings → Terminals → Marketing.</p></div></AppShell>;
+  }
+  const snapshot = data.data;
+  const name = settings.name || snapshot?.outlet?.name || "";
 
   let body: ReactNode;
   if (!restaurantId) body = <p className="text-sm text-muted-foreground">Join a restaurant first.</p>;
-  else if (data.isLoading || account.isLoading) body = <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-card" />)}</div>;
-  else if (data.isError || !data.data) {
+  else if (denied === "loading" || data.isLoading) body = <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-card" />)}</div>;
+  else if (data.isError || !snapshot) {
     body = (
       <div className="rounded-2xl border border-border bg-card p-6 text-center">
-        <p className="font-semibold">Marketing needs the internet</p>
-        <p className="mt-1 text-sm text-muted-foreground">{data.error instanceof Error ? data.error.message : "Check the connection and try again."}</p>
+        <p className="font-semibold">Couldn't open Marketing</p>
+        <p className="mt-1 text-sm text-muted-foreground">{data.error instanceof Error ? data.error.message : "Try again."}</p>
         <Button className="mt-4" onClick={() => void data.refetch()}>Try again</Button>
       </div>
     );
-  } else if (tab === "brand") body = <BrandEditor restaurantId={restaurantId} restaurantName={name} saved={data.data.branding} />;
-  else if (tab === "qr") body = outlet?.slug ? <QrKit slug={outlet.slug} restaurantName={name} brand={data.data.branding} ordering={outlet.ordering ?? {}} />
+  } else if (tab === "brand") body = <BrandEditor restaurantId={restaurantId} restaurantName={name} saved={snapshot.branding} />;
+  else if (tab === "qr") body = snapshot.outlet?.slug ? <QrKit slug={snapshot.outlet.slug} restaurantName={name} brand={snapshot.branding} ordering={snapshot.outlet.ordering ?? {}} />
     : <p className="text-sm text-muted-foreground">Set your ordering web address in Settings → Guest ordering first.</p>;
-  else if (tab === "whatsapp") body = <WhatsAppCenter restaurantId={restaurantId} restaurantName={name} slug={outlet?.slug ?? null} brand={data.data.branding} settings={data.data.marketing} />;
+  else if (tab === "whatsapp") body = <WhatsAppCenter restaurantId={restaurantId} restaurantName={name} slug={snapshot.outlet?.slug ?? null} brand={snapshot.branding} settings={snapshot.marketing} />;
   else body = <MarketingResults restaurantId={restaurantId} />;
+
+  const banner = snapshot?.offline || pending ? (
+    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-secondary px-4 py-2.5 text-sm">
+      {snapshot?.offline ? <span><strong>Offline.</strong> Showing what this terminal last saw ({new Date(snapshot.savedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}). Changes you make are kept here.</span> : null}
+      {pending ? <span className="font-semibold text-warning">{pending} {pending === 1 ? "change" : "changes"} waiting to upload</span> : null}
+    </div>
+  ) : null;
 
   return (
     <AppShell>
@@ -76,7 +93,7 @@ function MarketingPage() {
             ))}
           </nav>
         </div>
-        <div className="mx-auto max-w-6xl p-4 lg:p-8">{body}</div>
+        <div className="mx-auto max-w-6xl p-4 lg:p-8">{banner}{body}</div>
       </div>
     </AppShell>
   );
