@@ -13,7 +13,7 @@ declare d text := pg_get_functiondef('public.place_guest_order(text,text,text,te
   IF (SELECT count(*) FROM guest_orders WHERE restaurant_id = rr.id AND status = 'new'
         AND ((_channel = 'table' AND table_id = _table_id AND created_at > now() - interval '10 minutes')
           OR (_channel = 'online' AND customer_phone = digits AND created_at > now() - interval '3 minutes')))
-     >= CASE WHEN _channel = 'table' THEN 8 ELSE 3 END THEN$n$;
+     >= (CASE WHEN _channel = 'table' THEN 8 ELSE 3 END) THEN$n$;
   old2 text := $o$  IF (SELECT count(*) FROM guest_orders WHERE restaurant_id = rr.id AND created_at > now() - interval '1 minute') >= 40 THEN$o$;
   new2 text := $n$  -- Whole-restaurant flood guard grows with the floor: 3 orders a minute per table or room (at least 60),
   -- so tables added later raise it automatically.
