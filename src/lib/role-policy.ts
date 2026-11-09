@@ -38,7 +38,7 @@ export const POLICY_ACTIONS: { id: PolicyAction; label: string; hint: string; ro
 export type PolicyScreen = "/tables" | "/menu" | "/stock" | "/customers" | "/reports";
 export const POLICY_SCREENS: { path: PolicyScreen; label: string; hint: string }[] = [
   { path: "/menu", label: "Menu (view)", hint: "See dishes and mark sold out; editing stays admin-only" },
-  { path: "/stock", label: "Stock (wastage)", hint: "Record wastage; set-up and purchases stay admin-only" },
+  { path: "/stock", label: "Purchase (view)", hint: "Items and purchase history; recording and returns stay admin-only" },
   { path: "/customers", label: "Guests", hint: "Guest list, dues and WhatsApp consent" },
   { path: "/reports", label: "Reports", hint: "Daily summary, and Sales Summary if allowed below" },
 ];
@@ -46,7 +46,7 @@ export const POLICY_SCREENS: { path: PolicyScreen; label: string; hint: string }
 /** Never configurable: kept with owners and managers, and enforced by the database. */
 export const ALWAYS_ADMIN = [
   "Editing the menu, recipes, prices and tables",
-  "Stock set-up, purchases and counts",
+  "Purchase items, supplier bills and returns",
   "Restaurant settings, logins, roles and terminals",
   "Voiding or changing a settled bill",
   "Full reports and exports",

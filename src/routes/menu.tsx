@@ -173,29 +173,6 @@ function ItemEditor({ item, stock, categories, stations, materials, onClose }: {
       ) : null}
 
       <fieldset className="rounded-lg border border-border p-3">
-        <legend className="px-1 text-sm font-semibold">Recipe, per portion</legend>
-        {materials.length ? <>
-          <p className="text-xs text-muted-foreground">Ingredients used up each time this dish is billed. Leave empty if you don't track ingredients.</p>
-          <div className="mt-2 space-y-2">
-            {draft.recipe.map((row, index) => {
-              const unit = materials.find((m) => m.id === row.materialId)?.unit ?? "";
-              const update = (change: Partial<typeof row>) => set("recipe", draft.recipe.map((r, i) => (i === index ? { ...r, ...change } : r)));
-              return (
-                <div key={index} className="flex gap-2">
-                  <Dropdown ariaLabel="Ingredient" className="min-w-0 flex-1" value={row.materialId} onChange={(materialId) => update({ materialId })} placeholder="Choose ingredient" searchable
-                    options={materials.map((m) => ({ value: m.id, label: m.name, hint: m.unit }))} />
-                  <input aria-label="Amount per portion" inputMode="decimal" value={row.qty} onChange={(e) => update({ qty: e.target.value })} placeholder={unit || "Amount"} className="w-24 rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
-                  <span className="w-10 self-center text-xs text-muted-foreground">{unit}</span>
-                  <Button type="button" size="icon" variant="ghost" aria-label="Remove ingredient" onClick={() => set("recipe", draft.recipe.filter((_, i) => i !== index))}><X /></Button>
-                </div>
-              );
-            })}
-          </div>
-          <Button type="button" size="sm" variant="ghost" className="mt-1" onClick={() => set("recipe", [...draft.recipe, { materialId: "", qty: "" }])}><Plus />Add ingredient</Button>
-        </> : <p className="text-xs text-muted-foreground">Add raw materials in Stock first to give this dish a recipe.</p>}
-      </fieldset>
-
-      <fieldset className="rounded-lg border border-border p-3">
         <legend className="px-1 text-sm font-semibold">Portions in stock</legend>
         <label className="flex items-center gap-2 text-sm"><Switch checked={stockDraft.tracked} onCheckedChange={(v) => setStockDraft((s) => ({ ...s, tracked: v }))} />Count portions and stop selling at zero</label>
         {stockDraft.tracked ? (

@@ -11,12 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { requeueHeldRecords, clearSyncNotice, getLiveStatus, getSyncSnapshot, onLiveStatus, saveSyncError, syncCloudData } from "@/lib/cloud-sync";
 import { diagnoseCloudSync } from "@/lib/sync-diagnosis.functions";
 import logo from "@/assets/logo.png";
-import { getDb, getMaterialLevels } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { InstallButton } from "@/components/AppInstall";
 import { PinGate, PolicySync, usePolicy } from "@/components/PinGate";
 import { can, screenPermitted } from "@/lib/permissions";
-import { isLow } from "@/lib/stock-logic";
 import { GuestOrdersButton } from "@/components/GuestOrders";
 import { currentDevice, setAppMode, syncAppModeFromUrl, useAppMode } from "@/lib/app-mode";
 import { touchTerminal, useTerminalStatus } from "@/lib/terminal-actions";
@@ -34,7 +33,7 @@ const NAV = [
   { to: "/tables", label: "Tables", icon: LayoutGrid },
   { to: "/menu", label: "Menu", icon: UtensilsCrossed },
   { to: "/kitchen", label: "Kitchen", icon: ChefHat },
-  { to: "/stock", label: "Stock", icon: Package },
+  { to: "/stock", label: "Purchase", icon: Package },
   { to: "/customers", label: "Guests", icon: Users },
   { to: "/reports", label: "Summary", icon: BarChart3 },
   { to: "/marketing", label: "Marketing", icon: Sparkles },
@@ -348,10 +347,6 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   const settings = useRestaurantSettings();
   const restaurantName = settings.name || user?.restaurantName || "";
   const needsRestaurant = !!user && !user.restaurantId && pathname !== "/settings";
-  const lowStock = useLiveQuery(async () => {
-    const [materials, levels] = await Promise.all([getDb().materials.toArray(), getMaterialLevels()]);
-    return materials.filter((m) => !m.archived && isLow(m, levels.get(m.id) ?? 0)).length;
-  }, [], 0);
   const app = useAppMode(user);
   usePolicy();
   const allowed = screensFor(user?.role, app);
@@ -383,7 +378,6 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
                 {active ? <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-sidebar-primary" aria-hidden="true" /> : null}
                 <Icon className={wide ? "size-[1.15rem] shrink-0" : "size-[1.3rem]"} strokeWidth={active ? 2.2 : 1.8} />
                 <span className="truncate">{label}</span>
-                {to === "/stock" && lowStock > 0 ? <span className={`min-w-[1.1rem] rounded-full bg-destructive px-1 text-center text-[10px] font-semibold text-destructive-foreground ${wide ? "ml-auto" : "absolute right-1.5 top-1"}`} aria-label={`${lowStock} running low`}>{lowStock}</span> : null}
               </Link>
             );
           })}

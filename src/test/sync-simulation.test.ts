@@ -256,8 +256,11 @@ describe("multi-device sync", () => {
   it("keeps stock levels right when ledger entries arrive more than once", async () => {
     await on("store-room", async () => {
       await stock.recordStockEntry({ type: "purchase", items: [{ materialId: "paneer", qty: 5, unitCost: 380 }] });
-      await stock.recordStockEntry({ id: "sale:o-1", type: "sale", items: [{ materialId: "paneer", qty: -0.4 }] });
-      await stock.recordStockEntry({ id: "sale:o-1", type: "sale", items: [{ materialId: "paneer", qty: -0.4 }] }); // same bill twice
+      const purchase = (await db.getDb().stockEntries.toArray())[0];
+      if (!purchase) throw new Error("Missing purchase");
+      const entry = { id: "supplier-return-1", at: Date.now(), type: "return" as const, purchaseId: purchase.id, items: [{ materialId: "paneer", qty: -0.4, unitCost: 380 }] };
+      await stock.recordStockEntry(entry);
+      await stock.recordStockEntry(entry); // the same recorded return is idempotent
     });
     expect((await on("store-room", () => db.getMaterialLevels())).get("paneer")).toBe(4.6);
     await syncNow("store-room");

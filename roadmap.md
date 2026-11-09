@@ -1,5 +1,10 @@
 # POS expansion
 
+## Purchase ledger
+- [ ] Replace Stock with Purchase and Items catalogue; show standard prices, latest quantity/price, frequency and full purchase history.
+- [ ] Disable recipe deductions, lock purchase items/bills, and implement linked supplier returns within 48 hours with local/cloud validation.
+- [ ] Run purchase/settlement regression tests and isolated signed-in desktop/mobile purchase-to-return workflow.
+
 ## Guests and nearby printing
 - [ ] Fix guest-detail horizontal clipping and steady scrollable sizing; add authorized nearby print controls on saved bill/KOT surfaces while keeping Business Manager thermal printing blocked.
 
