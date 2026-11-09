@@ -211,6 +211,13 @@
       "when": 1794203871411,
       "tag": "0029_protect_purchase_ledger_and_supplier_returns",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794204134157,
+      "tag": "0030_preserve_pre_purchase_rollout_offline_ledger",
+      "breakpoints": true
     }
   ]
 }
