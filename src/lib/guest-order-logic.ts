@@ -48,6 +48,21 @@ export interface GuestOrder {
   source?: string;
   /** Server-assigned QR series number (QR/0001…); null for orders placed before the series. */
   qr_no?: number | null;
+  /** Public QR orders: dine-in (staff seat the guest), takeaway or delivery. Null = table/room QR or older pickup. */
+  order_type?: PublicOrderType | null;
+  delivery_address?: string | null;
+  delivery_landmark?: string | null;
+}
+
+/** What a guest can order from the public QR. */
+export type PublicOrderType = "dine-in" | "takeaway" | "delivery";
+export const PUBLIC_ORDER_TYPES: { id: PublicOrderType; label: string; hint: string }[] = [
+  { id: "dine-in", label: "Dine in", hint: "Order now, we'll seat you." },
+  { id: "takeaway", label: "Takeaway", hint: "Order ahead, pick it up." },
+  { id: "delivery", label: "Delivery", hint: "We bring it to your door." },
+];
+export function isPublicOrderType(value: unknown): value is PublicOrderType {
+  return value === "dine-in" || value === "takeaway" || value === "delivery";
 }
 
 /** QR/0001-style label for a guest order's QR series number. */
@@ -94,8 +109,9 @@ export const GUEST_STATUS_LABEL: Record<GuestStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export function orderTypeFor(channel: GuestChannel): OrderType {
-  return channel === "table" ? "dine-in" : "takeaway";
+/** A table or room QR is always dine-in; a public order is what the guest picked (pickup for older orders). */
+export function orderTypeFor(channel: GuestChannel, publicType?: PublicOrderType | null): OrderType {
+  return channel === "table" ? "dine-in" : publicType ?? "takeaway";
 }
 
 /** Turn a public dish back into a menu item so the POS's own pricing and option screens work on it. */
@@ -113,8 +129,8 @@ export function asMenuItem(item: StorefrontItem): MenuItem {
 /** The guest's cart, keyed like bill lines so the same dish with the same options adds up. */
 export interface GuestCartLine extends GuestLine { key: string }
 
-export function guestLineFor(item: MenuItem, channel: GuestChannel, variantId?: string, addonIds: string[] = []): GuestCartLine {
-  const line = buildLine(item, orderTypeFor(channel), variantId, addonIds);
+export function guestLineFor(item: MenuItem, channel: GuestChannel, variantId?: string, addonIds: string[] = [], publicType?: PublicOrderType | null): GuestCartLine {
+  const line = buildLine(item, orderTypeFor(channel, publicType), variantId, addonIds);
   return {
     key: line.itemId,
     itemId: item.id,
@@ -151,7 +167,7 @@ export function guestOrderPayload(cart: GuestCartLine[]) {
  * restaurant's source of truth). A dish no longer on the menu keeps the
  * guest's line so nothing they ordered is lost; it is reported back.
  */
-export function cartLinesFromGuest(lines: GuestLine[], menu: MenuItem[], channel: GuestChannel): { lines: CartLine[]; missing: string[] } {
+export function cartLinesFromGuest(lines: GuestLine[], menu: MenuItem[], channel: GuestChannel, publicType?: PublicOrderType | null): { lines: CartLine[]; missing: string[] } {
   const byId = new Map(menu.map((m) => [m.id, m]));
   const out: CartLine[] = [];
   const missing: string[] = [];
@@ -161,7 +177,7 @@ export function cartLinesFromGuest(lines: GuestLine[], menu: MenuItem[], channel
     const variantOk = !item?.variants?.length || item.variants.some((v) => v.id === g.variantId);
     let line: CartLine;
     if (item && variantOk) {
-      line = { ...buildLine(item, orderTypeFor(channel), g.variantId, g.addonIds ?? []), qty: g.qty };
+      line = { ...buildLine(item, orderTypeFor(channel, publicType), g.variantId, g.addonIds ?? []), qty: g.qty };
     } else {
       missing.push(g.name);
       line = { itemId: `guest:${g.itemId}:${g.variantId ?? ""}:${(g.addonIds ?? []).join(",")}`, menuItemId: g.itemId, name: g.name, price: g.price, qty: g.qty, veg: g.veg ?? false, gstRate: 5, station: fallbackStation };
@@ -277,4 +293,45 @@ export function guestWaitMessage(createdAt: string, now: number): { busy: boolea
   return waited >= GUEST_BUSY_AFTER_MS
     ? { busy: true, text: "The kitchen is busy right now. You're in the queue and the team will confirm your order shortly. No need to order again." }
     : { busy: false, text: "Sent. The team confirms most orders within a minute." };
+}
+
+/**
+ * Which QR a guest scanned. In-house (hotel guests): only the room picker. Public (shared): book a
+ * table, or order dine-in, takeaway or delivery; no tables or rooms are listed. A table or room QR
+ * (?table=) goes straight to its menu.
+ */
+export type GuestEntry = "inhouse" | "public";
+export function guestEntry(search: { for?: string | undefined }): GuestEntry {
+  return search.for === "stay" ? "inhouse" : "public";
+}
+
+/** The kitchen-ticket note for an accepted public order: pickup time, delivery address or seating. */
+export function publicOrderNote(guest: Pick<GuestOrder, "code" | "channel" | "order_type" | "pickup_at" | "note" | "delivery_address" | "delivery_landmark">): string {
+  const extra = guest.note ? `: ${guest.note}` : "";
+  if (guest.channel !== "online") return guest.note ? `${guest.code}${extra}` : "";
+  if (guest.order_type === "delivery") {
+    const where = [guest.delivery_address, guest.delivery_landmark ? `near ${guest.delivery_landmark}` : ""].filter(Boolean).join(", ");
+    return `${guest.code} delivery to ${where}${extra}`;
+  }
+  if (guest.order_type === "dine-in") return `${guest.code} dine-in${extra}`;
+  const at = guest.pickup_at ? ` at ${new Date(guest.pickup_at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}` : "";
+  return `${guest.code} pickup${at}${extra}`;
+}
+
+/** A public dine-in order has no table yet: staff pick one when accepting. */
+export function needsTableOnAccept(guest: Pick<GuestOrder, "channel" | "order_type">): boolean {
+  return guest.channel === "online" && guest.order_type === "dine-in";
+}
+
+/** Tables staff can seat a public dine-in guest at: dining tables only (rooms are for hotel guests), busy ones marked. */
+export function seatingChoices(tables: { id: string; label: string; section?: string; seats?: number; status?: string; deleted?: boolean }[]): { id: string; label: string; seats?: number; busy: boolean }[] {
+  return tables
+    .filter((t) => !t.deleted && !/^rooms?$/i.test((t.section ?? "").trim()))
+    .map((t) => ({ id: t.id, label: t.label, ...(t.seats ? { seats: t.seats } : {}), busy: t.status === "occupied" || t.status === "billed" }))
+    .sort((a, b) => Number(a.busy) - Number(b.busy) || a.label.localeCompare(b.label, undefined, { numeric: true }));
+}
+
+/** The two shareable QR links: in-house hotel guests (room picker only) and the public QR (book, dine in, takeaway, delivery). */
+export function entryQrUrls(origin: string, slug: string): { inhouse: string; public: string } {
+  return { inhouse: `${orderPageUrl(origin, slug, undefined, "stay")}&for=stay`, public: orderPageUrl(origin, slug, undefined, "public") };
 }

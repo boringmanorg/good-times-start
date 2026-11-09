@@ -3,12 +3,12 @@ import { placeName } from "@/lib/table-logic";
 import { Link } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import QRCode from "qrcode";
-import { Check, Copy, Download, LayoutGrid, Printer, QrCode, Store, UtensilsCrossed } from "lucide-react";
+import { BedDouble, Check, Copy, Download, Globe, LayoutGrid, Printer, QrCode, Store, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dropdown } from "@/components/Dropdown";
 import { getDb } from "@/lib/db";
-import { orderPageUrl } from "@/lib/guest-order-logic";
+import { entryQrUrls, orderPageUrl } from "@/lib/guest-order-logic";
 import { SCAN_SOURCES, activeOffers, cleanSource, type Branding } from "@/lib/marketing-logic";
 import { PRINT_DESIGNS, PRINT_THEMES, QR_LIGHT, buildPrintSheet, qrInk, type PrintCard, type PrintDesign, type PrintTheme } from "@/lib/qr-print";
 import { isRoomSection, roomLabel } from "@/lib/room-logic";
@@ -96,8 +96,10 @@ export function QrKit({ slug, restaurantName, brand, ordering }: { slug: string;
   };
 
   const orderingOff = !ordering.table && !ordering.online;
+  const entries = entryQrUrls(origin, slug);
   return (
     <div className="space-y-6">
+      <EntryQrCodes slug={slug} restaurantName={restaurantName} brand={brand} theme={theme} urls={entries} />
       {orderingOff || (meta.perTable && !ordering.table) ? (
         <div className="rounded-xl border border-gold/50 bg-gold/10 p-4 text-sm">
           <p className="font-semibold">{meta.perTable ? "QR ordering at tables is switched off." : "Guest ordering is switched off."} Guests who scan will see the menu but can't order.</p>
@@ -202,5 +204,62 @@ export function QrKit({ slug, restaurantName, brand, ordering }: { slug: string;
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * The two QR codes to put out: one for in-house hotel guests (they pick their room; no other room or
+ * table is shown) and one public QR to share anywhere (book a table, dine in, takeaway, delivery).
+ */
+function EntryQrCodes({ slug, restaurantName, brand, theme, urls }: { slug: string; restaurantName: string; brand: Branding; theme: PrintTheme; urls: { inhouse: string; public: string } }) {
+  const items = [
+    { id: "inhouse" as const, title: "In-house guests", hint: "For rooms and reception. Guests pick their room and order to it; nothing else is shown.", icon: BedDouble, url: urls.inhouse, headline: "Room service", subline: "Order to your room · Pay at checkout" },
+    { id: "public" as const, title: "Public QR", hint: "Share anywhere: book a table (up to 15), dine in, takeaway or delivery. No tables are shown.", icon: Globe, url: urls.public, headline: "Book · Dine in · Takeaway · Delivery", subline: "Scan · Order · Relax" },
+  ];
+  const [images, setImages] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let live = true;
+    void Promise.all(items.map(async (i) => [i.id, await qrImage(i.url, brand, 320)] as const)).then((pairs) => { if (live) setImages(Object.fromEntries(pairs)); }).catch(() => {});
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urls.inhouse, urls.public, brand.color]);
+  const copy = async (url: string) => { try { await navigator.clipboard.writeText(url); toast.success("Link copied"); } catch { toast.error("Couldn't copy. Select the link and copy it."); } };
+  const download = async (id: string, url: string) => {
+    const a = document.createElement("a");
+    a.href = await qrImage(url, brand, 1080);
+    a.download = `${slug}-qr-${id}.png`;
+    a.click();
+  };
+  const print = async (item: (typeof items)[number]) => {
+    try {
+      const qr = await qrImage(item.url, brand);
+      const html = buildPrintSheet("poster", [{ label: "", url: item.url, qr }], { restaurant: restaurantName, brand, headline: item.headline, subline: item.subline, theme });
+      const win = window.open("", "_blank", "width=900,height=1000");
+      if (!win) { toast.error("Allow pop-ups for this site to print"); return; }
+      win.document.write(html);
+      win.document.close();
+    } catch { toast.error("Couldn't prepare the QR code. Try again."); }
+  };
+  return (
+    <section aria-label="Your two QR codes" className="grid gap-3 md:grid-cols-2">
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <article key={item.id} className="flex gap-4 rounded-2xl border border-border bg-card p-4">
+            {images[item.id] ? <img src={images[item.id]} alt={`${item.title} QR code`} width={112} height={112} className="size-28 shrink-0 rounded-xl border border-border" /> : <div className="size-28 shrink-0 animate-pulse rounded-xl bg-secondary" />}
+            <div className="min-w-0 flex-1">
+              <h3 className="flex items-center gap-2 font-semibold"><Icon className="size-4 text-primary" />{item.title}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p>
+              <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground" title={item.url}>{item.url}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => void print(item)}><Printer />Print poster</Button>
+                <Button size="sm" variant="outline" onClick={() => void download(item.id, item.url)}><Download />PNG</Button>
+                <Button size="sm" variant="outline" onClick={() => void copy(item.url)}><Copy />Copy link</Button>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </section>
   );
 }

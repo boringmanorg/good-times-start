@@ -8,7 +8,7 @@ import { taxOptionsFor } from "./billing-config";
 import { withCustomerId } from "./customer-logic";
 import { rememberCustomer } from "./customer-actions";
 import { setWhatsappConsent } from "./marketing-actions";
-import { billWithGuestLines, cartLinesFromGuest, orderTypeFor, qrSeriesLabel, type GuestOrder, type GuestStatus } from "./guest-order-logic";
+import { billWithGuestLines, cartLinesFromGuest, needsTableOnAccept, orderTypeFor, publicOrderNote, qrSeriesLabel, type GuestOrder, type GuestStatus } from "./guest-order-logic";
 import { orderingSaveError } from "./qr-ordering";
 import { syncCloudData } from "./cloud-sync";
 
@@ -42,7 +42,9 @@ export function isActiveGuestOrder(order: GuestOrder): boolean {
  * accept it), then add it to the table's running bill or open a pickup bill,
  * and create the kitchen tickets. Returns the tickets to print.
  */
-export async function acceptGuestOrder(guest: GuestOrder, staffName: string): Promise<{ order: Order; kots: Kot[]; missing: string[] } | null> {
+export async function acceptGuestOrder(guest: GuestOrder, staffName: string, seatAt?: string): Promise<{ order: Order; kots: Kot[]; missing: string[] } | null> {
+  // A public dine-in guest is seated by staff: accepting needs the table they're given.
+  if (needsTableOnAccept(guest) && !seatAt) throw new Error("Choose the table to seat this guest at.");
   await ensureReadyForBilling(guest.restaurant_id);
   const { data: claimed, error } = await supabase.from("guest_orders")
     .update({ status: "accepted", handled_by: staffName })
@@ -50,7 +52,7 @@ export async function acceptGuestOrder(guest: GuestOrder, staffName: string): Pr
   if (error) throw new Error("Couldn't reach the cloud to accept this order. Check the internet and try again.");
   if (!claimed?.length) return null; // accepted, rejected or cancelled meanwhile
   try {
-    return await openBillFor(guest);
+    return await openBillFor(guest, seatAt);
   } catch (failure) {
     // Hand the order back so this or another counter can accept it again.
     await supabase.from("guest_orders").update({ status: "new", handled_by: "" }).eq("id", guest.id);
@@ -70,13 +72,14 @@ async function ensureReadyForBilling(restaurantId: string): Promise<void> {
   if (!(await ready())) throw new Error("This device is still loading the menu and tax settings. Wait a moment and accept again.");
 }
 
-async function openBillFor(guest: GuestOrder): Promise<{ order: Order; kots: Kot[]; missing: string[] }> {
+async function openBillFor(guest: GuestOrder, seatAt?: string): Promise<{ order: Order; kots: Kot[]; missing: string[] }> {
   const db = getDb();
   const [menu, settings] = await Promise.all([db.menu.toArray(), getSettings()]);
-  const orderType = orderTypeFor(guest.channel);
-  const { lines, missing } = cartLinesFromGuest(guest.lines, menu, guest.channel);
+  const orderType = orderTypeFor(guest.channel, guest.order_type);
+  const { lines, missing } = cartLinesFromGuest(guest.lines, menu, guest.channel, guest.order_type);
   const now = Date.now();
-  const tableId = guest.channel === "table" ? guest.table_id ?? undefined : undefined;
+  // Table/room QR: its own table. Public dine-in: the table staff chose when accepting.
+  const tableId = guest.channel === "table" ? guest.table_id ?? undefined : needsTableOnAccept(guest) ? seatAt : undefined;
   // QR orders from a table go on that table's QR bill, never on the waiter's or counter's bill.
   const base = tableId ? await latestHeldOrder(tableId, "qr") : null;
   const table = tableId ? await db.restTables.get(tableId) : undefined;
@@ -96,8 +99,11 @@ async function openBillFor(guest: GuestOrder): Promise<{ order: Order; kots: Kot
     orderType, tableId, tableLabel: table?.label ?? guest.table_label ?? undefined, tableSection: table?.section,
     discountPct: 0, serviceChargePct: 0, tax: taxOptionsFor(settings, orderType),
     payments: [], status: "held", createdAt: now, synced: false,
-    source: guest.channel === "table" ? "qr" : "online",
+    source: guest.channel === "table" || tableId ? "qr" : "online",
     ...(customer ? { customer } : {}),
+    ...(guest.order_type === "delivery" && guest.delivery_address
+      ? { deliveryAddress: [guest.delivery_address, guest.delivery_landmark ? `near ${guest.delivery_landmark}` : ""].filter(Boolean).join(", ") }
+      : {}),
   }, guest.code));
   if (base && customer && !base.customer) order.customer = customer;
   const qrNo = qrSeriesLabel(guest.qr_no);
@@ -105,9 +111,7 @@ async function openBillFor(guest: GuestOrder): Promise<{ order: Order; kots: Kot
 
   const byStation = new Map<string, CartLine[]>();
   for (const line of lines) byStation.set(line.station, [...(byStation.get(line.station) ?? []), line]);
-  const pickupNote = guest.channel === "online"
-    ? `${guest.code} pickup${guest.pickup_at ? ` at ${new Date(guest.pickup_at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}` : ""}${guest.note ? `: ${guest.note}` : ""}`
-    : guest.note ? `${guest.code}: ${guest.note}` : "";
+  const pickupNote = publicOrderNote(guest);
 
   let kots: Kot[] = [];
   // A guest order UUID is stable across acceptance retries and cloud response loss.

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { placeName } from "@/lib/table-logic";
 import { isRoomSection, roomOpen } from "@/lib/room-logic";
-import { PlaceOptions, RoomPicker, guestPlaceName } from "@/components/GuestPlacePicker";
+import { RoomPicker, guestPlaceName } from "@/components/GuestPlacePicker";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BadgePercent, BedDouble, Check, ChefHat, Clock, ExternalLink, MapPin, Minus, Phone, Plus, Search, Send, Share, ShoppingBag, Smartphone, Sparkles, Star, Store, UtensilsCrossed, X } from "lucide-react";
+import { ArrowLeft, BadgePercent, BedDouble, CalendarDays, Truck, Users, Check, ChefHat, Clock, ExternalLink, MapPin, Minus, Phone, Plus, Search, Send, Share, ShoppingBag, Smartphone, Sparkles, Star, Store, UtensilsCrossed, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { VegMark } from "@/components/VegMark";
 import { computeTotals, formatINR, upiLink } from "@/lib/billing";
 import { needsOptions, orderCategories, outsideHours } from "@/lib/menu-logic";
 import {
-  GUEST_STATUS_LABEL, addToGuestCart, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, guestTableChoices, pickupChoices, setGuestQty,
+  GUEST_STATUS_LABEL, PUBLIC_ORDER_TYPES, addToGuestCart, guestEntry, isPublicOrderType, orderTypeFor, type PublicOrderType, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, pickupChoices, setGuestQty,
   type GuestCartLine, type GuestChannel, type GuestLine, type GuestStatus, type Storefront, guestWaitMessage } from "@/lib/guest-order-logic";
 import type { CartLine, MenuItem } from "@/lib/types";
 import menuCover from "@/assets/photography/bistro-menu.jpg";
@@ -25,12 +25,12 @@ import { logScan, recordGuestChoice } from "@/lib/marketing-actions";
 import type { CSSProperties } from "react";
 import { guestCanCancel } from "@/lib/guest-cancellation";
 
-interface OrderSearch { table?: string; o?: string; k?: string; s?: string }
+interface OrderSearch { table?: string; o?: string; k?: string; s?: string; for?: string; mode?: string }
 
 export const Route = createFileRoute("/order/$slug")({
   validateSearch: (search: Record<string, unknown>): OrderSearch => {
     const out: OrderSearch = {};
-    for (const key of ["table", "o", "k", "s"] as const) if (typeof search[key] === "string" && search[key]) out[key] = search[key] as string;
+    for (const key of ["table", "o", "k", "s", "for", "mode"] as const) if (typeof search[key] === "string" && search[key]) out[key] = search[key] as string;
     return out;
   },
   head: () => ({
@@ -92,22 +92,46 @@ function GuestOrderPage() {
   if (search.table && !table && s.qr) return <Frame store={s}><Notice icon={UtensilsCrossed} title="This QR code is out of date" body="Please ask the staff for help with your order." /></Frame>;
   // A room that isn't switched on for room service (the server refuses its orders too).
   if (table && s.rooms && isRoomSection(table.section) && !roomOpen(table.id, s.rooms)) return <Frame store={s}><Notice icon={BedDouble} title={`Room service by QR is off for ${guestPlaceName(s, table)}`} body="Please call reception to order. We'll bring it to your room." /></Frame>;
-  if (!channel) {
-    if (!search.table && s.qr) return <Frame store={s}><section className="px-5 py-6" aria-label="Choose your table">
-      <p className="xt-eyebrow text-primary">Dine in</p>
-      <h2 className="mt-1 text-xl font-bold">Pick your table.</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Tap your table to open the menu. We bring the food to you.</p>
-      <h3 className="mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dining tables</h3>
-      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {guestTableChoices(s.tables).map((t) => <Button key={t.id} variant="outline" className="h-20 flex-col gap-1 rounded-2xl text-base font-bold active:scale-[0.98]" onClick={() => void navigate({ search: { ...search, table: t.id }, replace: true })}><UtensilsCrossed className="size-5 text-primary" />{placeName(t.label)}</Button>)}
-      </div>
-      <RoomPicker store={s} onPick={(id) => void navigate({ search: { ...search, table: id }, replace: true })} />
+  const entry = guestEntry(search);
+  const goRoom = (id: string) => void navigate({ search: { ...search, table: id }, replace: true });
+  // In-house QR (hotel guests): just the room picker. No tables, and no room's status is shown.
+  if (!search.table && entry === "inhouse") {
+    return <Frame store={s}><section className="px-5 py-6" aria-label="Room service">
+      <p className="xt-eyebrow text-primary">Room service</p>
+      <h2 className="mt-1 text-xl font-bold">Order to your room.</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Choose your room to open the menu. We bring it up, and you pay at checkout.</p>
+      {s.qr ? <RoomPicker store={s} onPick={goRoom} /> : <Notice icon={BedDouble} title="Room service by QR is off" body="Please call reception to order." />}
     </section></Frame>;
-    return <Frame store={s}><Notice icon={UtensilsCrossed} title={search.table ? "Table ordering is off" : "Scan the QR code on your table"}
-      body={search.table ? "Please order with the staff." : "This restaurant takes orders from the QR code on each table."} /></Frame>;
   }
-  // A guest already at a table goes straight to the menu; reservations are offered only off-site.
-  return <Frame store={s}>{channel === "table" ? null : <div className="px-5 pt-4"><Button variant="outline" asChild><Link to="/book/$slug" params={{ slug }}><Clock />Reserve a room or table</Link></Button></div>}<Menu store={s} channel={channel} tableId={table?.id} tableLabel={table ? guestPlaceName(s, table) : undefined} source={scanSource} /></Frame>;
+  // Public QR (shared anywhere): book a table, or order dine-in, takeaway or delivery. No tables are listed;
+  // staff seat dine-in guests and allot tables to bookings.
+  const publicType = isPublicOrderType(search.mode) ? search.mode : null;
+  if (!search.table && !publicType) {
+    const choose = (mode: PublicOrderType) => void navigate({ search: { ...search, mode }, replace: false });
+    const tiles: { mode: PublicOrderType; icon: typeof Users }[] = [{ mode: "dine-in", icon: Users }, { mode: "takeaway", icon: ShoppingBag }, { mode: "delivery", icon: Truck }];
+    return <Frame store={s}><section className="px-5 py-6" aria-label="How would you like to eat with us?">
+      <p className="xt-eyebrow text-primary">Welcome</p>
+      <h2 className="mt-1 text-xl font-bold">How would you like to eat?</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Book a table, or order to eat here, take away or have it delivered.</p>
+      <div className="mt-5 grid gap-3">
+        <Button variant="outline" asChild className="h-auto justify-start gap-4 rounded-2xl px-4 py-4 text-left">
+          <Link to="/book/$slug" params={{ slug }}><span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary"><CalendarDays className="size-5" /></span>
+            <span><span className="block text-base font-bold">Book a table</span><span className="block text-sm font-normal text-muted-foreground">Up to 15 guests. We'll confirm and keep a table for you.</span></span></Link>
+        </Button>
+        {s.online ? tiles.map(({ mode, icon: Icon }) => {
+          const t = PUBLIC_ORDER_TYPES.find((x) => x.id === mode)!;
+          return <Button key={mode} variant="outline" onClick={() => choose(mode)} className="h-auto justify-start gap-4 rounded-2xl px-4 py-4 text-left">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary"><Icon className="size-5" /></span>
+            <span><span className="block text-base font-bold">{t.label}</span><span className="block text-sm font-normal text-muted-foreground">{t.hint}</span></span>
+          </Button>;
+        }) : <p className="rounded-xl bg-secondary p-3 text-sm text-muted-foreground">Online ordering is off right now. You can still book a table.</p>}
+      </div>
+    </section></Frame>;
+  }
+  if (!channel && !publicType) {
+    return <Frame store={s}><Notice icon={UtensilsCrossed} title="Table ordering is off" body="Please order with the staff." /></Frame>;
+  }
+  return <Frame store={s}><Menu store={s} channel={publicType && !table ? "online" : channel ?? "online"} publicType={table ? null : publicType} tableId={table?.id} tableLabel={table ? guestPlaceName(s, table) : undefined} source={scanSource} /></Frame>;
 }
 
 /* ---------------- layout ---------------- */
@@ -173,7 +197,7 @@ function Notice({ icon: Icon, title, body, action }: { icon: typeof Store; title
 
 /* ---------------- menu and cart ---------------- */
 
-function Menu({ store, channel, tableId, tableLabel, source }: { store: Storefront; channel: GuestChannel; tableId?: string | undefined; tableLabel?: string | undefined; source: string }) {
+function Menu({ store, channel, publicType, tableId, tableLabel, source }: { store: Storefront; channel: GuestChannel; publicType?: PublicOrderType | null; tableId?: string | undefined; tableLabel?: string | undefined; source: string }) {
   const navigate = Route.useNavigate();
   const items = useMemo(() => store.menu.map(asMenuItem), [store.menu]);
   const categories = useMemo(() => orderCategories(items.map((i) => i.category), store.categoryOrder), [items, store.categoryOrder]);
@@ -200,7 +224,7 @@ function Menu({ store, channel, tableId, tableLabel, source }: { store: Storefro
   useEffect(() => { if (restored) writeJson(cartKey(store.slug, tableId), cart); }, [cart, store.slug, tableId, restored]);
 
   const qtyOf = (id: string) => cart.filter((l) => l.itemId === id).reduce((n, l) => n + l.qty, 0);
-  const add = (item: MenuItem, variantId?: string, addonIds: string[] = []) => setCart((c) => addToGuestCart(c, guestLineFor(item, channel, variantId, addonIds)));
+  const add = (item: MenuItem, variantId?: string, addonIds: string[] = []) => setCart((c) => addToGuestCart(c, guestLineFor(item, channel, variantId, addonIds, publicType)));
   const removeOne = (item: MenuItem) => {
     const last = [...cart].reverse().find((l) => l.itemId === item.id);
     if (last) setCart((c) => setGuestQty(c, last.key, last.qty - 1));
@@ -211,7 +235,7 @@ function Menu({ store, channel, tableId, tableLabel, source }: { store: Storefro
   const filteredItems = useMemo(() => filterGuestMenu(items, q, diet), [items, q, diet]);
   const visibleIds = new Set(filteredItems.map((i) => i.id));
   const visible = (i: MenuItem) => visibleIds.has(i.id);
-  const priceLabel = (i: MenuItem) => i.variants?.length ? `from ${formatINR(Math.min(...i.variants.map((v) => v.price)), 0)}` : formatINR(channel === "online" ? i.prices?.takeaway ?? i.price : i.price, 0);
+  const priceLabel = (i: MenuItem) => i.variants?.length ? `from ${formatINR(Math.min(...i.variants.map((v) => v.price)), 0)}` : formatINR(channel === "online" && publicType !== "dine-in" ? i.prices?.takeaway ?? i.price : i.price, 0);
 
   const jump = (c: string) => {
     setActive(c);
@@ -234,16 +258,18 @@ function Menu({ store, channel, tableId, tableLabel, source }: { store: Storefro
       <div className="px-4">
         <div className="relative border-b border-border bg-card px-4 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary">{channel === "table" ? <UtensilsCrossed className="size-5" /> : <ShoppingBag className="size-5" />}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold">{channel === "table" ? `Ordering to ${placeName(tableLabel ?? "")}` : "Order for pickup"}</p>
-              {store.qr ? <label className="mt-2 block text-xs font-medium">Table
-                <select aria-label="Select table" value={tableId ?? ""} onChange={(e) => void navigate({ search: { ...(e.target.value ? { table: e.target.value } : {}), s: source }, replace: true })} className="mt-1 w-full rounded-md border border-input bg-background px-2 py-2 text-sm">
-                  {store.online ? <option value="">Pickup</option> : null}
-                  <PlaceOptions store={store} currentId={tableId} />
-                </select>
-              </label> : null}
-              <p className="text-xs text-muted-foreground">{channel === "table" ? "We bring it to your table. Pay when you leave." : `Usually ready in about ${store.prepMinutes} minutes.`}</p>
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary">{channel === "table" ? <UtensilsCrossed className="size-5" /> : publicType === "delivery" ? <Truck className="size-5" /> : publicType === "dine-in" ? <Users className="size-5" /> : <ShoppingBag className="size-5" />}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">{channel === "table" ? `Ordering to ${placeName(tableLabel ?? "")}` : publicType === "delivery" ? "Delivery order" : publicType === "dine-in" ? "Dine-in order" : "Takeaway order"}</p>
+              <p className="text-xs text-muted-foreground">{channel === "table" ? "We bring it to you. Pay when you leave." : publicType === "dine-in" ? "Order now and we'll seat you. Pay when you leave." : publicType === "delivery" ? "We bring it to your door. Pay on delivery." : `Usually ready in about ${store.prepMinutes} minutes.`}</p>
+              {channel === "online" ? (
+                <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Order type">
+                  {PUBLIC_ORDER_TYPES.map((t) => <button key={t.id} type="button" role="radio" aria-checked={publicType === t.id} onClick={() => void navigate({ search: { s: source, mode: t.id }, replace: true })}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${publicType === t.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{t.label}</button>)}
+                </div>
+              ) : tableId && isRoomSection(store.tables.find((t) => t.id === tableId)?.section ?? "") ? (
+                <button type="button" className="mt-1 text-xs font-semibold text-primary underline" onClick={() => void navigate({ search: { s: source, for: "stay" }, replace: true })}>Change room</button>
+              ) : null}
             </div>
           </div>
           {store.paused ? <p role="status" className="mt-3 rounded-lg bg-gold/20 px-3 py-2 text-xs font-semibold text-gold-foreground">The kitchen isn't taking orders here for a little while. You can still look at the menu.</p> : null}
@@ -360,14 +386,14 @@ function Menu({ store, channel, tableId, tableLabel, source }: { store: Storefro
 
       <Dialog open={!!choosing} onOpenChange={(o) => { if (!o) setChoosing(null); }}>
         <DialogContent className="max-w-sm">
-          {choosing ? <ItemOptions key={choosing.id} item={choosing} orderType={channel === "table" ? "dine-in" : "takeaway"}
+          {choosing ? <ItemOptions key={choosing.id} item={choosing} orderType={orderTypeFor(channel, publicType)}
             onAdd={(variantId, addonIds) => { add(choosing, variantId, addonIds); setChoosing(null); }} /> : null}
         </DialogContent>
       </Dialog>
 
       <Dialog open={checkout} onOpenChange={setCheckout}>
         <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto">
-          {checkout ? <Checkout store={store} channel={channel} tableId={tableId} tableLabel={tableLabel} cart={cart} items={items} setCart={setCart} source={source}
+          {checkout ? <Checkout store={store} channel={channel} publicType={publicType ?? null} tableId={tableId} tableLabel={tableLabel} cart={cart} items={items} setCart={setCart} source={source}
             onPlaced={(ref) => {
               writeJson(placedKey(store.slug), [ref, ...readJson<PlacedRef[]>(placedKey(store.slug), [])].slice(0, 10));
               setCart([]);
@@ -387,8 +413,8 @@ function estimate(store: Storefront, lines: { itemId: string; price: number; qty
   return computeTotals(cartLines, 0, 0, { inclusive: store.pricesIncludeGst, exempt: store.gstMode !== "regular", roundToRupee: true });
 }
 
-function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, onPlaced, source }: {
-  store: Storefront; channel: GuestChannel; tableId?: string | undefined; tableLabel?: string | undefined; cart: GuestCartLine[]; items: MenuItem[]; source: string;
+function Checkout({ store, channel, publicType, tableId, tableLabel, cart, items, setCart, onPlaced, source }: {
+  store: Storefront; channel: GuestChannel; publicType: PublicOrderType | null; tableId?: string | undefined; tableLabel?: string | undefined; cart: GuestCartLine[]; items: MenuItem[]; source: string;
   setCart: (update: (c: GuestCartLine[]) => GuestCartLine[]) => void; onPlaced: (ref: PlacedRef) => void;
 }) {
   const saved = readJson<{ name?: string; phone?: string; optIn?: boolean }>("xtsy-guest-contact", {});
@@ -401,13 +427,20 @@ function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, o
   const [payment, setPayment] = useState<"counter" | "upi">("counter");
   const slots = useMemo(() => pickupChoices(new Date(), store.prepMinutes), [store.prepMinutes]);
   const [pickup, setPickup] = useState<string>("");
+  const savedAddress = readJson<{ address?: string; landmark?: string }>("xtsy-guest-address", {});
+  const [address, setAddress] = useState(savedAddress.address ?? "");
+  const [landmark, setLandmark] = useState(savedAddress.landmark ?? "");
+  const [party, setParty] = useState("");
+  const kind: PublicOrderType | null = channel === "online" ? publicType ?? "takeaway" : null;
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const [error, setError] = useState("");
   const totals = estimate(store, cart, items);
   const digits = phone.replace(/\D/g, "");
-  const short = channel === "online" && store.minOrder > 0 && totals.subtotal < store.minOrder;
-  const missing = (channel === "online" && (name.trim().length < 2 || digits.length < 10)) || (optIn && digits.length < 10);
+  // The minimum order is for takeaway and delivery; a dine-in guest orders as they like.
+  const short = (kind === "takeaway" || kind === "delivery") && store.minOrder > 0 && totals.subtotal < store.minOrder;
+  const missing = (channel === "online" && (name.trim().length < 2 || digits.length < 10)) || (optIn && digits.length < 10)
+    || (kind === "delivery" && address.trim().length < 10);
 
   const place = async () => {
     if (submitting.current || !cart.length || short || missing || store.paused) return;
@@ -415,11 +448,20 @@ function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, o
     setBusy(true);
     setError("");
     writeJson("xtsy-guest-contact", { name: name.trim(), phone: phone.trim(), optIn });
+    if (kind === "delivery") writeJson("xtsy-guest-address", { address: address.trim(), landmark: landmark.trim() });
+    const fullNote = [kind === "dine-in" && party ? `Party of ${party}` : "", note.trim()].filter(Boolean).join(". ");
     try {
-      const { data, error: failure } = await supabase.rpc("place_guest_order", {
-        _slug: store.slug, _channel: channel, _table_id: tableId ?? "", _name: name.trim(), _phone: phone.trim(), _note: note.trim(),
-        _lines: guestOrderPayload(cart) as never, _payment: payment, ...(pickup ? { _pickup_at: pickup } : {}),
-      });
+      const base = {
+        _slug: store.slug, _channel: channel, _table_id: tableId ?? "", _name: name.trim(), _phone: phone.trim(), _note: fullNote,
+        _lines: guestOrderPayload(cart) as never, _payment: payment, ...(kind === "takeaway" && pickup ? { _pickup_at: pickup } : {}),
+      };
+      let { data, error: failure } = await supabase.rpc("place_guest_order_v2" as never, {
+        ...base, _order_type: kind ?? "", _address: kind === "delivery" ? address.trim() : "", _landmark: kind === "delivery" ? landmark.trim() : "",
+      } as never) as unknown as { data: unknown; error: { message: string; code?: string } | null };
+      // Before the cloud update lands, fall back to the original call for table and takeaway orders.
+      if (failure && (failure.code === "PGRST202" || /could not find the function/i.test(failure.message)) && (kind === null || kind === "takeaway")) {
+        ({ data, error: failure } = await supabase.rpc("place_guest_order", base) as unknown as { data: unknown; error: { message: string; code?: string } | null });
+      }
       if (failure || !data) { setError(failure?.message ?? "Couldn't confirm your order. Check with the staff before trying again."); return; }
       const r = data as unknown as { id: string; token: string; code: string };
       // Confirmation is durable before optional consent recording; its failure must not encourage a duplicate order.
@@ -436,7 +478,7 @@ function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, o
 
   return (
     <div>
-      <DialogTitle>{channel === "table" ? `Your order for ${placeName(tableLabel ?? "")}` : "Your pickup order"}</DialogTitle>
+      <DialogTitle>{channel === "table" ? `Your order for ${placeName(tableLabel ?? "")}` : kind === "delivery" ? "Your delivery order" : kind === "dine-in" ? "Your dine-in order" : "Your takeaway order"}</DialogTitle>
       <ul className="mt-3 divide-y divide-border">
         {cart.map((l) => (
           <li key={l.key} className="flex items-center gap-3 py-2.5">
@@ -473,10 +515,26 @@ function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, o
             <input value={phone} maxLength={15} inputMode="tel" autoComplete="tel" onChange={(e) => setPhone(e.target.value.replace(/[^0-9+ ]/g, ""))} placeholder="98765 43210" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
             <span className="mt-1 block text-xs font-normal text-muted-foreground">The restaurant calls this number if anything changes.</span>
           </label>
-          <label className="block text-sm font-medium">Pickup time
+          {kind === "takeaway" ? <label className="block text-sm font-medium">Pickup time
             <Dropdown ariaLabel="Pickup time" className="mt-1 h-11" value={pickup} onChange={setPickup} searchable={false}
               options={slots.map((c) => ({ value: c.at ?? "", label: c.label }))} />
-          </label>
+          </label> : null}
+          {kind === "delivery" ? <>
+            <label className="block text-sm font-medium">Delivery address
+              <textarea value={address} maxLength={240} rows={2} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" placeholder="House, street, area" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" />
+              {address && address.trim().length < 10 ? <span className="mt-1 block text-xs font-semibold text-destructive">Please add your full address.</span> : null}
+            </label>
+            <label className="block text-sm font-medium">Landmark (optional)
+              <input value={landmark} maxLength={120} onChange={(e) => setLandmark(e.target.value)} placeholder="Near NIFT gate" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" />
+            </label>
+            <p className="text-xs text-muted-foreground">The restaurant confirms any delivery charge when they call to accept.</p>
+          </> : null}
+          {kind === "dine-in" ? <label className="block text-sm font-medium">How many guests? (optional)
+            <select value={party} onChange={(e) => setParty(e.target.value)} className="mt-1 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm">
+              <option value="">Choose</option>{Array.from({ length: 15 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted-foreground">We'll seat you at a table that fits.</span>
+          </label> : null}
         </> : null}
         {askOptIn ? (
           <label className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 text-sm">
@@ -493,7 +551,7 @@ function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, o
           <fieldset>
             <legend className="text-sm font-medium">Payment</legend>
             <div className="mt-1 grid grid-cols-2 gap-2">
-              {([["counter", channel === "table" ? "Pay at the end" : "Pay at pickup", Store], ["upi", "Pay now by UPI", Smartphone]] as const).map(([v, l, Icon]) => (
+              {([["counter", channel === "table" || kind === "dine-in" ? "Pay at the end" : kind === "delivery" ? "Pay on delivery" : "Pay at pickup", Store], ["upi", "Pay now by UPI", Smartphone]] as const).map(([v, l, Icon]) => (
                 <button key={v} type="button" role="radio" aria-checked={payment === v} onClick={() => setPayment(v)}
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm font-semibold ${payment === v ? "border-primary bg-primary-tint" : "border-border"}`}><Icon className="size-4" />{l}</button>
               ))}
@@ -502,7 +560,7 @@ function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, o
         ) : null}
       </div>
 
-      {short ? <p className="mt-3 text-sm font-semibold text-destructive">The minimum pickup order is {formatINR(store.minOrder, 0)}.</p> : null}
+      {short ? <p className="mt-3 text-sm font-semibold text-destructive">The minimum {kind === "delivery" ? "delivery" : "takeaway"} order is {formatINR(store.minOrder, 0)}.</p> : null}
       {error ? <p role="alert" className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
       <Button className="mt-4 h-12 w-full text-base" disabled={busy || !cart.length || short || missing || store.paused} onClick={() => void place()}>
         {busy ? "Sending…" : `Place order · ${formatINR(totals.total, 0)}`}
@@ -516,6 +574,7 @@ function Checkout({ store, channel, tableId, tableLabel, cart, items, setCart, o
 interface StatusView {
   id: string; code: string; channel: GuestChannel; status: GuestStatus; reason: string; tableLabel: string | null;
   lines: GuestLine[]; subtotal: number; payment: "counter" | "upi"; billNo: string | null; createdAt: string; pickupAt: string | null;
+  orderType?: PublicOrderType | null;
 }
 
 const STEPS: { status: GuestStatus; label: string; icon: typeof Check }[] = [
@@ -568,18 +627,18 @@ function OrderStatus({ store, id, token, table }: { store: Storefront; id: strin
     <div className="px-4 pt-5">
       <button type="button" onClick={backToMenu} className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-primary"><ArrowLeft className="size-4" />Menu</button>
       <div className="rounded-2xl border border-border bg-card p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{o.channel === "table" ? placeName(o.tableLabel ?? "") : "Pickup order"}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{o.channel === "table" ? placeName(o.tableLabel ?? "") : o.orderType === "delivery" ? "Delivery order" : o.orderType === "dine-in" ? "Dine-in order" : "Pickup order"}</p>
         <div className="mt-1 flex items-end justify-between gap-3">
           <h1 className="text-4xl font-extrabold tracking-tight">{o.code}</h1>
           {o.billNo ? <span className="text-xs text-muted-foreground">Bill {o.billNo}</span> : null}
         </div>
         <p className={`mt-2 text-base font-bold ${ended ? "text-destructive" : "text-primary"}`} role="status" aria-live="polite">{GUEST_STATUS_LABEL[o.status]}</p>
         {o.reason && ended ? <p className="mt-1 text-sm text-muted-foreground">{o.reason}</p> : null}
-        {o.channel === "online" && o.pickupAt && !ended ? <p className="mt-1 text-sm text-muted-foreground">Pickup at {new Date(o.pickupAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</p> : null}
+        {o.channel === "online" && o.orderType !== "delivery" && o.orderType !== "dine-in" && o.pickupAt && !ended ? <p className="mt-1 text-sm text-muted-foreground">Pickup at {new Date(o.pickupAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</p> : null}
 
         {!ended ? (
           <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Order progress">
-            {(o.channel === "table" ? STEPS.slice(0, 2) : STEPS).map((step, i) => {
+            {(o.channel === "table" || o.orderType === "dine-in" ? STEPS.slice(0, 2) : o.orderType === "delivery" ? [STEPS[0]!, STEPS[1]!, { status: "ready" as const, label: "On the way", icon: Truck }] : STEPS).map((step, i) => {
               const done = i <= stepIndex;
               const Icon = step.icon;
               return (
@@ -591,7 +650,8 @@ function OrderStatus({ store, id, token, table }: { store: Storefront; id: strin
             })}
           </ol>
         ) : null}
-        {o.channel === "table" && o.status === "accepted" ? <p className="mt-4 text-sm text-muted-foreground">The kitchen has your order. We'll bring it to your table as soon as it's ready.</p> : null}
+        {(o.channel === "table" || o.orderType === "dine-in") && o.status === "accepted" ? <p className="mt-4 text-sm text-muted-foreground">The kitchen has your order. We'll bring it to your table as soon as it's ready.</p> : null}
+        {o.orderType === "delivery" && o.status === "accepted" ? <p className="mt-4 text-sm text-muted-foreground">The kitchen has your order. We'll call you when it leaves.</p> : null}
         {o.status === "new" ? (() => {
           const wait = guestWaitMessage(o.createdAt, cancelClock);
           return <p className={`mt-4 text-sm ${wait.busy ? "rounded-lg bg-gold/15 p-3 font-medium text-foreground" : "text-muted-foreground"}`} role="status" aria-live="polite">{wait.text}</p>;
@@ -610,7 +670,7 @@ function OrderStatus({ store, id, token, table }: { store: Storefront; id: strin
       {o.payment === "upi" && store.upiVpa && !ended ? (
         <div className="mt-3 rounded-2xl border border-border bg-card p-5">
           <p className="font-semibold">Pay by UPI</p>
-          <p className="mt-1 text-sm text-muted-foreground">Pays {store.name} directly. Show the payment to the staff when you {o.channel === "table" ? "leave" : "pick up"}.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Pays {store.name} directly. Show the payment to the staff when you {o.channel === "table" || o.orderType === "dine-in" ? "leave" : o.orderType === "delivery" ? "receive your order" : "pick up"}.</p>
           <a href={upiLink({ vpa: store.upiVpa, name: store.name, amount: totals.total, billNo: o.code })}
             className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground"><Smartphone className="size-4" />Pay {formatINR(totals.total, 0)} in a UPI app</a>
           {sent ? <p className="mt-3 text-sm font-semibold text-success">Thanks, the restaurant can see your payment reference.</p> : (

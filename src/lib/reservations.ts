@@ -1,12 +1,33 @@
 import type { RestaurantTable, CartDraft, Order } from "./types";
 import { GUEST_ORDER_ORIGIN } from "./qr-ordering";
 export interface GuestPlace { id: string; label: string; section: string; seats: number; occupancy: "free" | "occupied" | "reserved" }
-export interface BookingAvailability { name: string; slug: string; enabled: boolean; places: GuestPlace[] }
+export interface BookingAvailability { name: string; slug: string; enabled: boolean; places: GuestPlace[]; maxParty?: number }
+/** Bookings are for a party; staff allot the table. Larger groups call. */
+export const BOOKING_MAX_PARTY = 15;
+export interface BookingStatusView { table_label: string | null; section: string | null; party_size: number; arrival_at: string; status: ReservationStatus }
+/** Checks the guest's booking request before it is sent (the server applies the same rules). */
+export function bookingRequestError(arrival: number, hours: number, party: number, now: number): string | null {
+  if (!Number.isFinite(arrival) || arrival <= now) return "Choose a time in the future.";
+  if (arrival > now + 60 * 24 * 3600_000) return "Bookings open up to 60 days ahead.";
+  if (!Number.isInteger(hours) || hours < 1 || hours > 6) return "Choose 1 to 6 hours.";
+  if (!Number.isInteger(party) || party < 1 || party > BOOKING_MAX_PARTY) return `Bookings are for 1 to ${BOOKING_MAX_PARTY} guests. For larger groups, please call us.`;
+  return null;
+}
+/** What the guest reads about their booking. The table is named only once staff allot it. */
+export function bookingStatusText(b: Pick<BookingStatusView, "status" | "table_label">): { title: string; body: string } {
+  switch (b.status) {
+    case "confirmed": return { title: "You're booked.", body: b.table_label ? `Your table: ${b.table_label}. See you soon.` : "Your table is held. See you soon." };
+    case "arrived": return { title: "Welcome!", body: "Enjoy your time with us." };
+    case "rejected": return { title: "We can't take this booking.", body: "We're full at that time. Please call us to find another slot." };
+    case "cancelled": return { title: "Booking cancelled.", body: "Book again any time." };
+    default: return { title: "Request received.", body: "We'll confirm shortly and keep a table for you." };
+  }
+}
 export type ReservationStatus = "pending" | "confirmed" | "arrived" | "cancelled" | "rejected";
 export interface Reservation {
-  id: string; restaurant_id: string; table_id: string; table_label: string; section: string;
+  id: string; restaurant_id: string; table_id: string | null; table_label: string | null; section: string | null;
   guest_name: string; guest_phone: string; party_size: number; arrival_at: string; end_at: string;
-  status: ReservationStatus; created_at: string;
+  status: ReservationStatus; created_at: string; note?: string | null;
 }
 export function bookingUrl(slug: string): string { return `${GUEST_ORDER_ORIGIN}/book/${encodeURIComponent(slug)}`; }
 export function overlaps(a: { arrival_at: string; end_at: string }, b: { arrival_at: string; end_at: string }): boolean {
@@ -39,6 +60,7 @@ export function newBookingRequests(rows: Reservation[], seen: Set<string> | null
 }
 export function reservationDraft(r: Reservation, existing: CartDraft | undefined, running: Order | undefined, now: number): CartDraft {
   if (!["confirmed", "arrived"].includes(r.status)) throw new Error("Confirm this booking before starting an order.");
+  if (!r.table_id) throw new Error("Allot a table to this booking first.");
   if (running) throw new Error("This table already has a running bill. Open it from Tables before starting another guest's order.");
   if (existing?.lines.length && (existing.customer?.phone !== r.guest_phone || existing.customer?.name !== r.guest_name)) throw new Error("This table has unsent items for another guest. Review its current order first.");
   if (r.end_at && Date.parse(r.end_at) <= now) throw new Error("This reservation has ended. Review the current booking before starting an order.");

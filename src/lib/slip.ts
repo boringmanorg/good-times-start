@@ -101,6 +101,7 @@ export function billSlip(order: Order, settings: RestaurantSettings, paper: Pape
   const guest = [order.customer?.name, order.customer?.phone].filter(Boolean).join("/");
   if (guest) for (const t of wrap(`Guest: ${guest}`, cols)) L.push({ text: t });
   if (order.customer?.gstin) L.push({ text: plain(`Guest GSTIN: ${order.customer.gstin}`) });
+  if (order.deliveryAddress) L.push({ text: plain(`Deliver to: ${order.deliveryAddress}`) });
   if (order.closedBy) L.push({ text: plain(`Cashier: ${order.closedBy}`) });
   const table = order.tableLabel ?? order.tableId;
   if (table) L.push({ text: plain(`Table: ${table}${order.source === "qr" ? " (QR order)" : ""}`), bold: true });

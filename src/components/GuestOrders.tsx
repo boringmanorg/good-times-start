@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { placeName } from "@/lib/table-logic";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, CalendarClock, Check, ChefHat, Clock, Phone, Send, ShoppingBag, Smartphone, UtensilsCrossed, X } from "lucide-react";
+import { BellRing, CalendarClock, Check, ChefHat, Clock, MapPin, Phone, Send, ShoppingBag, Smartphone, Truck, Users, UtensilsCrossed, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { getDb } from "@/lib/db";
 import { useAccount } from "@/lib/use-account";
 import { formatINR } from "@/lib/billing";
 import { acceptGuestOrder, isActiveGuestOrder, loadGuestOrders, setGuestOrderStatus } from "@/lib/guest-order-actions";
-import { sortGuestOrders, type GuestOrder, guestOrderClosing } from "@/lib/guest-order-logic";
+import { sortGuestOrders, type GuestOrder, guestOrderClosing, needsTableOnAccept, seatingChoices } from "@/lib/guest-order-logic";
 import { Segmented } from "@/components/Segmented";
 import { fillTemplate, waLink } from "@/lib/marketing-logic";
 import { useRestaurantSettings } from "@/lib/use-settings";
@@ -170,7 +170,7 @@ type FinishedBill = { status: "settled" | "void"; billNo: string };
 function useFinishedGuestBills(orders: GuestOrder[], staffName: string): Map<string, FinishedBill> {
   // Only orders still open need their bill checked.
   const uids = orders.filter((o) => o.status === "accepted" || o.status === "ready").map((o) => o.order_uid).filter((u): u is string => !!u);
-  const closed = useLiveQuery(async () => {
+  const finishedBills = useLiveQuery(async () => {
     const map = new Map<string, FinishedBill>();
     if (!uids.length) return map;
     const bills = await getDb().orders.where("uid").anyOf(uids).toArray();
@@ -187,7 +187,8 @@ function useFinishedGuestBills(orders: GuestOrder[], staffName: string): Map<str
       }
     }
     return map;
-  }, [uids.join(",")]) ?? new Map<string, FinishedBill>();
+  }, [uids.join(",")]);
+  const closed = useMemo(() => finishedBills ?? new Map<string, FinishedBill>(), [finishedBills]);
   const closing = useRef(new Set<string>());
   useEffect(() => {
     for (const o of orders) {
@@ -238,8 +239,15 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
     setBusy(true);
     try { await work(); } catch (error) { toast.error(error instanceof Error ? error.message : "Something went wrong"); } finally { setBusy(false); void refresh(); }
   };
+  // Public dine-in guests are seated by staff: pick the table before accepting.
+  const seatNeeded = needsTableOnAccept(order) && order.status === "new";
+  const floor = useLiveQuery(async () => (seatNeeded ? await getDb().restTables.toArray() : []), [seatNeeded]);
+  const seats = useMemo(() => seatingChoices(floor ?? []), [floor]);
+  const [seatAt, setSeatAt] = useState("");
+  const delivery = order.channel === "online" && order.order_type === "delivery";
+  const publicDineIn = order.channel === "online" && order.order_type === "dine-in";
   const accept = () => run(async () => {
-    const result = await acceptGuestOrder(order, staff);
+    const result = await acceptGuestOrder(order, staff, seatAt || undefined);
     if (!result) { toast.error(`Order ${order.code} was already handled on another device`); return; }
     void printKots(result.kots, "sent");
     toast.success(`${order.code} accepted: ${result.kots.length} KOT${result.kots.length === 1 ? "" : "s"} sent${result.order.billNo ? `, bill ${result.order.billNo}` : " to the running bill"}`);
@@ -247,7 +255,7 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
   });
   const status = (next: GuestOrder["status"], why = "") => run(() => setGuestOrderStatus(order, next, staff, why));
   const restaurant = useRestaurantSettings().name;
-  const readyText = fillTemplate("Hi {first}, your order {offer} from {restaurant} is ready for pickup. See you soon!", { name: order.customer_name, offer: order.code, restaurant });
+  const readyText = fillTemplate(delivery ? "Hi {first}, your order {offer} from {restaurant} is on its way to you." : "Hi {first}, your order {offer} from {restaurant} is ready for pickup. See you soon!", { name: order.customer_name, offer: order.code, restaurant });
   const markReady = () => run(async () => {
     await setGuestOrderStatus(order, "ready", staff);
     // Automatic WhatsApp, only if the owner switched it on and the guest said yes.
@@ -270,7 +278,10 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
           <div className="flex items-center gap-2">
             <span className="text-lg font-extrabold">{order.code}</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">
-              {order.channel === "table" ? <><UtensilsCrossed className="size-3" />{placeName(order.table_label ?? "")}</> : <><ShoppingBag className="size-3" />Pickup{order.pickup_at ? ` ${timeOf(order.pickup_at)}` : " ASAP"}</>}
+              {order.channel === "table" ? <><UtensilsCrossed className="size-3" />{placeName(order.table_label ?? "")}</>
+                : delivery ? <><Truck className="size-3" />Delivery</>
+                : publicDineIn ? <><Users className="size-3" />Dine in · seat guest</>
+                : <><ShoppingBag className="size-3" />Pickup{order.pickup_at ? ` ${timeOf(order.pickup_at)}` : " ASAP"}</>}
             </span>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground"><Clock className="mr-1 inline size-3" />{minutesAgo(order.created_at)} min ago{order.handled_by ? ` · ${order.handled_by}` : ""}{order.bill_no ? ` · Bill ${order.bill_no}` : ""}</p>
@@ -289,7 +300,16 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
           <li key={i} className="flex items-start gap-2"><span className="mt-1"><VegMark veg={l.veg ?? false} /></span><span className="flex-1"><strong>{l.qty} ×</strong> {l.name}{l.note ? <span className="block text-xs text-muted-foreground">{l.note}</span> : null}</span></li>
         ))}
       </ul>
+      {delivery && order.delivery_address ? <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-secondary px-3 py-2 text-sm"><MapPin className="mt-0.5 size-4 shrink-0 text-primary" /><span>{order.delivery_address}{order.delivery_landmark ? <span className="block text-xs text-muted-foreground">Near {order.delivery_landmark}</span> : null}</span></p> : null}
       {order.note ? <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-sm">“{order.note}”</p> : null}
+      {seatNeeded && can(user, "guestOrders.handle") ? (
+        <label className="mt-3 block text-sm font-semibold">Seat at
+          <select value={seatAt} onChange={(e) => setSeatAt(e.target.value)} className="mt-1 block h-10 w-full rounded-lg border border-input bg-card px-3 text-sm font-normal">
+            <option value="">Choose a table…</option>
+            {seats.map((t) => <option key={t.id} value={t.id}>{placeName(t.label)}{t.busy ? " (has a bill)" : ""}{t.seats ? ` · ${t.seats} seats` : ""}</option>)}
+          </select>
+        </label>
+      ) : null}
       {order.payment === "upi" ? <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary"><Smartphone className="size-3.5" />Paying by UPI{order.upi_ref ? `, ref ${order.upi_ref}` : ""}. Check it before settling.</p> : null}
       {order.reason && !isActiveGuestOrder(order) ? <p className="mt-2 text-xs text-muted-foreground">{order.reason}</p> : null}
 
@@ -302,13 +322,13 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {order.status === "new" && can(user, "guestOrders.handle") ? <>
-            <ConfirmButton id={`accept-${order.id}`} disabled={busy} onConfirm={accept} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={<><ChefHat />Tap again to accept</>}><ChefHat />{busy ? "Accepting…" : "Accept & send KOT"}</ConfirmButton>
+            <ConfirmButton id={`accept-${order.id}`} disabled={busy || (seatNeeded && !seatAt)} onConfirm={accept} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={<><ChefHat />Tap again to accept</>}><ChefHat />{busy ? "Accepting…" : "Accept & send KOT"}</ConfirmButton>
             <Button variant="ghost" className="text-destructive" disabled={busy} onClick={() => setRejecting(true)}><X />Reject</Button>
           </> : null}
-          {order.status === "accepted" && order.channel === "online" ? <ConfirmButton id={`ready-${order.id}`} disabled={busy} onConfirm={markReady} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again: tell guest it's ready"><Check />Ready for pickup</ConfirmButton> : null}
+          {order.status === "accepted" && order.channel === "online" && !publicDineIn ? <ConfirmButton id={`ready-${order.id}`} disabled={busy} onConfirm={markReady} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={delivery ? "Tap again: tell guest it's on the way" : "Tap again: tell guest it's ready"}>{delivery ? <Truck /> : <Check />}{delivery ? "Out for delivery" : "Ready for pickup"}</ConfirmButton> : null}
           {order.status === "ready" && order.customer_phone ? <Button variant="outline" asChild><a href={waLink(order.customer_phone, readyText)} target="_blank" rel="noreferrer"><Send />WhatsApp guest</a></Button> : null}
-          {order.status === "accepted" && order.channel === "table" ? <ConfirmButton id={`served-${order.id}`} disabled={busy} onConfirm={() => status("completed")} className={buttonVariants({ variant: "secondary" })} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again"><Check />Served</ConfirmButton> : null}
-          {order.status === "ready" ? <ConfirmButton id={`picked-${order.id}`} disabled={busy} onConfirm={() => status("completed")} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again"><Check />Picked up</ConfirmButton> : null}
+          {order.status === "accepted" && (order.channel === "table" || publicDineIn) ? <ConfirmButton id={`served-${order.id}`} disabled={busy} onConfirm={() => status("completed")} className={buttonVariants({ variant: "secondary" })} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again"><Check />Served</ConfirmButton> : null}
+          {order.status === "ready" ? <ConfirmButton id={`picked-${order.id}`} disabled={busy} onConfirm={() => status("completed")} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again"><Check />{delivery ? "Delivered" : "Picked up"}</ConfirmButton> : null}
           {order.status === "accepted" || order.status === "ready" ? <Button variant="outline" onClick={openBill}>Open bill</Button> : null}
         </div>
       )}

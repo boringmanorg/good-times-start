@@ -95,6 +95,8 @@ export interface Order {
   /** Tax rules this bill was made under. */
   tax?: { inclusive?: boolean; exempt?: boolean; roundToRupee?: boolean };
   customer?: { name?: string; phone?: string; gstin?: string };
+  /** Delivery orders: where the rider takes it (printed on the bill). */
+  deliveryAddress?: string;
   /** Number of guests covered by this bill. */
   guestCount?: number | undefined;
   /** Exact guest arrival linked by explicit Start order. */

@@ -62,6 +62,7 @@ export function Receipt({ order }: { order: Order }) {
       <div className="flex justify-between"><span>{ORDER_TYPE_LABEL[order.orderType]}{table ? `, table ${table}` : ""}</span><span>{time(order.createdAt)}</span></div>
       {order.customer?.name || order.customer?.phone ? <div>Guest: {[order.customer.name, order.customer.phone].filter(Boolean).join(", ")}</div> : null}
       {order.customer?.gstin ? <div>Guest GSTIN: {order.customer.gstin}</div> : null}
+      {order.deliveryAddress ? <div>Deliver to: {order.deliveryAddress}</div> : null}
       <Rule />
       <table className="w-full">
         <thead>

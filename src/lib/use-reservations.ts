@@ -29,7 +29,7 @@ export function useReservations() {
         for (const order of voids.filter((o) => o.reservationId)) await queueBillBookingCancellation(restaurant, order);
         let cleanupError = "";
         try { await flushBookingCancellations(restaurant); } catch (e) { cleanupError = e instanceof Error ? e.message : "Booking cleanup pending."; }
-        const result = await supabase.from("guest_reservations").select("id,restaurant_id,table_id,table_label,section,guest_name,guest_phone,party_size,arrival_at,end_at,status,created_at").eq("restaurant_id", restaurant).order("arrival_at").limit(1000);
+        const result = await supabase.from("guest_reservations").select("*").eq("restaurant_id", restaurant).order("arrival_at").limit(1000);
         if (result.error) throw result.error;
         if (!alive) return;
         await getDb().meta.put({ key, value: JSON.stringify({ rows: result.data, at: Date.now() }) });
@@ -49,9 +49,18 @@ export function useReservations() {
     const result = await supabase.rpc("manage_guest_reservation", { _id: id, _status: status });
     if (result.error) throw new Error(result.error.message);
     // Never claim a status change until the server's authoritative row is read back.
-    const readback = await supabase.from("guest_reservations").select("id,restaurant_id,table_id,table_label,section,guest_name,guest_phone,party_size,arrival_at,end_at,status,created_at").eq("restaurant_id", restaurant ?? "").order("arrival_at").limit(1000);
+    const readback = await supabase.from("guest_reservations").select("*").eq("restaurant_id", restaurant ?? "").order("arrival_at").limit(1000);
     if (readback.error) throw new Error("Saved, but couldn't refresh bookings. Reconnect to check the status.");
     await getDb().meta.put({ key, value: JSON.stringify({ rows: readback.data, at: Date.now() }) });
   };
-  return { rows: restaurant ? cache.rows : [], at: cache.at, connected, error, update };
+  /** Give a booking its table and confirm it in one step (the guest never chose one). */
+  const allot = async (id: string, table: string) => {
+    if (!navigator.onLine) throw new Error("Reconnect before allotting a table.");
+    const result = await supabase.rpc("allot_guest_reservation" as never, { _id: id, _table: table } as never) as unknown as { error: { message: string } | null };
+    if (result.error) throw new Error(result.error.message);
+    const readback = await supabase.from("guest_reservations").select("*").eq("restaurant_id", restaurant ?? "").order("arrival_at").limit(1000);
+    if (readback.error) throw new Error("Saved, but couldn't refresh bookings. Reconnect to check the status.");
+    await getDb().meta.put({ key, value: JSON.stringify({ rows: readback.data, at: Date.now() }) });
+  };
+  return { rows: restaurant ? cache.rows : [], at: cache.at, connected, error, update, allot };
 }
