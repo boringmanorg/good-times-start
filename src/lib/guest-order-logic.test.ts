@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addToGuestCart, asMenuItem, billWithGuestLines, cartLinesFromGuest, guestLineFor, guestOrderPayload, guestSubtotal, orderPageUrl, pickupChoices, guestTableChoices, guestOrderClosing, qrOrderState, qrSeriesLabel, setGuestQty, sortGuestOrders, type GuestOrder } from "./guest-order-logic";
+import { addToGuestCart, asMenuItem, billWithGuestLines, cartLinesFromGuest, guestLineFor, guestOrderPayload, guestSubtotal, orderPageUrl, pickupChoices, guestTableChoices, guestOrderClosing, guestWaitMessage, qrOrderState, qrSeriesLabel, setGuestQty, sortGuestOrders, type GuestOrder } from "./guest-order-logic";
 import type { MenuItem, Order } from "./types";
 
 const momo: MenuItem = {
@@ -118,5 +118,18 @@ describe("guestOrderClosing", () => {
   it("leaves running bills and already-finished orders alone", () => {
     expect(guestOrderClosing({ status: "accepted" }, undefined)).toBeNull();
     for (const status of ["new", "completed", "rejected", "cancelled"] as const) expect(guestOrderClosing({ status }, { status: "settled", billNo: "POS/0001" })).toBeNull();
+  });
+});
+
+describe("guestWaitMessage", () => {
+  const placed = "2026-11-09T07:00:00.000Z";
+  it("says the usual wait for the first minute", () => {
+    expect(guestWaitMessage(placed, Date.parse(placed) + 59_000).busy).toBe(false);
+  });
+  it("tells the guest the kitchen is busy, and not to order again, once a minute passes unconfirmed", () => {
+    const m = guestWaitMessage(placed, Date.parse(placed) + 60_000);
+    expect(m.busy).toBe(true);
+    expect(m.text).toMatch(/kitchen is busy/);
+    expect(m.text).toMatch(/no need to order again/);
   });
 });

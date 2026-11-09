@@ -267,3 +267,14 @@ export function guestOrderClosing(
     ? { status: "cancelled", reason: "Bill cancelled by restaurant", billNo: "" }
     : { status: "completed", reason: "", billNo: bill.billNo };
 }
+
+/** After this long without staff confirming, the guest is told the kitchen is busy (and not to order again). */
+export const GUEST_BUSY_AFTER_MS = 60_000;
+
+/** What the guest reads while their order waits for the restaurant to confirm it. */
+export function guestWaitMessage(createdAt: string, now: number): { busy: boolean; text: string } {
+  const waited = now - Date.parse(createdAt);
+  return waited >= GUEST_BUSY_AFTER_MS
+    ? { busy: true, text: "The kitchen is busy right now. Your order is in the queue and the staff will confirm it shortly. There's no need to order again." }
+    : { busy: false, text: "Waiting for the restaurant to confirm. This usually takes a minute." };
+}

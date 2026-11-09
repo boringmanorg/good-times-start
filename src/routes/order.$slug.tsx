@@ -14,8 +14,7 @@ import { computeTotals, formatINR, upiLink } from "@/lib/billing";
 import { needsOptions, orderCategories, outsideHours } from "@/lib/menu-logic";
 import {
   GUEST_STATUS_LABEL, addToGuestCart, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, guestTableChoices, pickupChoices, setGuestQty,
-  type GuestCartLine, type GuestChannel, type GuestLine, type GuestStatus, type Storefront,
-} from "@/lib/guest-order-logic";
+  type GuestCartLine, type GuestChannel, type GuestLine, type GuestStatus, type Storefront, guestWaitMessage } from "@/lib/guest-order-logic";
 import type { CartLine, MenuItem } from "@/lib/types";
 import menuCover from "@/assets/photography/bistro-menu.jpg";
 import { filterGuestMenu, guestChannel, type GuestDiet } from "@/lib/qr-ordering";
@@ -576,7 +575,10 @@ function OrderStatus({ store, id, token, table }: { store: Storefront; id: strin
           </ol>
         ) : null}
         {o.channel === "table" && o.status === "accepted" ? <p className="mt-4 text-sm text-muted-foreground">The kitchen has your order. It comes to your table as soon as it's ready.</p> : null}
-        {o.status === "new" ? <p className="mt-4 text-sm text-muted-foreground">Waiting for the restaurant to confirm. This usually takes a minute.</p> : null}
+        {o.status === "new" ? (() => {
+          const wait = guestWaitMessage(o.createdAt, cancelClock);
+          return <p className={`mt-4 text-sm ${wait.busy ? "rounded-lg bg-gold/15 p-3 font-medium text-foreground" : "text-muted-foreground"}`} role="status" aria-live="polite">{wait.text}</p>;
+        })() : null}
       </div>
 
       <div className="mt-3 rounded-2xl border border-border bg-card p-5">
