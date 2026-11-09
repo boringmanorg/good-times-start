@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { LiveAdminCode } from "@/components/PinGate";
+import { newAdminCodeKey } from "@/lib/admin-code";
 import { Switch } from "@/components/ui/switch";
 import { Segmented } from "@/components/Segmented";
 import { getSettings, saveSettings } from "@/lib/db";
@@ -9,14 +12,13 @@ import { useStaff } from "@/lib/auth-context";
 import { can } from "@/lib/permissions";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import {
-  ALWAYS_ADMIN, POLICY_ACTIONS, POLICY_SCREENS, hashPin, pinProblem, resolvePolicy,
+  ALWAYS_ADMIN, POLICY_ACTIONS, POLICY_SCREENS, resolvePolicy,
   type Mode, type PolicyRole, type RolePolicy,
 } from "@/lib/role-policy";
 import { cn } from "@/lib/utils";
 
 const ROLE_NAMES: Record<PolicyRole, string> = { cashier: "Reception (billdesk)", captain: "Waiter" };
-const MODE_OPTIONS: { value: Mode; label: string }[] = [{ value: "off", label: "Off" }, { value: "on", label: "On" }, { value: "pin", label: "On with PIN" }];
-const input = "mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-center text-lg tracking-[0.4em]";
+const MODE_OPTIONS: { value: Mode; label: string }[] = [{ value: "off", label: "Off" }, { value: "on", label: "On" }, { value: "pin", label: "On with admin code" }];
 
 export function RolesSettings() {
   const { user } = useStaff();
@@ -25,8 +27,6 @@ export function RolesSettings() {
   const [policy, setPolicy] = useState<RolePolicy>(saved);
   const [role, setRole] = useState<PolicyRole>("cashier");
   const [busy, setBusy] = useState(false);
-  const [pin, setPin] = useState("");
-  const [pin2, setPin2] = useState("");
   useEffect(() => { setPolicy(saved); }, [saved]);
 
   if (!can(user, "roles.manage")) return <p className="py-8 text-sm text-muted-foreground">Only the admin can change roles.</p>;
@@ -44,22 +44,20 @@ export function RolesSettings() {
       toast.success("Roles saved. Every device follows them once it syncs.");
     } finally { setBusy(false); }
   };
-  const pinError = pin ? pinProblem(pin) : null;
-  const setAdminPin = async () => {
-    if (pinError || pin !== pin2) return;
+  const setUpCode = async () => {
     setBusy(true);
     try {
       const current = await getSettings();
-      await saveSettings({ ...current, adminPin: await hashPin(pin) });
-      setPin(""); setPin2("");
-      toast.success("Admin PIN set");
+      const { adminPin: _retired, ...rest } = current;
+      await saveSettings({ ...rest, adminCode: newAdminCodeKey() });
+      toast.success(current.adminCode ? "New admin code key made. Older codes stop working on each terminal once it syncs." : "Admin code ready. Open it any time from the key button at the top.");
     } finally { setBusy(false); }
   };
-  const clearPin = async () => {
+  const removeCode = async () => {
     const current = await getSettings();
-    const { adminPin: _drop, ...rest } = current;
+    const { adminCode: _drop, adminPin: _retired, ...rest } = current;
     await saveSettings(rest);
-    toast.success("Admin PIN removed. Actions set to On with PIN are blocked until a PIN is set.");
+    toast.success("Admin code turned off. Actions set to On with admin code are blocked until it's set up again.");
   };
 
   const actions = POLICY_ACTIONS.filter((a) => a.roles.includes(role));
@@ -108,7 +106,7 @@ export function RolesSettings() {
             <p className="mt-2 text-xs text-muted-foreground">These are protected by the database too, so no device setting can open them.</p>
           </div>
 
-          {usesPin && !settings.adminPin ? <p role="alert" className="rounded-xl bg-gold/15 p-3 text-sm font-medium text-gold-foreground">Some actions are On with PIN, but no admin PIN is set yet. Set one below, or those actions stay blocked.</p> : null}
+          {usesPin && !settings.adminCode ? <p role="alert" className="rounded-xl bg-gold/15 p-3 text-sm font-medium text-gold-foreground">Some actions are On with admin code, but the admin code isn't set up yet. Set it up below, or those actions stay blocked.</p> : null}
           <div className="sticky bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] -mx-4 flex items-center gap-3 lg:bottom-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur lg:-mx-8 lg:px-8">
             <Button disabled={!dirty || busy} onClick={() => void save()}>{busy ? "Saving…" : "Save roles"}</Button>
             {dirty ? <Button variant="ghost" onClick={() => setPolicy(saved)}>Undo changes</Button> : <span className="text-sm text-muted-foreground">All changes saved</span>}
@@ -118,24 +116,25 @@ export function RolesSettings() {
 
       <section className="grid gap-4 border-t border-border pt-8 lg:grid-cols-[15rem_1fr]">
         <div>
-          <h2 className="flex items-center gap-2 text-base font-bold"><ShieldCheck className="size-4" />Admin PIN</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Typed on a staff device to allow an action set to On with PIN. Only a scrambled copy is stored, never the PIN itself.</p>
+          <h2 className="flex items-center gap-2 text-base font-bold"><KeyRound className="size-4" />Admin code</h2>
+          <p className="mt-1 text-sm text-muted-foreground">A 6-digit code that changes every 60 seconds. Staff type it to allow an action set to On with admin code. It's made and checked on each device, with no internet needed, and each code works once per terminal.</p>
         </div>
-        <div className="max-w-sm space-y-3">
-          <p className={cn("rounded-lg px-3 py-2 text-sm font-medium", settings.adminPin ? "bg-success/10 text-success" : "bg-secondary")}>{settings.adminPin ? "A PIN is set." : "No PIN set yet."}</p>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm font-medium">New PIN
-              <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className={input} />
-            </label>
-            <label className="block text-sm font-medium">Repeat
-              <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ""))} className={input} />
-            </label>
-          </div>
-          {pinError ? <p className="text-xs text-destructive">{pinError}</p> : pin && pin2 && pin !== pin2 ? <p className="text-xs text-destructive">The two PINs don't match.</p> : null}
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={busy || !pin || !!pinError || pin !== pin2} onClick={() => void setAdminPin()}>{settings.adminPin ? "Change PIN" : "Set PIN"}</Button>
-            {settings.adminPin ? <Button variant="ghost" className="text-destructive" onClick={() => void clearPin()}>Remove PIN</Button> : null}
-          </div>
+        <div className="max-w-md space-y-3">
+          {settings.adminCode ? <>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Code now</p>
+              <div className="mt-2"><LiveAdminCode codeKey={settings.adminCode} /></div>
+              <p className="mt-3 text-xs text-muted-foreground">On any device where you're signed in as owner or manager, tap the key button at the top to see it. Set up {new Date(settings.adminCode.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <ConfirmButton id="admin-code-new" disabled={busy} onConfirm={setUpCode} className={buttonVariants({ variant: "outline" })} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again: old codes stop">Make a new key</ConfirmButton>
+              <ConfirmButton id="admin-code-off" onConfirm={removeCode} className={cn(buttonVariants({ variant: "ghost" }), "text-destructive hover:text-destructive")} armedClassName="!bg-destructive !text-destructive-foreground" confirm="Tap again to turn off">Turn off</ConfirmButton>
+            </div>
+            <p className="text-xs text-muted-foreground">Make a new key if you think someone has seen how codes are made, for example after a device is lost. Terminals pick it up when they sync.</p>
+          </> : <>
+            <p className="rounded-lg bg-secondary px-3 py-2 text-sm font-medium">Not set up yet.{settings.adminPin ? " The old fixed PIN no longer works." : ""}</p>
+            <Button disabled={busy} onClick={() => void setUpCode()}><KeyRound />Set up admin code</Button>
+          </>}
         </div>
       </section>
     </div>

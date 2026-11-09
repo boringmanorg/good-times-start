@@ -370,7 +370,7 @@ const CARDS: SettingCard[] = [
   { v: "ordering", l: "QR & guest ordering", d: "Table menus, pickup, readiness and printable QR codes", group: "Outlet settings" },
   { v: "restaurant", l: "Restaurant details", d: "Name, address, GSTIN, FSSAI, UPI ID and contact", group: "Outlet settings" },
   { v: "logins", l: "Logins", d: "Admin, Reception and Waiter: passwords, WhatsApp, devices, install links", group: "Staff and access" },
-  { v: "roles", l: "Roles", d: "What Reception and Waiter may do: Off, On or On with PIN", group: "Staff and access" },
+  { v: "roles", l: "Roles", d: "What Reception and Waiter may do: Off, On or On with admin code, and the 60-second admin code", group: "Staff and access" },
   { v: null, to: "/marketing", l: "Brand & QR codes", d: "Logo, colours, offers and printable QR cards", group: "Marketing" },
   { v: null, to: "/marketing", hash: "whatsapp", l: "WhatsApp", d: "Campaigns, consent and automatic sending", group: "Marketing" },
   { v: "device", l: "This device", d: "Bill series (reset bill number), sync and clearing this device", group: "This device", staff: true },

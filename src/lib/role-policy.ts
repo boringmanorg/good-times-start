@@ -1,7 +1,7 @@
 /**
  * What Reception (cashier) and Waiter (captain) may do, as the admin sets it in
- * Settings → Roles. Each billing action is Off, On, or On with PIN (the admin's
- * PIN typed on the spot). Owners and managers can always do everything.
+ * Settings → Roles. Each billing action is Off, On, or On with admin code (the
+ * admin's current 60-second code typed on the spot). Owners and managers can always do everything.
  * Pure rules, tested; the policy travels in the restaurant settings, which
  * only the owner or a manager can change (database rule 0008).
  */

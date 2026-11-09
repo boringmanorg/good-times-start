@@ -5,7 +5,8 @@
  * changed screen can't get around them.
  */
 import type { StaffRole } from "./auth-context";
-import { DEFAULT_POLICY, modeFor, resolvePolicy, screenAllowed, type PinHash, type PolicyAction, type PolicyScreen, type RolePolicy, type SavedRolePolicy } from "./role-policy";
+import { DEFAULT_POLICY, modeFor, resolvePolicy, screenAllowed, type PolicyAction, type PolicyScreen, type RolePolicy, type SavedRolePolicy } from "./role-policy";
+import { isAdminCodeKey, type AdminCodeKey } from "./admin-code";
 
 export type Action =
   // Menu, floor and stock set-up
@@ -20,7 +21,7 @@ export type Action =
   | "marketing.manage"
   // Everyday shift work
   | "bill.create" | "bill.settle" | "kot.send" | "stock.wastage" | "guests.collectDue" | "counter.close" | "tables.status" | "guestOrders.handle" | "guests.consent"
-  // Billing actions the admin sets per role in Settings → Roles (Off / On / On with PIN)
+  // Billing actions the admin sets per role in Settings → Roles (Off / On / On with admin code)
   | "settings.open" | "bill.discount" | "bill.nc" | "bill.charges" | "bill.split" | "tables.move"
   | "kot.edit" | "kot.reprint" | "bill.print" | "bill.reprint" | "bill.reprintOld" | "terminals.manage" | "roles.manage" | "reports.summary";
 
@@ -51,14 +52,14 @@ const CONFIGURABLE: Partial<Record<Action, PolicyAction>> = {
   "bill.print": "billPrint", "bill.reprint": "billReprint", "bill.reprintOld": "oldBillReprint",
 };
 
-/* The current policy and PIN, from the restaurant settings (set by PolicySync). */
+/* The current policy and admin-code secret, from the restaurant settings (set by PolicySync). */
 let policy: RolePolicy = DEFAULT_POLICY;
-let pinHash: PinHash | null = null;
+let adminCodeKey: AdminCodeKey | null = null;
 let savedRef: unknown = undefined;
 const policyListeners = new Set<() => void>();
-export function setRolePolicy(saved: SavedRolePolicy | undefined, pin: PinHash | undefined): void {
+export function setRolePolicy(saved: SavedRolePolicy | undefined, code: AdminCodeKey | undefined): void {
   const key = JSON.stringify(saved ?? null);
-  pinHash = pin ?? null;
+  adminCodeKey = isAdminCodeKey(code) ? code : null;
   if (key === savedRef) return;
   savedRef = key;
   policy = resolvePolicy(saved);
@@ -66,7 +67,7 @@ export function setRolePolicy(saved: SavedRolePolicy | undefined, pin: PinHash |
 }
 export function subscribePolicy(l: () => void) { policyListeners.add(l); return () => { policyListeners.delete(l); }; }
 export function currentPolicy(): RolePolicy { return policy; }
-export function currentPinHash(): PinHash | null { return pinHash; }
+export function currentAdminCodeKey(): AdminCodeKey | null { return adminCodeKey; }
 
 /** May this person do this? Nobody signed in may do nothing. */
 export function can(user: { role: Role } | null | undefined, action: Action): boolean {
@@ -76,7 +77,7 @@ export function can(user: { role: Role } | null | undefined, action: Action): bo
   return RULES[action].includes(user.role);
 }
 
-/** Allowed, but only after the admin types their PIN on this device. */
+/** Allowed, but only after the admin's current 60-second code is typed on this device. */
 export function needsPin(user: { role: Role } | null | undefined, action: Action): boolean {
   const configurable = CONFIGURABLE[action];
   if (!user || !configurable || (user.role !== "cashier" && user.role !== "captain")) return false;

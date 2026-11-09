@@ -1,11 +1,11 @@
 import { toast } from "sonner";
 import { ROLE_LABELS } from "./auth-context";
-import { can, currentPinHash, needsPin, type Action } from "./permissions";
+import { can, currentAdminCodeKey, needsPin, type Action } from "./permissions";
 
 /*
- * One PIN prompt for the whole app. allow() is called before any action the
+ * One admin-code prompt for the whole app. allow() is called before any action the
  * admin can switch per role: it says no (Off), goes ahead (On), or asks for
- * the admin's PIN on this device (On with PIN).
+ * the admin's current 60-second code on this device (On with admin code).
  */
 
 type Request = { label: string; resolve: (ok: boolean) => void };
@@ -33,8 +33,8 @@ export async function allow(user: Who, action: Action, label: string): Promise<b
     return false;
   }
   if (!needsPin(user as never, action)) return true;
-  if (!currentPinHash()) {
-    toast.error("This needs the admin PIN, but no PIN is set yet. The admin can set one in Settings → Roles.");
+  if (!currentAdminCodeKey()) {
+    toast.error("This needs the admin code, but it isn't set up yet. The admin can set it up in Settings → Roles.");
     return false;
   }
   return askPin(label);

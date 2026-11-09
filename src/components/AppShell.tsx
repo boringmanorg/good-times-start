@@ -15,7 +15,7 @@ import logo from "@/assets/logo.png";
 import { getDb } from "@/lib/db";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { InstallButton } from "@/components/AppInstall";
-import { PinGate, PolicySync, usePolicy } from "@/components/PinGate";
+import { AdminCodeButton, PinGate, PolicySync, usePolicy } from "@/components/PinGate";
 import { can, screenPermitted } from "@/lib/permissions";
 import { GuestOrdersButton } from "@/components/GuestOrders";
 import { currentDevice, setAppMode, syncAppModeFromUrl, useAppMode } from "@/lib/app-mode";
@@ -408,7 +408,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
               <div className="text-[11px] text-muted-foreground">{APPS[app].name}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<InstallButton /><SyncChip /><AppUpdateWatcher /></div>
+          <div className="flex items-center gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
         </header>
         {needsDetails && !needsRestaurant ? (
           <Link to="/setup" className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-gold-foreground lg:px-6">

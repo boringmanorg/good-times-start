@@ -225,8 +225,10 @@ export interface RestaurantSettings {
   loyaltyPct?: number;
   /** What Reception and Waiter may do (Settings → Roles); missing parts use the defaults. */
   rolePolicy?: import("./role-policy").SavedRolePolicy;
-  /** Admin PIN for "On with PIN" actions: a salted slow hash, never the PIN. */
+  /** Retired fixed admin PIN (kept so old settings still read); "On with admin code" uses adminCode. */
   adminPin?: import("./role-policy").PinHash;
+  /** Secret for the 60-second admin code (Settings → Roles). Codes are made and checked on each device, offline. */
+  adminCode?: import("./admin-code").AdminCodeKey;
   /** Terminals (device ids) the admin has enabled for Marketing; no other terminal may open it. */
   marketingDevices?: string[];
   updatedAt?: number;
