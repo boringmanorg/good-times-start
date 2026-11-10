@@ -90,3 +90,41 @@ export async function deleteSupplier(id: string): Promise<void> {
   await getDb().suppliers.delete(id);
   await markDirty(["supplier", id]);
 }
+
+async function assertEditablePurchase(id: string): Promise<StockEntry> {
+  const db = getDb();
+  const prior = await db.stockEntries.get(id);
+  if (!prior || prior.type !== "purchase") throw new Error("This purchase bill no longer exists.");
+  if ((await db.stockEntries.toArray()).some((e) => e.purchaseId === id)) throw new Error("This purchase has supplier returns, so it cannot be edited or deleted.");
+  return prior;
+}
+
+/** Owners/managers correct a saved purchase bill (supplier, invoice, lines). Bills with returns stay locked. */
+export async function updatePurchase(id: string, change: Pick<StockEntry, "items"> & { supplierId?: string; supplierName?: string; reference?: string }): Promise<StockEntry> {
+  const db = getDb();
+  let saved!: StockEntry;
+  await db.transaction("rw", db.stockEntries, db.materialLevels, db.materials, async () => {
+    const prior = await assertEditablePurchase(id);
+    const items = change.items.filter((i) => i.qty !== 0);
+    if (!items.length || items.some((i) => !Number.isFinite(i.qty) || i.qty <= 0 || !Number.isFinite(i.unitCost) || (i.unitCost ?? -1) < 0)) throw new Error("Each purchase item needs a positive quantity and a valid unit price.");
+    const materials = new Map((await db.materials.toArray()).map((m) => [m.id, m]));
+    const { supplierId: _s, supplierName: _n, reference: _r, ...base } = prior;
+    saved = { ...base, ...(change.supplierId ? { supplierId: change.supplierId } : {}), ...(change.supplierName ? { supplierName: change.supplierName } : {}), ...(change.reference ? { reference: change.reference } : {}),
+      items: items.map((i) => { const m = materials.get(i.materialId); const old = prior.items.find((p) => p.materialId === i.materialId);
+        return { ...i, ...(m ? { name: m.name, unit: m.unit } : old?.name ? { name: old.name, unit: old.unit } : {}) } as StockEntry["items"][number]; }) };
+    await applyEntryToLevels(db, id, saved);
+    await db.stockEntries.put(saved);
+  });
+  await markDirty(["stock_entry", id]);
+  return saved;
+}
+
+export async function deletePurchase(id: string): Promise<void> {
+  const db = getDb();
+  await db.transaction("rw", db.stockEntries, db.materialLevels, async () => {
+    await assertEditablePurchase(id);
+    await applyEntryToLevels(db, id, null);
+    await db.stockEntries.delete(id);
+  });
+  await markDirty(["stock_entry", id]);
+}
