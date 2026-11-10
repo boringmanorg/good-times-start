@@ -218,6 +218,13 @@
       "when": 1794204134157,
       "tag": "0030_preserve_pre_purchase_rollout_offline_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794328863326,
+      "tag": "0031_lock_account_status_functions",
+      "breakpoints": true
     }
   ]
 }
