@@ -11,7 +11,7 @@ import { useStaff } from "@/lib/auth-context";
 import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
 import { STOCK_UNITS, formatQty, purchaseTotal } from "@/lib/stock-logic";
-import { deleteMaterial, deleteSupplier, recordStockEntry, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
+import { deleteMaterial, deletePurchase, deleteSupplier, recordStockEntry, updatePurchase, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
 import { canReturnPurchase, entryAmount, itemPurchaseLines, itemTotals, remainingPurchaseQty, supplierHistories } from "@/lib/purchase-logic";
 import { gstinError } from "@/lib/validation";
 import { downloadXlsx } from "@/lib/xlsx";
@@ -81,11 +81,11 @@ function MaterialForm({ material, onDone }: { material?: Material; onDone: () =>
   </form>;
 }
 
-function PurchaseForm({ materials, suppliers, onDone }: { materials: Material[]; suppliers: Supplier[]; onDone: () => void }) {
+function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: Material[]; suppliers: Supplier[]; purchase?: StockEntry; onDone: () => void }) {
   const { user } = useStaff();
-  const [supplierId, setSupplierId] = useState("");
-  const [reference, setReference] = useState("");
-  const [rows, setRows] = useState([{ key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }]);
+  const [supplierId, setSupplierId] = useState(purchase?.supplierId ?? "");
+  const [reference, setReference] = useState(purchase?.reference ?? "");
+  const [rows, setRows] = useState(purchase ? purchase.items.map((i) => ({ key: newUid(), materialId: i.materialId, qty: String(i.qty), cost: String(i.unitCost ?? 0) })) : [{ key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }]);
   const [error, setError] = useState("");
   const parsed = rows.map((r) => ({ materialId: r.materialId, qty: num(r.qty), unitCost: num(r.cost) }));
   const valid = parsed.filter((p) => p.materialId && p.qty !== null && p.qty > 0);
@@ -96,6 +96,10 @@ function PurchaseForm({ materials, suppliers, onDone }: { materials: Material[];
     if (valid.length !== rows.length || parsed.some((p) => p.unitCost === null || (p.unitCost ?? -1) < 0)) { setError("Add all items with a quantity. Costs must be numbers."); return; }
     const items = valid.map((p) => ({ materialId: p.materialId, qty: p.qty ?? 0, ...(p.unitCost !== undefined && p.unitCost !== null ? { unitCost: p.unitCost } : {}) }));
     try {
+      if (purchase) {
+        await updatePurchase(purchase.id, { items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}) });
+        toast.success("Purchase bill updated"); onDone(); return;
+      }
       await recordStockEntry({ type: "purchase", items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) });
     } catch (e) { setError(e instanceof Error ? e.message : "Could not record purchase"); return; }
     toast.success(`Purchase of ${formatINR(total, 0)} recorded`);
@@ -118,7 +122,7 @@ function PurchaseForm({ materials, suppliers, onDone }: { materials: Material[];
           return (
             <div key={row.key} className="flex gap-2">
               <Dropdown ariaLabel="Item" className="min-w-0 flex-1" value={row.materialId} onChange={(materialId) => update({ materialId, cost: String(materials.find((m) => m.id === materialId)?.costPerUnit ?? 0) })} placeholder="Choose item"
-                options={materials.map((m) => ({ value: m.id, label: m.name, hint: m.unit }))} />
+                options={[...materials.map((m) => ({ value: m.id, label: m.name, hint: m.unit })), ...(purchase?.items ?? []).filter((i) => !materials.some((m) => m.id === i.materialId)).map((i) => ({ value: i.materialId, label: i.name ?? "Deleted item", hint: i.unit ?? "" }))]} />
               <input aria-label="Quantity" inputMode="decimal" value={row.qty} onChange={(e) => update({ qty: e.target.value })} placeholder={unit || "Qty"} className="w-20 rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
               <input aria-label="Cost per unit" inputMode="decimal" value={row.cost} onChange={(e) => update({ cost: e.target.value })} placeholder={`₹/${unit}`} className="w-20 rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
               {rows.length > 1 ? <Button type="button" size="icon" variant="ghost" aria-label="Remove line" onClick={() => setRows(rows.filter((_, i) => i !== index))}><X /></Button> : null}
@@ -130,7 +134,7 @@ function PurchaseForm({ materials, suppliers, onDone }: { materials: Material[];
       <p className="text-right text-sm font-semibold">Total {formatINR(total)}</p>
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
       <div className="flex gap-2">
-        <ConfirmButton id="stock-purchase" submit disabled={!valid.length} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again to record">Record purchase</ConfirmButton>
+        <ConfirmButton id="stock-purchase" submit disabled={!valid.length} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={purchase ? "Tap again to save" : "Tap again to record"}>{purchase ? "Save changes" : "Record purchase"}</ConfirmButton>
         <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
       </div>
     </form>
@@ -208,7 +212,7 @@ function ReturnForm({ purchase, entries, materials, onDone }: { purchase: StockE
   </form>;
 }
 
-type Sheet = { kind: "item"; material?: Material } | { kind: "purchase" } | { kind: "supplier"; supplier: Supplier | null } | { kind: "return"; purchase: StockEntry };
+type Sheet = { kind: "item"; material?: Material } | { kind: "purchase"; purchase?: StockEntry } | { kind: "supplier"; supplier: Supplier | null } | { kind: "return"; purchase: StockEntry };
 const dateText = (at: number) => new Date(at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const timeText = (at: number) => new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
 
@@ -245,6 +249,11 @@ function StockPage() {
     <p className="mt-0.5 text-xs text-muted-foreground">{dateText(p.at)}, {timeText(p.at)}{p.by ? ` · ${p.by}` : ""}</p>
     <table className="mt-2 w-full text-xs"><tbody>{p.items.map((i, index) => <tr key={index} className="border-t border-border/60"><td className="py-1 pr-2">{lineName(i)}</td><td className="py-1 pr-2 text-right tabular-nums">{formatQty(Math.abs(i.qty), lineUnit(i))}</td><td className="py-1 pr-2 text-right tabular-nums">{i.unitCost !== undefined ? `${formatINR(i.unitCost)} / ${lineUnit(i)}` : "—"}</td><td className="py-1 text-right font-semibold tabular-nums">{formatINR(Math.abs(i.qty) * (i.unitCost ?? 0))}</td></tr>)}</tbody></table>
     {admin && canReturnPurchase(p) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0) ? <Button size="sm" variant="outline" className="mt-2" onClick={() => setSheet({ kind: "return", purchase: p })}>Return items</Button> : null}
+    {admin && !p.purchaseId && !entries.some((e) => e.purchaseId === p.id) ? <div className="mt-2 inline-flex gap-2 pl-2">
+      <Button size="sm" variant="outline" onClick={() => setSheet({ kind: "purchase", purchase: p })}><Pencil />Edit</Button>
+      <ConfirmButton id={`delete-purchase-${p.id}`} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-destructive hover:text-destructive")} armedClassName="!bg-destructive !text-destructive-foreground"
+        onConfirm={async () => { try { await deletePurchase(p.id); toast.success("Purchase bill deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete"); } }} confirm={<><Trash2 />Tap again to delete</>}><Trash2 />Delete</ConfirmButton>
+    </div> : null}
     {p.purchaseId ? <p className="mt-1 text-xs text-muted-foreground">Against purchase {entries.find((e) => e.id === p.purchaseId)?.reference || "without invoice no."}</p> : null}
   </li>;
 
@@ -315,7 +324,7 @@ function StockPage() {
     </div> : null}
   </div><Dialog open={!!sheet} onOpenChange={(open) => { if (!open) close(); }}><DialogContent className="max-h-[85dvh] max-w-lg overflow-y-auto">
     {sheet?.kind === "item" ? <><DialogTitle>{sheet.material ? "Edit purchase item" : "Add purchase item"}</DialogTitle><MaterialForm key={sheet.material?.id ?? "new"} {...(sheet.material ? { material: sheet.material } : {})} onDone={close}/></> : null}
-    {sheet?.kind === "purchase" ? <><DialogTitle>Record purchase</DialogTitle><PurchaseForm materials={active} suppliers={suppliers} onDone={close}/></> : null}
+    {sheet?.kind === "purchase" ? <><DialogTitle>{sheet.purchase ? "Edit purchase bill" : "Record purchase"}</DialogTitle><PurchaseForm key={sheet.purchase?.id ?? "new"} materials={active} suppliers={suppliers} {...(sheet.purchase ? { purchase: sheet.purchase } : {})} onDone={close}/></> : null}
     {sheet?.kind === "return" ? <><DialogTitle>Return purchased items</DialogTitle><ReturnForm purchase={sheet.purchase} entries={entries} materials={materials} onDone={close}/></> : null}
     {sheet?.kind === "supplier" ? <><DialogTitle>{sheet.supplier ? "Edit vendor" : "Add vendor"}</DialogTitle><SupplierForm supplier={sheet.supplier} onDone={close}/></> : null}
   </DialogContent></Dialog></AppShell>;
