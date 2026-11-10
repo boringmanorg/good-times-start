@@ -295,11 +295,14 @@ export type Database = {
           created_at: string
           customer_name: string
           customer_phone: string
+          delivery_address: string | null
+          delivery_landmark: string | null
           handled_by: string
           id: string
           lines: Json
           note: string
           opt_in_at: string | null
+          order_type: string | null
           order_uid: string | null
           payment: string
           pickup_at: string | null
@@ -323,11 +326,14 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_phone?: string
+          delivery_address?: string | null
+          delivery_landmark?: string | null
           handled_by?: string
           id?: string
           lines: Json
           note?: string
           opt_in_at?: string | null
+          order_type?: string | null
           order_uid?: string | null
           payment?: string
           pickup_at?: string | null
@@ -351,11 +357,14 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_phone?: string
+          delivery_address?: string | null
+          delivery_landmark?: string | null
           handled_by?: string
           id?: string
           lines?: Json
           note?: string
           opt_in_at?: string | null
+          order_type?: string | null
           order_uid?: string | null
           payment?: string
           pickup_at?: string | null
@@ -390,13 +399,14 @@ export type Database = {
           guest_name: string
           guest_phone: string
           id: string
+          note: string | null
           party_size: number
           request_id: string
           restaurant_id: string
-          section: string
+          section: string | null
           status: string
-          table_id: string
-          table_label: string
+          table_id: string | null
+          table_label: string | null
           token: string
           updated_at: string
         }
@@ -407,13 +417,14 @@ export type Database = {
           guest_name: string
           guest_phone: string
           id?: string
+          note?: string | null
           party_size: number
           request_id: string
           restaurant_id: string
-          section?: string
+          section?: string | null
           status?: string
-          table_id: string
-          table_label: string
+          table_id?: string | null
+          table_label?: string | null
           token?: string
           updated_at?: string
         }
@@ -424,13 +435,14 @@ export type Database = {
           guest_name?: string
           guest_phone?: string
           id?: string
+          note?: string | null
           party_size?: number
           request_id?: string
           restaurant_id?: string
-          section?: string
+          section?: string | null
           status?: string
-          table_id?: string
-          table_label?: string
+          table_id?: string | null
+          table_label?: string | null
           token?: string
           updated_at?: string
         }
@@ -748,6 +760,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      restaurant_audit_log: {
+        Row: {
+          action: string
+          at: string
+          changes: Json
+          device_id: string | null
+          id: number
+          kind: string
+          label: string | null
+          record_id: string
+          restaurant_id: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          at?: string
+          changes?: Json
+          device_id?: string | null
+          id?: number
+          kind: string
+          label?: string | null
+          record_id: string
+          restaurant_id: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          at?: string
+          changes?: Json
+          device_id?: string | null
+          id?: number
+          kind?: string
+          label?: string | null
+          record_id?: string
+          restaurant_id?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       restaurant_invites: {
         Row: {
@@ -1218,6 +1272,10 @@ export type Database = {
         Args: { _request_id: string; _restaurant_id: string; _series: string }
         Returns: string
       }
+      allot_guest_reservation: {
+        Args: { _id: string; _table: string }
+        Returns: undefined
+      }
       claim_counter_print: {
         Args: { _device: string; _restaurant: string }
         Returns: Json
@@ -1344,6 +1402,23 @@ export type Database = {
         }
         Returns: Json
       }
+      place_guest_order_v2: {
+        Args: {
+          _address?: string
+          _channel: string
+          _landmark?: string
+          _lines: Json
+          _name: string
+          _note: string
+          _order_type?: string
+          _payment?: string
+          _phone: string
+          _pickup_at?: string
+          _slug: string
+          _table_id: string
+        }
+        Returns: Json
+      }
       public_booking_availability: {
         Args: { _arrival: string; _hours?: number; _slug: string }
         Returns: Json
@@ -1354,9 +1429,26 @@ export type Database = {
         Args: { _restaurant_id: string; _units: Json }
         Returns: Json
       }
+      push_restaurant_records_from: {
+        Args: { _device: string; _restaurant_id: string; _units: Json }
+        Returns: Json
+      }
       remove_member: {
         Args: { _restaurant_id: string; _user_id: string }
         Returns: undefined
+      }
+      request_guest_booking: {
+        Args: {
+          _arrival: string
+          _hours?: number
+          _name: string
+          _note?: string
+          _party: number
+          _phone: string
+          _request: string
+          _slug: string
+        }
+        Returns: Json
       }
       request_guest_reservation: {
         Args: {
@@ -1394,6 +1486,10 @@ export type Database = {
       }
       setup_void_approval_code: { Args: never; Returns: Json }
       slugify: { Args: { _text: string }; Returns: string }
+      terminal_is_blocked: {
+        Args: { _device: string; _restaurant_id: string }
+        Returns: boolean
+      }
       touch_terminal: {
         Args: {
           _app: string
