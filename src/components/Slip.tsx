@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { billSlip, type Slip } from "@/lib/slip";
 import { usePrintConfig } from "@/lib/print-config";
+import { slipLayoutOf } from "@/lib/print-logic";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import type { Order } from "@/lib/types";
 import { THERMAL } from "@/lib/thermal-tokens";
@@ -15,7 +16,7 @@ export function SlipView({ slip, qrDataUrl }: { slip: Slip; qrDataUrl?: string |
   const font = THERMAL.fontMm;
   const base: CSSProperties = { fontSize: `${font}mm`, lineHeight: THERMAL.lineHeight, whiteSpace: "pre", fontWeight: THERMAL.normalWeight };
   return (
-    <div className="slip bg-white text-black" style={{ width: `${width}mm`, fontFamily: THERMAL.fontFamily }}>
+    <div className="slip bg-white text-black" style={{ width: `${width}mm`, fontFamily: THERMAL.fontFamily, boxSizing: "border-box", paddingLeft: `${slip.marginMm ?? 0}mm`, paddingRight: `${slip.marginMm ?? 0}mm`, overflow: "hidden" }}>
       {slip.startFeedMm ? <div className="print-slip-start-feed" aria-hidden="true" style={{ height: String(slip.startFeedMm) + "mm" }} /> : null}
       {slip.lines.map((line, i) => {
         const style: CSSProperties = { ...base, textAlign: line.align ?? "left", fontWeight: line.bold ? THERMAL.boldWeight : THERMAL.normalWeight };
@@ -41,7 +42,7 @@ export function BillSlipPreview({ order }: { order: Order }) {
   const config = usePrintConfig();
   return (
     <div className="mx-auto w-fit max-w-full overflow-x-auto rounded-lg bg-white p-3 shadow-inner ring-1 ring-border">
-      <SlipView slip={billSlip(order, settings, config.paper)} />
+      <SlipView slip={billSlip(order, settings, slipLayoutOf(config))} />
     </div>
   );
 }

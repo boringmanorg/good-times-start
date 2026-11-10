@@ -11,6 +11,26 @@ import type { Kot, Order, RestaurantSettings } from "./types";
 export type Paper = 58 | 80;
 export const columnsFor = (paper: Paper) => (paper === 58 ? 30 : 45);
 
+/**
+ * How a printer lays out a slip: paper width, how many characters fit on a line (some printers print
+ * less than the full roll; the Print width test finds it) and a side margin in mm. Lines wrap inside it.
+ */
+export interface SlipLayout { paper: Paper; cols?: number | null | undefined; marginMm?: number | undefined }
+export type PaperOrLayout = Paper | SlipLayout;
+export const MIN_SLIP_COLS = 16;
+/** The widest line each paper can hold in this font, before margins. */
+export const maxColumnsFor = (paper: Paper) => (paper === 58 ? 32 : 48);
+const CHAR_MM = 1.46; // one character of the slip font, in mm
+export function layoutOf(p: PaperOrLayout): { paper: Paper; cols: number; marginMm: number } {
+  const lay = typeof p === "number" ? { paper: p } : p;
+  const paper: Paper = lay.paper === 80 ? 80 : 58;
+  const marginMm = Math.min(8, Math.max(0, Number.isFinite(lay.marginMm) ? Number(lay.marginMm) : 0));
+  // Columns that fit between the two side margins.
+  const room = Math.floor(((paper === 58 ? 48 : 72) - 2 * marginMm) / CHAR_MM);
+  const wanted = lay.cols && Number.isInteger(lay.cols) ? lay.cols : columnsFor(paper);
+  return { paper, marginMm, cols: Math.max(MIN_SLIP_COLS, Math.min(wanted, columnsFor(paper), room)) };
+}
+
 export interface SlipLine {
   text: string;
   align?: "left" | "center" | "right";
@@ -22,7 +42,7 @@ export interface SlipLine {
 export const KOT_START_FEED_MM = 30;
 export const KOT_END_FEED_MM = 10;
 export const BILL_END_FEED_MM = 30;
-export interface Slip { paper: Paper; lines: SlipLine[]; qr?: string | undefined; endFeedMm?: number; startFeedMm?: number }
+export interface Slip { paper: Paper; lines: SlipLine[]; qr?: string | undefined; endFeedMm?: number; startFeedMm?: number; /** Side margin in mm. */ marginMm?: number }
 
 const ORDER_TYPE: Record<string, string> = { "dine-in": "DINE IN", takeaway: "TAKEAWAY", delivery: "DELIVERY", swiggy: "SWIGGY", zomato: "ZOMATO" };
 const PAY: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points" };
@@ -68,14 +88,24 @@ function dateTime(at: number): { date: string; time: string } {
   return { date: `${dd}-${mm}-${d.getFullYear()}`, time: `${String(h).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} ${ampm}` };
 }
 
+/** Last safety net: any line still wider than the printer wraps onto the next line instead of being cut. */
+function fitLines(lines: SlipLine[], cols: number): SlipLine[] {
+  return lines.flatMap((l) => {
+    const width = l.size === "big" ? Math.floor(cols / 2) : cols;
+    if (l.text.length <= width) return [l];
+    const indent = /^\s*/.exec(l.text)?.[0] ?? "";
+    return wrap(l.text, width).map((text, i) => ({ ...l, text: i && indent && text.length + indent.length <= width ? indent + text : text }));
+  });
+}
+
 /** Item table columns: name wraps in its own column, numbers stay lined up on the right. */
 function itemColumns(cols: number) {
   return cols >= 48 ? { qty: 5, rate: 9, amt: 10 } : { qty: 4, rate: 0, amt: 9 };
 }
 
 /** The customer bill: header, guest and table, items, totals, payment, UPI QR and footer. */
-export function billSlip(order: Order, settings: RestaurantSettings, paper: Paper, endFeedMm = BILL_END_FEED_MM): Slip {
-  const cols = columnsFor(paper);
+export function billSlip(order: Order, settings: RestaurantSettings, layout: PaperOrLayout, endFeedMm = BILL_END_FEED_MM): Slip {
+  const { paper, cols, marginMm } = layoutOf(layout);
   const L: SlipLine[] = [];
   const center = (text: string, extra: Partial<SlipLine> = {}) => { for (const t of wrap(text, extra.size === "big" ? cols / 2 : cols)) L.push({ text: t, align: "center", ...extra }); };
   const exempt = Boolean(order.tax?.exempt);
@@ -146,15 +176,15 @@ export function billSlip(order: Order, settings: RestaurantSettings, paper: Pape
   center(settings.billFooter || "Thank you! Visit again.");
   center(order.source === "waiter" ? "Printed through XTSY Waiter" : "Billed with XTSY POS");
   if (qr) { L.push({ text: "" }); L.push({ text: `Scan to pay Rs.${money(due)} by UPI`, align: "center", bold: true }); }
-  return { paper, lines: L, qr, endFeedMm };
+  return { paper, lines: fitLines(L, cols), qr, endFeedMm, marginMm };
 }
 
 /** A kitchen ticket: big order type and table, then items in tall bold text with their quantities. */
-export function kotSlip(kots: Kot[], paper: Paper, header = "", large = true, endFeedMm = KOT_END_FEED_MM): Slip {
-  const cols = columnsFor(paper);
+export function kotSlip(kots: Kot[], layout: PaperOrLayout, header = "", large = true, endFeedMm = KOT_END_FEED_MM): Slip {
+  const { paper, cols, marginMm } = layoutOf(layout);
   const first = kots[0];
   const L: SlipLine[] = [];
-  if (!first) return { paper, lines: L };
+  if (!first) return { paper, lines: L, marginMm };
   const cancel = first.kind === "cancel";
   if (header) for (const t of wrap(header, cols)) L.push({ text: t, align: "center" });
   L.push({ text: cancel ? "CANCEL KOT" : "Running KOT", align: "center", bold: true, size: cancel ? "big" : "normal" });
@@ -190,7 +220,32 @@ export function kotSlip(kots: Kot[], paper: Paper, header = "", large = true, en
   }
   L.push({ text: `Total Qty: ${qtyText(total)}`, bold: true, size: "big" });
   L.push(rule(cols));
-  return { paper, lines: L, startFeedMm: KOT_START_FEED_MM, endFeedMm };
+  return { paper, lines: fitLines(L, cols), startFeedMm: KOT_START_FEED_MM, endFeedMm, marginMm };
+}
+
+/**
+ * Print width test: numbered rulers as wide as the paper can go. Staff read the last number printed in
+ * full and set "Characters per line" to it, so every slip wraps inside what this printer really prints.
+ */
+export function widthTestSlip(layout: PaperOrLayout): Slip {
+  const { paper, marginMm } = layoutOf(layout);
+  const max = maxColumnsFor(paper);
+  const digits = Array.from({ length: max }, (_, i) => String((i + 1) % 10)).join("");
+  const tens = Array.from({ length: max }, (_, i) => ((i + 1) % 10 === 0 ? String(((i + 1) / 10) % 10) : " ")).join("");
+  const L: SlipLine[] = [
+    { text: "PRINT WIDTH TEST", bold: true },
+    { text: `Paper ${paper} mm, margin ${marginMm} mm` },
+    { text: "-".repeat(MIN_SLIP_COLS) },
+    { text: tens, bold: true },
+    { text: digits, bold: true },
+    { text: "#".repeat(max), bold: true },
+    { text: "-".repeat(MIN_SLIP_COLS) },
+    { text: "Count to the last digit" },
+    { text: "printed in full: that is" },
+    { text: "Characters per line." },
+    { text: "Example: 2 under 2 = 22." },
+  ];
+  return { paper, lines: L, marginMm, endFeedMm: KOT_END_FEED_MM };
 }
 
 /* ---------------- ESC/POS ---------------- */
@@ -205,6 +260,7 @@ export function escPos(slip: Slip, opts: { upiLink?: string; copies?: number; cu
   const one = () => {
     push(ESC, 0x40); // initialise
     push(ESC, 0x4d, 0); // Font A: 32 columns on 58 mm / 48 on 80 mm
+    if (slip.marginMm) { const dots = Math.round(slip.marginMm * 8); push(GS, 0x4c, dots & 0xff, dots >> 8); } // left margin (8 dots per mm)
     push(ESC, 0x32); // standard line spacing, independent of a previous job
     push(ESC, 0x74, 0x00); // code page PC437 (ASCII-safe)
     if (slip.startFeedMm) {

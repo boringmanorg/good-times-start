@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
-import { Trash2, UserPlus } from "lucide-react";
+import { Printer, Trash2, UserPlus } from "lucide-react";
 import { AppShell, useRestaurantSettings } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +13,9 @@ import { computeTotals } from "@/lib/billing";
 import { ALL_PAYMENT_MODES, GST_MODES, RESTAURANT_SAC } from "@/lib/billing-config";
 import { savePrintConfig, usePrintConfig } from "@/lib/print-config";
 import { PrinterMethod } from "@/components/PrinterMethod";
-import type { PrintConfig } from "@/lib/print-logic";
-import { printKots } from "@/components/PrintHost";
+import { slipLayoutOf, type PrintConfig } from "@/lib/print-logic";
+import { columnsFor, layoutOf, MIN_SLIP_COLS } from "@/lib/slip";
+import { printKots, printWidthTest } from "@/components/PrintHost";
 import { Switch } from "@/components/ui/switch";
 import { emailError, fssaiError, gstinError, upiError } from "@/lib/validation";
 import type { PaymentMode, RestaurantSettings } from "@/lib/types";
@@ -287,6 +288,27 @@ function PrintingSettings() {
           <Field label="KOT copies">
             <input type="number" min={1} max={5} value={form.kotCopies} onChange={(e) => patch({ kotCopies: Number(e.target.value) })} className={inputClass} />
           </Field>
+        </div>
+        <div className="rounded-2xl border border-border p-4">
+          <p className="text-sm font-semibold">Line width and margin</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">If the right edge of bills or KOTs gets cut, print the width test, count the last number printed in full, and set it here. Every slip then wraps onto the next line inside this width.</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            <Field label="Characters per line">
+              <Dropdown<number> ariaLabel="Characters per line" className="mt-1" value={form.charsPerLine ?? 0} onChange={(n) => patch({ charsPerLine: n || null })} searchable={false}
+                options={[{ value: 0, label: `Full width (${columnsFor(form.paper)})` }, ...Array.from({ length: columnsFor(form.paper) - MIN_SLIP_COLS }, (_, i) => columnsFor(form.paper) - 1 - i).map((n) => ({ value: n, label: `${n} characters` }))]} />
+            </Field>
+            <Field label="Side margin">
+              <Dropdown<number> ariaLabel="Side margin" className="mt-1" value={form.marginMm} onChange={(marginMm) => patch({ marginMm })} searchable={false}
+                options={[0, 1, 2, 3, 4, 5, 6].map((mm) => ({ value: mm, label: mm ? `${mm} mm each side` : "None" }))} />
+            </Field>
+            <Field label="Fits on this paper">
+              <p className="mt-1 rounded-lg bg-secondary px-3 py-2.5 text-sm">{layoutOf(slipLayoutOf(form)).cols} characters a line</p>
+            </Field>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button variant="outline" disabled={dirty} onClick={() => void printWidthTest()}><Printer />Print width test</Button>
+            {dirty ? <span className="text-xs text-muted-foreground">Save first: the test uses this device's saved settings.</span> : null}
+          </div>
         </div>
         <Toggle label="Print KOTs sent from this device" checked={form.printKotOnSend} onChange={(v) => patch({ printKotOnSend: v })} />
         <Toggle label="Print the bill as soon as it's settled" checked={form.autoPrintBill} onChange={(v) => patch({ autoPrintBill: v })} />

@@ -10,6 +10,7 @@ import { DialogTitle } from "./ui/dialog";
 import { Segmented } from "./Segmented";
 import { SlipView } from "./Slip";
 import { billSlip, kotSlip } from "@/lib/slip";
+import { slipLayoutOf } from "@/lib/print-logic";
 import { usePrintConfig } from "@/lib/print-config";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { kotSubmissions, type KotSubmission } from "@/lib/kot-history";
@@ -84,9 +85,9 @@ export function OrdersOverview({ onClose }: OrdersOverviewProps) {
           {"tickets" in record ? record.tickets.map((ticket, index) => (
             <div key={ticket.uid ?? ticket.id ?? index} className="mb-3 last:mb-0">
               {canPrint ? <Button variant="outline" size="sm" className="mb-2" aria-label={`Print ${ticket.kotNo ?? ticket.billNo} ${ticket.station}`} disabled={printing !== null} onClick={() => void reprint([ticket], `${record.id}:${index}`)}><Printer className="size-4" />Print {ticket.station}</Button> : null}
-              <SlipView slip={kotSlip([ticket], config.paper, settings.kotHeader, config.largeKotText)} />
+              <SlipView slip={kotSlip([ticket], slipLayoutOf(config), settings.kotHeader, config.largeKotText)} />
             </div>
-          )) : <SlipView slip={billSlip(record, settings, config.paper)} />}
+          )) : <SlipView slip={billSlip(record, settings, slipLayoutOf(config))} />}
         </div>
       </div>
     </section>

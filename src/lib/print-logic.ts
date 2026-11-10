@@ -30,6 +30,15 @@ export interface PrintConfig {
   endFeedMm: number;
   /** Cutter is opt-in because ESC/POS does not provide reliable universal capability discovery. */
   cutter: "none" | "full" | "partial";
+  /** Characters this printer really prints on a line (from the Print width test); null = the paper's full width. */
+  charsPerLine: number | null;
+  /** Blank side margin in mm, left and right; lines wrap inside it. */
+  marginMm: number;
+}
+
+/** The slip layout this device's printer needs. */
+export function slipLayoutOf(config: Pick<PrintConfig, "paper" | "charsPerLine" | "marginMm">): import("./slip").SlipLayout {
+  return { paper: config.paper, cols: config.charsPerLine, marginMm: config.marginMm };
 }
 
 export const DEFAULT_PRINT_CONFIG: PrintConfig = {
@@ -45,6 +54,8 @@ export const DEFAULT_PRINT_CONFIG: PrintConfig = {
   largeKotText: true,
   endFeedMm: 5,
   cutter: "none",
+  charsPerLine: null,
+  marginMm: 2,
 };
 
 /** Read a stored config, falling back to defaults for anything missing or invalid. */
@@ -64,6 +75,8 @@ export function normalisePrintConfig(raw: unknown): PrintConfig {
     largeKotText: typeof r.largeKotText === "boolean" ? r.largeKotText : DEFAULT_PRINT_CONFIG.largeKotText,
     endFeedMm: typeof r.endFeedMm === "number" && Number.isFinite(r.endFeedMm) && r.endFeedMm !== 50 ? Math.min(100, Math.max(0, r.endFeedMm)) : DEFAULT_PRINT_CONFIG.endFeedMm,
     cutter: r.cutter === "full" || r.cutter === "partial" ? r.cutter : "none",
+    charsPerLine: typeof r.charsPerLine === "number" && Number.isInteger(r.charsPerLine) && r.charsPerLine >= 16 && r.charsPerLine <= 48 ? r.charsPerLine : null,
+    marginMm: typeof r.marginMm === "number" && Number.isFinite(r.marginMm) ? Math.min(8, Math.max(0, Math.round(r.marginMm * 2) / 2)) : DEFAULT_PRINT_CONFIG.marginMm,
   };
 }
 

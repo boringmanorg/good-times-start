@@ -141,3 +141,47 @@ describe("KOT quantities", () => {
     }
   });
 });
+
+import { layoutOf, widthTestSlip, maxColumnsFor } from "./slip";
+import { normalisePrintConfig, slipLayoutOf } from "./print-logic";
+describe("printer line width and side margin", () => {
+  const kot = { uid: "k", kind: "kot", kotNo: "KOT/0049", station: "Hot Tandoori Breads", tableLabel: "Room 8A", tableSection: "Rooms", createdAt: new Date(2026, 10, 10, 20, 39).getTime(),
+    lines: [{ itemId: "roti|v:1", name: "Tawa Roti [1Pc] (Regular)", qty: 4 }, { itemId: "n", name: "Burned Garlic Hakka Noodles (Veg)", qty: 3, note: "less spicy please, no onion" }] } as never;
+  it("wraps every KOT line inside the printer's real width, item names onto an indented next line", () => {
+    const slip = kotSlip([kot], { paper: 58, cols: 24, marginMm: 2 });
+    expect(slip.marginMm).toBe(2);
+    for (const l of slip.lines) expect(l.text.length, l.text).toBeLessThanOrEqual(l.size === "big" ? 24 : 24);
+    const texts = slip.lines.map((l) => l.text);
+    expect(texts).toContain("4 x Tawa Roti [1Pc]");
+    expect(texts).toContain("    (Regular)");
+    expect(texts.some((t) => t.startsWith("3 x Burned Garlic"))).toBe(true);
+  });
+  it("keeps bills inside the width too", () => {
+    const bill = { uid: "b", billNo: "POS/0010", orderType: "dine-in", tableLabel: "Room 8A", status: "settled", createdAt: Date.now(), synced: true,
+      lines: [{ itemId: "x", name: "Steamed Rice with Chicken Kosha", price: 280, qty: 2, veg: false, gstRate: 0, station: "Indian" }],
+      subtotal: 560, discountPct: 0, discountAmt: 0, cgst: 0, sgst: 0, roundOff: 0, total: 560, payments: [{ mode: "cash", amount: 560 }] } as never;
+    for (const l of billSlip(bill, { name: "TAB Bistro by XTSY", address: "New Shillong Township, Meghalaya" } as never, { paper: 58, cols: 24 }).lines)
+      expect(l.text.length, l.text).toBeLessThanOrEqual(l.size === "big" ? 12 : 24);
+  });
+  it("never lets margins plus text overflow the paper, and keeps a sensible minimum", () => {
+    expect(layoutOf(58)).toEqual({ paper: 58, cols: 30, marginMm: 0 });
+    expect(layoutOf({ paper: 58, marginMm: 2 }).cols).toBe(30);
+    expect(layoutOf({ paper: 58, marginMm: 6 }).cols).toBeLessThan(30);
+    expect(layoutOf({ paper: 80, cols: 99 }).cols).toBe(45);
+    expect(layoutOf({ paper: 58, cols: 4 }).cols).toBe(16);
+  });
+  it("sends the side margin to ESC/POS printers (GS L) and prints a full-width ruler for the test", () => {
+    const bytes = [...escPos(kotSlip([kot], { paper: 58, marginMm: 2 }))];
+    const at = bytes.findIndex((b, i) => b === 0x1d && bytes[i + 1] === 0x4c);
+    expect(at).toBeGreaterThan(-1);
+    expect([bytes[at + 2], bytes[at + 3]]).toEqual([16, 0]);
+    const test = widthTestSlip({ paper: 58, marginMm: 2 });
+    expect(test.lines.some((l) => l.text === "12345678901234567890123456789012")).toBe(true);
+    expect(maxColumnsFor(80)).toBe(48);
+  });
+  it("stores characters per line and margin per device, with a 2 mm margin by default", () => {
+    expect(slipLayoutOf(normalisePrintConfig({}))).toEqual({ paper: 58, cols: null, marginMm: 2 });
+    expect(slipLayoutOf(normalisePrintConfig({ paper: 80, charsPerLine: 40, marginMm: 3.2 }))).toEqual({ paper: 80, cols: 40, marginMm: 3 });
+    expect(normalisePrintConfig({ charsPerLine: 3 }).charsPerLine).toBeNull();
+  });
+});
