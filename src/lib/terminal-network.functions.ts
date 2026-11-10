@@ -62,6 +62,8 @@ export const recordTerminalNetwork = createServerFn({ method: "POST" })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabaseAdmin as any).from("terminals")
       .update({ last_ip: ip || null, last_location: location || null, network_seen_at: new Date().toISOString() })
-      .eq("restaurant_id", data.restaurantId).eq("device_id", data.deviceId);
+      .eq("restaurant_id", data.restaurantId).eq("device_id", data.deviceId)
+      // Only the device the caller itself checked in with (touch_terminal records user_id).
+      .eq("user_id", context.userId);
     return { ok: true };
   });
