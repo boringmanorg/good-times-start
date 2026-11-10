@@ -1,10 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate } from "@tanstack/react-router";
 import { reportOrders } from "@/lib/report-orders";
 import { getDb } from "@/lib/db";
 import { formatINR } from "@/lib/billing";
-import { dayBounds, dateLabel, historyBills, paidBy, type HistoryKind, type PaymentFilter } from "@/lib/orders-history";
+import { closedAt, dayBounds, dateLabel, historyBills, openFor, paidBy, type HistoryKind, type PaymentFilter } from "@/lib/orders-history";
 import { Button } from "./ui/button";
 import { DialogTitle } from "./ui/dialog";
 import { Segmented } from "./Segmented";
@@ -41,12 +41,14 @@ export function OrdersOverview({ onClose }: OrdersOverviewProps) {
   const date = period === "custom" ? custom : dateLabel(period === "yesterday" ? -1 : period === "before" ? -2 : 0);
   const [start, end] = dayBounds(date);
   const running = useLiveQuery(() => getDb().orders.where("status").equals("held").sortBy("createdAt"), [], []);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 30_000); return () => window.clearInterval(t); }, []);
   const tables = useLiveQuery(() => getDb().restTables.toArray(), [], []);
   // Bills settled that day, plus cancelled bills (few) so a bill cancelled today but opened earlier shows today.
   const history = useLiveQuery(async () => ({ bills: [...new Map([...await reportOrders({ from: start, to: end - 1 }), ...await getDb().orders.where("status").equals("void").toArray()].map((o) => [o.uid ?? o.id ?? o.billNo, o])).values()], kots: await getDb().kots.where("createdAt").between(start, end, true, false).reverse().toArray() }), [start, end], { bills: [], kots: [] });
   const datedBills = (type: HistoryKind) => historyBills(history.bills, type, [start, end]);
   const shownBills = kind === "settled" ? datedBills("settled").filter((o) => paidBy(o, paid)) : datedBills(kind);
-  // Oldest first, matching the bills list: the day reads in the order it happened.
+  // Newest first in every list: the last KOT sent, the last bill settled or cancelled.
   const submissions = kotSubmissions(history.kots);
   const settings = useRestaurantSettings(); const config = usePrintConfig();
   const { user } = useStaff();
@@ -99,7 +101,7 @@ export function OrdersOverview({ onClose }: OrdersOverviewProps) {
     <Segmented className="shrink-0" ariaLabel="Orders view" stretch value={view} onChange={(v) => { setView(v); setDetail(null); }} options={[{ value: "running", label: "Running", badge: running.length }, { value: "history", label: "History" }]} />
     {view === "running" ? <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
       {active.length ? <Button variant="outline" className="mb-3 w-full" onClick={() => { onClose(); window.dispatchEvent(new Event("pos:bookings")); }}>{active.length} guest booking{active.length === 1 ? "" : "s"} · View & start order</Button> : null}
-      {running.map((o) => <div key={o.uid ?? o.billNo} className="flex h-16 items-center gap-2"><Button variant="ghost" className="h-16 min-w-0 flex-1 justify-between gap-3 rounded-none text-left" onClick={() => open(o)}><span className="min-w-0"><span className="block truncate font-bold">{o.tableLabel ?? tables.find((t) => t.id === o.tableId)?.label ?? o.orderType}</span><span className="block truncate text-xs font-normal text-muted-foreground">{billLabel(o)} · {o.lines.reduce((n, l) => n + l.qty, 0)} items{o.customer?.name ? ` · ${o.customer.name}` : ""}</span></span><span>{formatINR(o.total, 0)}</span></Button><BillPrintButton order={o} className="shrink-0" /></div>)}
+      {running.map((o) => <div key={o.uid ?? o.billNo} className="flex h-16 items-center gap-2"><Button variant="ghost" className="h-16 min-w-0 flex-1 justify-between gap-3 rounded-none text-left" onClick={() => open(o)}><span className="min-w-0"><span className="block truncate font-bold">{o.tableLabel ?? tables.find((t) => t.id === o.tableId)?.label ?? o.orderType}</span><span className="block truncate text-xs font-normal text-muted-foreground">{billLabel(o)} · {o.lines.reduce((n, l) => n + l.qty, 0)} items{o.customer?.name ? ` · ${o.customer.name}` : ""}</span></span><span className="flex shrink-0 flex-col items-end"><span>{formatINR(o.total, 0)}</span><span title={`Opened ${new Date(o.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}`} className={`text-xs font-semibold tabular-nums ${now - o.createdAt >= 3 * 3_600_000 ? "text-warning" : "text-muted-foreground"}`}>Open {openFor(o.createdAt, now)}</span></span></Button><BillPrintButton order={o} className="shrink-0" /></div>)}
       {tables.filter((t) => t.status === "occupied" && !running.some((o) => o.tableId === t.id)).map((t) => <div key={t.id} className="flex justify-between py-3 text-sm"><strong>{t.label}</strong><span>{t.heldBy ?? "Taking order"} · {formatINR(t.runningTotal, 0)}</span></div>)}
       {!running.length && !tables.some((t) => t.status === "occupied") ? <p className="py-8 text-center text-sm text-muted-foreground">No running bills.</p> : null}
     </div> : <>
@@ -125,7 +127,7 @@ export function OrdersOverview({ onClose }: OrdersOverviewProps) {
             const selected = detail !== null && recordKey(detail) === recordKey(record);
             return <div key={record.uid ?? record.id}>
               <div className="flex h-16 items-center gap-2"><Button variant="ghost" aria-expanded={selected} className={`h-16 min-w-0 flex-1 justify-between gap-3 rounded-none text-left ${selected ? "bg-accent" : ""}`} onClick={(event) => selectRecord(record, event.currentTarget)}>
-                <span className="min-w-0"><span className="block truncate font-semibold">{billLabel(record)}</span><span className="block truncate text-xs font-normal text-muted-foreground">{record.tableLabel ?? record.tableId ?? "Counter"} · {record.status === "held" ? "Running" : record.status === "void" ? "Cancelled" : "Settled"}</span></span>
+                <span className="min-w-0"><span className="block truncate font-semibold">{billLabel(record)}</span><span className="block truncate text-xs font-normal text-muted-foreground">{record.tableLabel ?? record.tableId ?? "Counter"} · {record.status === "held" ? "Running" : record.status === "void" ? "Cancelled" : "Settled"}{closedAt(record) ? ` ${new Date(closedAt(record)!).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : ""}</span></span>
                 <span className="flex shrink-0 items-center gap-2"><span className="tabular-nums">{formatINR(record.total, 0)}</span><ChevronDown className={`size-4 ${selected ? "rotate-180" : ""}`} /></span>
               </Button>
               <BillPrintButton order={record} className="shrink-0" /></div>

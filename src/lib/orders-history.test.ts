@@ -41,9 +41,29 @@ describe("Orders history", () => {
     expect(historyBills([room], "settled", yesterday)).toEqual([]);
   });
 
-  it("lists bills in the order they were settled", () => {
+  it("lists the last bill settled first", () => {
     const late = order({ uid: "late", payments: [paid("cash", 1)] as Order["payments"], settledAt: 900 });
     const early = order({ uid: "early", payments: [paid("upi", 1)] as Order["payments"], settledAt: 300 });
-    expect(historyBills([late, early], "settled").map((o) => o.uid)).toEqual(["early", "late"]);
+    expect(historyBills([early, late], "settled").map((o) => o.uid)).toEqual(["late", "early"]);
+  });
+});
+
+import { openFor } from "./orders-history";
+describe("newest first and open time", () => {
+  it("lists the last settled, NC or cancelled bill first", () => {
+    const bill = (uid: string, status: "settled" | "void", at: number, amount = 100) => ({ uid, billNo: uid, status, createdAt: at - 3_600_000, settledAt: status === "settled" ? at : undefined, cancelledAt: status === "void" ? at : undefined,
+      payments: amount ? [{ mode: "upi", amount }] : [], lines: [], total: amount }) as never;
+    const all = [bill("POS/0011", "settled", 1000_000), bill("POS/0013", "settled", 3000_000), bill("POS/0012", "settled", 2000_000, 0), bill("V1", "void", 500_000), bill("V2", "void", 900_000)];
+    expect(historyBills(all, "settled").map((o) => o.uid)).toEqual(["POS/0013", "POS/0011"]);
+    expect(historyBills(all, "cancelled").map((o) => o.uid)).toEqual(["V2", "V1"]);
+    expect(historyBills(all, "nc").map((o) => o.uid)).toEqual(["POS/0012"]);
+  });
+  it("says how long a running bill has been open", () => {
+    const now = 1_700_000_000_000;
+    expect(openFor(now - 25 * 60_000, now)).toBe("25 min");
+    expect(openFor(now - 135 * 60_000, now)).toBe("2 h 15 min");
+    expect(openFor(now - 3 * 3_600_000, now)).toBe("3 h");
+    expect(openFor(now - 27 * 3_600_000, now)).toBe("1 day 3 h");
+    expect(openFor(now + 60_000, now)).toBe("0 min");
   });
 });

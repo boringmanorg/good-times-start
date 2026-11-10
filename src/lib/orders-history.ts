@@ -33,7 +33,7 @@ export function closedAt(o: Order): number | undefined {
   return undefined;
 }
 
-/** Closed bills of one kind, in the order they were settled or cancelled. */
+/** Closed bills of one kind, the last one settled or cancelled first. */
 export function historyBills(orders: Order[], kind: HistoryKind, bounds?: [number, number]): Order[] {
   return orders.filter((o) => {
     if (kind === "kots") return false;
@@ -45,13 +45,22 @@ export function historyBills(orders: Order[], kind: HistoryKind, bounds?: [numbe
     return !bounds || at >= bounds[0] && at < bounds[1];
   }).sort((a, b) => {
     const ca = closedAt(a), cb = closedAt(b);
-    if (ca !== undefined && cb !== undefined) return ca - cb;
+    if (ca !== undefined && cb !== undefined) return cb - ca;
     if (ca !== undefined) return -1;
     if (cb !== undefined) return 1;
-    return a.createdAt - b.createdAt;
+    return b.createdAt - a.createdAt;
   });
 }
 export function dateLabel(offset = 0): string {
   const d = new Date(); d.setDate(d.getDate() + offset);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+/** How long a running bill has been open: "25 min", "2 h 15 min", "1 day 3 h". */
+export function openFor(createdAt: number, now = Date.now()): string {
+  const mins = Math.max(0, Math.floor((now - createdAt) / 60_000));
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  if (h < 24) return m ? `${h} h ${m} min` : `${h} h`;
+  const d = Math.floor(h / 24), rh = h % 24;
+  return `${d} ${d === 1 ? "day" : "days"}${rh ? ` ${rh} h` : ""}`;
 }
