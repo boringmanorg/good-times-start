@@ -77,15 +77,15 @@ describe("thermal slips", () => {
     expect(slip.lines.find((l) => l.text === "DINE IN")).toMatchObject({ size: "big", bold: true });
     expect(slip.lines.find((l) => l.text === "TBL: D2")).toMatchObject({ size: "big", bold: true });
     expect(t).toContain("Date: 03-10-2026  Time: 07:45 PM");
-    expect(slip.lines.find((l) => l.text.startsWith("Chicken Burned Garlic"))).toMatchObject({ size: "tall", bold: true });
+    expect(slip.lines.find((l) => /^\d+ x Chicken Burned Garlic/.test(l.text))).toMatchObject({ size: "tall", bold: true });
     expect(t).toContain("NOTE: less spicy");
-    expect(t).toMatch(/Total Qty\s+2/);
+    expect(t).toContain("Total Qty: 2");
     expect(text(kotSlip([{ ...kot, kind: "cancel" }], 80).lines)).toContain("CANCEL KOT");
   });
 
   it("wraps long names inside their column on 58 mm paper", () => {
     const lines = kotSlip([kot], 58).lines.map((l) => l.text);
-    expect(lines.some((l) => l.startsWith("Kerala Parotta"))).toBe(true);
+    expect(lines.some((l) => /^\d+ x Kerala Parotta/.test(l))).toBe(true);
     expect(lines.every((l) => l.length <= 30)).toBe(true);
   });
 
@@ -123,5 +123,21 @@ describe("thermal slips", () => {
   it("keeps text printable on any thermal printer", () => {
     expect(plain("₹120 × 2 — Crème brûlée")).toBe("Rs.120 x 2 - Creme brulee");
     expect(wrap("Kerala Parotta [2 Pcs] With Chicken Gravy", 20)).toEqual(["Kerala Parotta [2", "Pcs] With Chicken", "Gravy"]);
+  });
+});
+
+describe("KOT quantities", () => {
+  it("prints the quantity first, so a clipped right edge can't hide it (4 x Tawa Roti)", () => {
+    const kot = { uid: "k", kind: "kot", kotNo: "KOT/0049", station: "Hot Tandoori Breads", tableLabel: "Room 8A", tableSection: "Rooms", createdAt: new Date(2026, 10, 10, 20, 39).getTime(),
+      lines: [{ itemId: "roti|v:1", name: "Tawa Roti [1Pc] (Regular)", qty: 4 }] } as never;
+    for (const paper of [58, 80] as const) {
+      const slip = kotSlip([kot], paper);
+      const texts = slip.lines.map((l) => l.text);
+      expect(texts).toContain("4 x Tawa Roti [1Pc] (Regular)".slice(0, texts.find((t) => t.startsWith("4 x "))!.length));
+      expect(texts.find((t) => t.startsWith("4 x "))).toMatch(/^4 x Tawa Roti/);
+      expect(texts).toContain("Total Qty: 4");
+      expect(texts.some((t) => t.includes("08:39 PM"))).toBe(true);
+      expect(texts.every((t) => !t.endsWith("Time:"))).toBe(true);
+    }
   });
 });

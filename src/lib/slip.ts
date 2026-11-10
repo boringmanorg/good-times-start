@@ -166,25 +166,29 @@ export function kotSlip(kots: Kot[], paper: Paper, header = "", large = true, en
   if (first.billNo) L.push({ text: plain(`Bill: ${first.billNo}`) });
   if (first.kotNo) for (const text of wrap(first.kotNo, cols)) L.push({ text, bold: true });
   if (first.tableSection) for (const text of wrap(`Section: ${first.tableSection}`, cols)) L.push({ text, bold: true });
+  // Date and time on their own lines when they don't both fit, so neither is ever cut.
   const stamp = `Date: ${when.date}  Time: ${when.time}`;
-  for (const t of stamp.length <= cols ? [stamp] : wrap(stamp, cols)) L.push({ text: t });
+  for (const t of stamp.length <= cols ? [stamp] : [`Date: ${when.date}`, `Time: ${when.time}`]) L.push({ text: t });
   L.push(rule(cols));
-  const qtyW = 5;
+  // Quantity first, on the left ("4 x Tawa Roti"): the kitchen reads it first, and a printer that
+  // clips the right edge of the paper can never hide it.
   let total = 0;
   for (const k of kots) {
     if (kots.length > 1 || k.station) L.push({ text: plain(k.station.toUpperCase()), bold: true });
-    L.push({ text: pad("Item", cols - qtyW) + lpad("Qty", qtyW), bold: true });
+    L.push({ text: "Qty  Item", bold: true });
     for (const line of k.lines) {
       total += line.qty;
-      const names = wrap(`${cancel ? "CANCEL " : ""}${line.name}`, cols - qtyW - 1);
+      const qty = `${qtyText(line.qty)} x `;
+      const indent = " ".repeat(qty.length);
+      const names = wrap(`${cancel ? "CANCEL " : ""}${line.name}`, Math.max(8, cols - qty.length));
       const size = large ? "tall" as const : "normal" as const;
-      L.push({ text: pad(names[0] ?? "", cols - qtyW) + lpad(qtyText(line.qty), qtyW), bold: true, size });
-      for (const more of names.slice(1)) L.push({ text: more, bold: true, size });
+      L.push({ text: qty + (names[0] ?? ""), bold: true, size });
+      for (const more of names.slice(1)) L.push({ text: indent + more, bold: true, size });
       if (line.note) for (const t of wrap(`  NOTE: ${line.note}`, cols)) L.push({ text: t, bold: true });
     }
     L.push(rule(cols));
   }
-  L.push(pair("Total Qty", qtyText(total), cols, { bold: true }));
+  L.push({ text: `Total Qty: ${qtyText(total)}`, bold: true, size: "big" });
   L.push(rule(cols));
   return { paper, lines: L, startFeedMm: KOT_START_FEED_MM, endFeedMm };
 }
