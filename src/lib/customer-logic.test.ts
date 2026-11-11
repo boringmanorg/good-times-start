@@ -39,4 +39,16 @@ describe("customers", () => {
     const stats = customerStats({ id: "9876543210", pointsAdjustment: 5, duesPaid: [{ id: "p", amount: 200, mode: "upi", at: 30 }] }, orders, 5);
     expect(stats).toMatchObject({ visits: 2, spent: 1600, lastVisit: 20, pointsEarned: 0, pointsRedeemed: 30, points: 0, dueOwed: 570, duePaid: 200, due: 370, averageRating: 4.5 });
   });
+
+  it("never earns more than the bill total, even if the taxable value is inflated", () => {
+    const order = bill("x", 100, [{ mode: "cash", amount: 100 }], { subtotal: 100000, taxable: 100000 });
+    expect(earnedPoints(order, 1, true)).toBe(1);
+  });
+
+  it("earns no points on a settled bill until it has an official bill number, then earns them", () => {
+    const orders = Array.from({ length: 6 }, (_, i) => bill("9876543210", 1000, [{ mode: "cash", amount: 1000 }], { createdAt: i, billNo: i === 5 ? "" : "B" }));
+    expect(customerStats({ id: "9876543210" }, orders, 1).pointsEarned).toBe(0);
+    orders[5] = { ...orders[5]!, billNo: "POS/0099" };
+    expect(customerStats({ id: "9876543210" }, orders, 1).pointsEarned).toBe(10);
+  });
 });
