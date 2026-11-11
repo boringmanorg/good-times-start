@@ -327,14 +327,20 @@ function niceStep(raw: number): number {
 /* ---------------- live status ---------------- */
 
 function LiveStatus() {
-  const held = useLiveQuery(() => getDb().orders.where("status").equals("held").toArray(), [], []);
-  const live = useMemo(() => liveStatus(held), [held]);
+  const data = useLiveQuery(async () => {
+    const db = getDb();
+    const held = await db.orders.where("status").equals("held").toArray();
+    const ids = held.map((o) => o.id).filter((id): id is number => id !== undefined);
+    const kots = ids.length ? await db.kots.where("orderId").anyOf(ids).toArray() : [];
+    return { held, kots };
+  }, [], { held: [], kots: [] });
+  const live = useMemo(() => liveStatus(data.held, data.kots), [data]);
   return (
     <div>
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Live status</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Updates by itself as tables order and settle.</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Latest orders first · each KOT shown newest on top.</p>
         </div>
         <div className="flex gap-3">
           <div className="rounded-xl bg-card px-4 py-2 ring-1 ring-border/70"><p className="text-xs text-muted-foreground">Running bills</p><p className="text-xl font-bold tabular-nums">{live.cards.length}</p></div>
@@ -358,9 +364,24 @@ function LiveStatus() {
                   {c.guestPhone ? <a href={`tel:${c.guestPhone}`} className="shrink-0 tabular-nums text-primary">{c.guestPhone}</a> : null}
                 </div>
               ) : null}
-              <ul className="flex-1 space-y-1 overflow-y-auto px-4 py-3 text-sm">
-                {c.lines.map((l) => <li key={l.name} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.name}</span><span className="tabular-nums text-muted-foreground">{l.qty}</span></li>)}
-              </ul>
+              {c.kots.length ? (
+                <ol className="flex-1 overflow-y-auto px-4 py-2 text-sm">
+                  {c.kots.map((k, i) => (
+                    <li key={k.key} className="relative border-l-2 border-border py-2 pl-3">
+                      <span className={cn("absolute -left-[5px] top-3 size-2 rounded-full", i === 0 ? "bg-primary" : "bg-muted-foreground/40")} />
+                      <p className={cn("mb-1 flex justify-between gap-2 text-xs", k.cancel ? "text-destructive" : i === 0 ? "font-semibold text-primary" : "text-muted-foreground")}>
+                        <span>{k.cancel ? "Cancelled · " : i === 0 ? "Latest · " : ""}{k.kotNo || "KOT"}</span>
+                        <span className="tabular-nums">{new Date(k.at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</span>
+                      </p>
+                      <ul className="space-y-0.5">{k.lines.map((l) => <li key={l.name} className={cn("flex justify-between gap-3", k.cancel && "line-through opacity-70")}><span className="min-w-0 truncate">{l.name}</span><span className="tabular-nums text-muted-foreground">{l.qty}</span></li>)}</ul>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <ul className="flex-1 space-y-1 overflow-y-auto px-4 py-3 text-sm">
+                  {c.lines.map((l) => <li key={l.name} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.name}</span><span className="tabular-nums text-muted-foreground">{l.qty}</span></li>)}
+                </ul>
+              )}
               <footer className="flex items-center justify-between border-t border-border bg-secondary/40 px-4 py-3">
                 <span className="text-sm font-medium">Expected total</span>
                 <span className="text-lg font-bold tabular-nums">{money(c.total)}</span>
