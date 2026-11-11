@@ -99,11 +99,37 @@ export interface LiveCard {
   lines: { name: string; qty: number }[];
   total: number;
   billNo: string;
+  /** KOT submissions for this bill, newest first, so the last ordered items show on top. */
+  kots: LiveKot[];
+  lastAt: number;
 }
 
-/** Running (held) bills as cards, oldest first, with each dish's quantity added up. */
-export function liveStatus(orders: Order[]): { cards: LiveCard[]; total: number } {
-  const cards = orders.filter((o) => o.status === "held" && o.lines.length > 0).sort((a, b) => a.createdAt - b.createdAt).map((o): LiveCard => {
+export interface LiveKot { key: string; at: number; kotNo: string; cancel: boolean; lines: { name: string; qty: number }[] }
+
+/** Groups a bill's KOT tickets by submission (station splits merged), newest first. */
+export function liveKots(kots: Kot[]): LiveKot[] {
+  const groups = new Map<string, LiveKot>();
+  for (const k of kots) {
+    const cancel = k.kind === "cancel";
+    const key = `${k.submissionId ?? k.uid ?? k.id}${cancel ? ":c" : ""}`;
+    const g = groups.get(key) ?? { key, at: k.createdAt, kotNo: k.kotNo ?? "", cancel, lines: [] };
+    g.at = Math.min(g.at, k.createdAt);
+    if (!g.kotNo && k.kotNo) g.kotNo = k.kotNo;
+    for (const l of k.lines) {
+      const row = g.lines.find((x) => x.name === l.name);
+      if (row) row.qty += l.qty; else g.lines.push({ name: l.name, qty: l.qty });
+    }
+    groups.set(key, g);
+  }
+  return [...groups.values()].sort((a, b) => b.at - a.at);
+}
+
+/** Running (held) bills as cards, most recently ordered first, with KOTs grouped newest first. */
+export function liveStatus(orders: Order[], kots: Kot[] = []): { cards: LiveCard[]; total: number } {
+  const byOrder = new Map<string, Kot[]>();
+  for (const k of kots) { const key = k.orderUid ?? `#${k.orderId}`; byOrder.set(key, [...(byOrder.get(key) ?? []), k]); }
+  const cards = orders.filter((o) => o.status === "held" && o.lines.length > 0).map((o): LiveCard => {
+    const groups = liveKots([...(o.uid ? byOrder.get(o.uid) ?? [] : []), ...(o.id !== undefined ? (byOrder.get(`#${o.id}`) ?? []).filter((k) => !k.orderUid) : [])]);
     const qty = new Map<string, number>();
     for (const l of o.lines) qty.set(l.name, (qty.get(l.name) ?? 0) + l.qty);
     const pickupName = o.guestCodes?.[0] ? `${o.guestCodes[0]}${o.customer?.name ? ` ${o.customer.name}` : ""}` : o.customer?.name;
@@ -117,8 +143,10 @@ export function liveStatus(orders: Order[]): { cards: LiveCard[]; total: number 
       lines: [...qty.entries()].map(([name, n]) => ({ name, qty: n })),
       total: o.total,
       billNo: o.billNo,
+      kots: groups,
+      lastAt: groups[0]?.at ?? o.createdAt,
     };
-  });
+  }).sort((a, b) => b.lastAt - a.lastAt);
   return { cards, total: r2(cards.reduce((t, c) => t + c.total, 0)) };
 }
 
