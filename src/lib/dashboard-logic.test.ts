@@ -51,14 +51,22 @@ describe("business overview", () => {
 });
 
 describe("live status", () => {
-  it("lists running bills oldest first with each dish added up, and their total", () => {
+  it("lists the most recently ordered bill first with each dish added up, and their total", () => {
     const live = liveStatus([
       bill({ status: "held", tableId: "t2", tableLabel: "2A", createdAt: base + 5, lines: [line("Tea", 2), line("Tea", 1), line("Dosa", 1)], total: 400, customer: { name: "Anisha", phone: "7077376844" } }),
       bill({ status: "held", createdAt: base, guestCodes: ["W-1234"], customer: { name: "Banrita" }, total: 149 }),
       bill({ status: "settled" }),
     ]);
     expect(live.total).toBe(549);
-    expect(live.cards.map((c) => c.title)).toEqual(["W-1234 Banrita", "2A"]);
-    expect(live.cards[1]?.lines).toEqual([{ name: "Tea", qty: 3 }, { name: "Dosa", qty: 1 }]);
+    expect(live.cards.map((c) => c.title)).toEqual(["2A", "W-1234 Banrita"]);
+    expect(live.cards[0]?.lines).toEqual([{ name: "Tea", qty: 3 }, { name: "Dosa", qty: 1 }]);
+  });
+
+  it("groups a bill's KOTs by submission, newest on top", () => {
+    const o = bill({ id: 7, uid: "b7", status: "held", createdAt: base, lines: [line("Tea", 1)], total: 60 });
+    const k = (submissionId: string, station: string, at: number, name: string, qty: number) => ({ orderId: 7, orderUid: "b7", submissionId, station, billNo: "", status: "new" as const, createdAt: at, kotNo: `KOT/${submissionId}`, lines: [{ name, qty }] });
+    const live = liveStatus([o], [k("1", "INDIAN", base + 1, "Dosa", 2), k("2", "CHINESE", base + 9, "Noodles", 1), k("2", "INDIAN", base + 9, "Tea", 3)]);
+    expect(live.cards[0]?.kots.map((g) => g.kotNo)).toEqual(["KOT/2", "KOT/1"]);
+    expect(live.cards[0]?.kots[0]?.lines).toEqual([{ name: "Noodles", qty: 1 }, { name: "Tea", qty: 3 }]);
   });
 });
