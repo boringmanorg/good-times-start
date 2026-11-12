@@ -13,7 +13,7 @@ describe("spendBySupplier", () => {
   it("daily: today's spend per supplier is net of returns", () => {
     const v = spendBySupplier(entries, sups, "day", now);
     expect(v.buckets).toHaveLength(14);
-    expect(v.buckets.at(-1)!.bySupplier.a).toBe(400);
+    expect(v.buckets.at(-1)!.bySupplier["a"]).toBe(400);
   });
   it("weekly: Mon 9 Nov – Sun 15 Nov groups both suppliers", () => {
     const w = spendBySupplier(entries, sups, "week", now).buckets.at(-1)!;
@@ -21,7 +21,7 @@ describe("spendBySupplier", () => {
   });
   it("monthly: October purchase lands in October", () => {
     const v = spendBySupplier(entries, sups, "month", now);
-    expect(v.buckets.at(-2)!.bySupplier.a).toBe(200);
+    expect(v.buckets.at(-2)!.bySupplier["a"]).toBe(200);
     expect(v.total).toBe(900);
   });
   it("pending purchases are not counted", () => {

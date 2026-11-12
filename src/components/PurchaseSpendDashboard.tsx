@@ -18,7 +18,7 @@ export function PurchaseSpendDashboard({ entries, suppliers }: { entries: StockE
     const row: Record<string, number | string> = { label: b.label };
     let rest = b.total;
     for (const s of top) { row[s.key] = b.bySupplier[s.key] ?? 0; rest -= b.bySupplier[s.key] ?? 0; }
-    if (others) row.others = Math.round(rest * 100) / 100;
+    if (others) row["others"] = Math.round(rest * 100) / 100;
     return row;
   });
   const series = [...top.map((s) => ({ key: s.key, name: s.name })), ...(others ? [{ key: "others", name: "Others" }] : [])];
