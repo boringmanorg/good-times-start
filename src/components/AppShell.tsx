@@ -400,7 +400,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border/70 px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] lg:px-6">
+        <header className="dark glass-dark sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border/70 text-foreground px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] lg:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <img src={logo} alt="" width={28} height={28} className="rounded-[8px] lg:hidden" />
             <div className="min-w-0">
@@ -432,7 +432,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
         </main>
       </div>
 
-      <nav className="glass no-scrollbar fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-border/70 pb-[env(safe-area-inset-bottom)] text-foreground lg:hidden" aria-label="Main">
+      <nav className="dark glass-dark no-scrollbar fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-border/70 pb-[env(safe-area-inset-bottom)] text-foreground lg:hidden" aria-label="Main">
         {nav.map(({ to, label, icon: Icon }) => {
           const active = to === "/tables" ? pathname === "/" || pathname.startsWith(to) : pathname.startsWith(to);
           return (
