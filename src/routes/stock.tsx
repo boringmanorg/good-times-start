@@ -21,6 +21,7 @@ import { Dropdown } from "@/components/Dropdown";
 import { Segmented } from "@/components/Segmented";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { cn } from "@/lib/utils";
+import { PurchaseSpendDashboard } from "@/components/PurchaseSpendDashboard";
 import { can } from "@/lib/permissions";
 
 export const Route = createFileRoute("/stock")({
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/stock")({
 });
 
 const inputClass = "mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm";
-type Tab = "items" | "purchases" | "suppliers" | "history";
+type Tab = "spend" | "items" | "purchases" | "suppliers" | "history";
 function num(raw: string): number | null {
   const value = Number(raw.trim());
   return raw.trim() !== "" && Number.isFinite(value) ? value : null;
@@ -324,7 +325,7 @@ function StockPage() {
         <ul className="divide-y divide-border px-4">{pending.map(billCard)}</ul>
       </section>
     ) : null}
-    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[{ value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, { value: "suppliers", label: "Vendors" }, { value: "history", label: "History" }]}/>
+    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, { value: "suppliers", label: "Vendors" }, { value: "history", label: "History" }]}/>
 
     {tab === "items" ? <div className="mt-4"><input aria-label="Find purchase item" placeholder="Find item" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"/>
       <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr>
@@ -352,6 +353,7 @@ function StockPage() {
         })}</tbody></table></div>{!shown.length ? <p className="py-8 text-center text-sm text-muted-foreground">No items found</p> : null}
     </div> : null}
 
+    {tab === "spend" && admin ? <PurchaseSpendDashboard entries={entries} suppliers={suppliers} /> : null}
     {tab === "purchases" || tab === "history" ? <ul className="mt-4 divide-y divide-border">{(tab === "purchases" ? purchases : history).map(billCard)}{!(tab === "purchases" ? purchases : history).length ? <li className="py-8 text-center text-muted-foreground">No purchase history yet</li> : null}</ul> : null}
 
     {tab === "suppliers" ? <div className="mt-4 space-y-3">
