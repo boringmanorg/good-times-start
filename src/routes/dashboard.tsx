@@ -11,6 +11,7 @@ import { PRESET_LABELS, businessOverview, dashboardRange, liveStatus, salesByDay
 import { dayStart, type Range } from "@/lib/report-logic";
 import { kpiForecast, LOOKBACK_DAYS } from "@/lib/forecast";
 import { cn } from "@/lib/utils";
+import { recentPointAwards } from "@/lib/customer-logic";
 import { can } from "@/lib/permissions";
 import { useStaff } from "@/lib/auth-context";
 
@@ -332,9 +333,15 @@ function LiveStatus() {
     const held = await db.orders.where("status").equals("held").toArray();
     const ids = held.map((o) => o.id).filter((id): id is number => id !== undefined);
     const kots = ids.length ? await db.kots.where("orderId").anyOf(ids).toArray() : [];
-    return { held, kots };
-  }, [], { held: [], kots: [] });
+    const since = dayStart(Date.now());
+    const guestOrders = (await db.orders.where("customerId").above("").toArray()).filter((o) => o.status === "settled");
+    const recent = guestOrders.filter((o) => (o.settledAt ?? o.createdAt) >= since);
+    const customers = await db.customers.toArray();
+    return { held, kots, recent, guestOrders, customers };
+  }, [], { held: [], kots: [], recent: [], guestOrders: [], customers: [] });
   const live = useMemo(() => liveStatus(data.held, data.kots), [data]);
+  const loyaltyPct = useRestaurantSettings().loyaltyPct ?? 1;
+  const awards = useMemo(() => recentPointAwards(data.recent, data.guestOrders, data.customers, loyaltyPct), [data, loyaltyPct]);
   return (
     <div>
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -347,6 +354,19 @@ function LiveStatus() {
           <div className="rounded-xl bg-card px-4 py-2 ring-1 ring-border/70"><p className="text-xs text-muted-foreground">Expected total</p><p className="text-xl font-bold tabular-nums">{money(live.total)}</p></div>
         </div>
       </header>
+      {awards.length ? (
+        <section aria-label="Loyalty points today" className="mb-5 rounded-2xl bg-card p-4 ring-1 ring-border/70">
+          <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Gift className="size-4 text-primary" />Loyalty points today</h2>
+          <ul className="flex flex-wrap gap-2 text-sm">
+            {awards.slice(0, 12).map((a) => (
+              <li key={`${a.orderId}-${a.customerId}`} className="rounded-xl bg-muted px-3 py-1.5">
+                <span className="font-medium">{a.name}</span>
+                <span className="ml-2 tabular-nums text-muted-foreground">{a.pending ? "Waiting for sync" : `+${a.points} pts · Bill ${a.billNo} · balance ${a.balance}`}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {live.cards.length ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {live.cards.map((c) => (
