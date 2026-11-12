@@ -84,8 +84,8 @@ export function recentPointAwards(recent: Order[], guestOrders: Order[], custome
     const c = customers.find((x) => x.id === o.customerId);
     const all = byGuest.get(o.customerId!) ?? [];
     const withBill = c ? customerStats(c, all, loyaltyPct) : null;
-    const without = c ? customerStats(c, all.filter((x) => x.uid !== o.uid), loyaltyPct) : null;
+    const without = c ? customerStats(c, all.filter((x) => (o.uid ? x.uid !== o.uid : x.id !== o.id)), loyaltyPct) : null;
     const pending = !o.billNo;
-    return { orderId: o.id, billNo: o.billNo || null, customerId: o.customerId!, name: c?.name ?? o.customerName ?? "Guest", points: pending || !withBill || !without ? 0 : Math.max(0, withBill.pointsEarned - without.pointsEarned), balance: withBill?.points ?? 0, pending, at: o.settledAt ?? o.createdAt };
+    return { orderId: o.id, billNo: o.billNo || null, customerId: o.customerId!, name: c?.name ?? o.customer?.name ?? "Guest", points: pending || !withBill || !without ? 0 : Math.max(0, withBill.pointsEarned - without.pointsEarned), balance: withBill?.points ?? 0, pending, at: o.settledAt ?? o.createdAt };
   }).sort((a, b) => b.at - a.at);
 }

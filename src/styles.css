@@ -191,10 +191,15 @@
 }
 
 /* Frosted bars, as in iOS navigation and tab bars. */
+@utility glass-dark {
+  background: color-mix(in srgb, oklch(0.12 0 0) 82%, transparent);
+  color: oklch(0.97 0 0);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
 @utility glass {
   background: color-mix(in srgb, var(--color-background) 78%, transparent);
   backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 /* Thermal printing is set up per device by PrintHost (src/components/PrintHost.tsx). */
