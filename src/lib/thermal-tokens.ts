@@ -8,4 +8,6 @@ export const THERMAL = {
   boldWeight: 800,
   largeMultiplier: 2,
   widths: { 58: 48, 80: 72 },
+  /** Widest common monospace character (Courier New), in em: slips size their font so a line always fits. */
+  charEm: 0.6,
 } as const;

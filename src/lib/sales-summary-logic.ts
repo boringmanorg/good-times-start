@@ -2,7 +2,6 @@
  * Sales Summary: one row per bill with filters, a totals strip and an Excel
  * sheet, like a back-office sales report. Pure, tested.
  */
-import { openFor } from "./orders-history";
 import type { Order, PaymentMode } from "./types";
 import { paymentLabel, seriesOf, summaryAt } from "./report-logic";
 import type { Column, CellValue, SheetSpec } from "./xlsx";
@@ -91,25 +90,12 @@ export function summarySheet(bills: Order[], opts: SummaryOptions, restaurant: s
   });
   return {
     name: "Sales Summary", title: `${restaurant} — Sales Summary`, subtitle: rangeLabel, columns, rows, totals: true,
-    notes: ["Money columns count completed bills only; cancelled bills show as 0. Running bills are on their own sheet."],
+    notes: ["Settled (including NC) and cancelled bills only. Money columns count settled bills; cancelled bills show as 0."],
   };
 }
 
-/** Paid and closed bills (settled or cancelled) apart from running bills, which aren't sales yet. */
-export function splitRunning(bills: Order[]): { closed: Order[]; running: Order[] } {
-  return { closed: bills.filter((o) => o.status !== "held"), running: bills.filter((o) => o.status === "held").sort((a, b) => a.createdAt - b.createdAt) };
+/** The Sales Summary's bills: settled (including NC) and cancelled, newest first. Running bills aren't sales yet. */
+export function salesBills(orders: Order[]): Order[] {
+  return orders.filter((o) => o.status !== "held");
 }
 
-/** Running bills: open, not paid yet, not part of sales. Longest open first. */
-export function runningSheet(bills: Order[], restaurant: string, rangeLabel: string, now = Date.now()): SheetSpec {
-  const columns: Column[] = [
-    { header: "Bill", format: "text" }, { header: "Opened", format: "datetime" }, { header: "Open for" }, { header: "Type" }, { header: "Customer" },
-    { header: "Mobile", format: "text" }, { header: "Table" }, { header: "Items", format: "qty", total: true }, { header: "Amount due", format: "inr", total: true }, { header: "Item list", width: 60 },
-  ];
-  const rows: CellValue[][] = bills.map((o) => [
-    o.billNo || "Running", new Date(o.createdAt), openFor(o.createdAt, now), ORDER_TYPE_LABELS[o.orderType], o.customer?.name ?? "", o.customer?.phone ?? "",
-    o.tableLabel ?? "", o.lines.reduce((n, l) => n + l.qty, 0), o.total, itemsOf(o),
-  ]);
-  return { name: "Running bills", title: `${restaurant} — Running bills (not paid yet)`, subtitle: rangeLabel, columns, rows, totals: true,
-    notes: ["Open bills, not counted in sales until they are settled."] };
-}

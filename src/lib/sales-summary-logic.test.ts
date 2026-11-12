@@ -60,21 +60,10 @@ describe("sales summary", () => {
   });
 });
 
-import { runningSheet, splitRunning } from "./sales-summary-logic";
-describe("running bills kept apart from sales", () => {
-  const bill = (uid: string, status: "settled" | "held" | "void", total: number, createdAt: number) => ({ uid, billNo: status === "held" ? "" : uid, status, total, createdAt, orderType: "dine-in",
-    subtotal: total, discountAmt: 0, discountPct: 0, cgst: 0, sgst: 0, payments: status === "settled" ? [{ mode: "upi", amount: total }] : [], lines: [{ name: "Tawa Roti", qty: 4, price: 40 }] }) as never;
-  it("separates open bills from paid and cancelled ones, longest open first", () => {
-    const { closed, running } = splitRunning([bill("POS/0014", "held", 504, 3000), bill("POS/0013", "settled", 360, 1000), bill("R", "held", 3460, 2000), bill("V", "void", 100, 500)]);
-    expect(closed.map((o) => o.uid)).toEqual(["POS/0013", "V"]);
-    expect(running.map((o) => o.uid)).toEqual(["R", "POS/0014"]);
-  });
-  it("exports running bills on their own sheet with amount due and open time", () => {
-    const now = 10 * 3_600_000;
-    const sheet = runningSheet([bill("R", "held", 3460, now - 135 * 60_000)], "TAB Bistro", "Today", now);
-    expect(sheet.name).toBe("Running bills");
-    expect(sheet.rows[0]?.[0]).toBe("Running");
-    expect(sheet.rows[0]?.[2]).toBe("2 h 15 min");
-    expect(sheet.rows[0]?.[8]).toBe(3460);
+import { salesBills } from "./sales-summary-logic";
+describe("sales summary is sales only", () => {
+  it("leaves running bills out: settled (including NC) and cancelled only", () => {
+    const bill = (uid: string, status: "settled" | "held" | "void") => ({ uid, status }) as never;
+    expect(salesBills([bill("a", "settled"), bill("b", "held"), bill("c", "void")]).map((o) => o.uid)).toEqual(["a", "c"]);
   });
 });

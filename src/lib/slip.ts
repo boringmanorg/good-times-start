@@ -20,15 +20,15 @@ export type PaperOrLayout = Paper | SlipLayout;
 export const MIN_SLIP_COLS = 16;
 /** The widest line each paper can hold in this font, before margins. */
 export const maxColumnsFor = (paper: Paper) => (paper === 58 ? 32 : 48);
-const CHAR_MM = 1.46; // one character of the slip font, in mm
+/** Blank space each side of the printed text, in mm. On a 58 mm printer (48 mm printable, e.g. XP-C230H) it keeps text clear of the edge. */
+export const SAFE_MARGIN_MM = 1.5;
+/** Paper, characters per line and side margin for a slip. The on-screen/Chrome font shrinks to fit, so lines never run off the paper. */
 export function layoutOf(p: PaperOrLayout): { paper: Paper; cols: number; marginMm: number } {
   const lay = typeof p === "number" ? { paper: p } : p;
   const paper: Paper = lay.paper === 80 ? 80 : 58;
-  const marginMm = Math.min(8, Math.max(0, Number.isFinite(lay.marginMm) ? Number(lay.marginMm) : 0));
-  // Columns that fit between the two side margins.
-  const room = Math.floor(((paper === 58 ? 48 : 72) - 2 * marginMm) / CHAR_MM);
+  const marginMm = Math.min(6, Math.max(0, Number.isFinite(lay.marginMm) ? Number(lay.marginMm) : 0));
   const wanted = lay.cols && Number.isInteger(lay.cols) ? lay.cols : columnsFor(paper);
-  return { paper, marginMm, cols: Math.max(MIN_SLIP_COLS, Math.min(wanted, columnsFor(paper), room)) };
+  return { paper, marginMm, cols: Math.max(MIN_SLIP_COLS, Math.min(wanted, columnsFor(paper))) };
 }
 
 export interface SlipLine {
@@ -42,7 +42,7 @@ export interface SlipLine {
 export const KOT_START_FEED_MM = 30;
 export const KOT_END_FEED_MM = 10;
 export const BILL_END_FEED_MM = 30;
-export interface Slip { paper: Paper; lines: SlipLine[]; qr?: string | undefined; endFeedMm?: number; startFeedMm?: number; /** Side margin in mm. */ marginMm?: number }
+export interface Slip { paper: Paper; lines: SlipLine[]; qr?: string | undefined; endFeedMm?: number; startFeedMm?: number; /** Side margin in mm. */ marginMm?: number; /** Characters a line was laid out for. */ cols?: number }
 
 const ORDER_TYPE: Record<string, string> = { "dine-in": "DINE IN", takeaway: "TAKEAWAY", delivery: "DELIVERY", swiggy: "SWIGGY", zomato: "ZOMATO" };
 const PAY: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points" };
@@ -176,7 +176,7 @@ export function billSlip(order: Order, settings: RestaurantSettings, layout: Pap
   center(settings.billFooter || "Thank you! Visit again.");
   center(order.source === "waiter" ? "Printed through XTSY Waiter" : "Billed with XTSY POS");
   if (qr) { L.push({ text: "" }); L.push({ text: `Scan to pay Rs.${money(due)} by UPI`, align: "center", bold: true }); }
-  return { paper, lines: fitLines(L, cols), qr, endFeedMm, marginMm };
+  return { paper, lines: fitLines(L, cols), qr, endFeedMm, marginMm, cols };
 }
 
 /** A kitchen ticket: big order type and table, then items in tall bold text with their quantities. */
@@ -184,7 +184,7 @@ export function kotSlip(kots: Kot[], layout: PaperOrLayout, header = "", large =
   const { paper, cols, marginMm } = layoutOf(layout);
   const first = kots[0];
   const L: SlipLine[] = [];
-  if (!first) return { paper, lines: L, marginMm };
+  if (!first) return { paper, lines: L, marginMm, cols };
   const cancel = first.kind === "cancel";
   if (header) for (const t of wrap(header, cols)) L.push({ text: t, align: "center" });
   L.push({ text: cancel ? "CANCEL KOT" : "Running KOT", align: "center", bold: true, size: cancel ? "big" : "normal" });
@@ -220,32 +220,7 @@ export function kotSlip(kots: Kot[], layout: PaperOrLayout, header = "", large =
   }
   L.push({ text: `Total Qty: ${qtyText(total)}`, bold: true, size: "big" });
   L.push(rule(cols));
-  return { paper, lines: fitLines(L, cols), startFeedMm: KOT_START_FEED_MM, endFeedMm, marginMm };
-}
-
-/**
- * Print width test: numbered rulers as wide as the paper can go. Staff read the last number printed in
- * full and set "Characters per line" to it, so every slip wraps inside what this printer really prints.
- */
-export function widthTestSlip(layout: PaperOrLayout): Slip {
-  const { paper, marginMm } = layoutOf(layout);
-  const max = maxColumnsFor(paper);
-  const digits = Array.from({ length: max }, (_, i) => String((i + 1) % 10)).join("");
-  const tens = Array.from({ length: max }, (_, i) => ((i + 1) % 10 === 0 ? String(((i + 1) / 10) % 10) : " ")).join("");
-  const L: SlipLine[] = [
-    { text: "PRINT WIDTH TEST", bold: true },
-    { text: `Paper ${paper} mm, margin ${marginMm} mm` },
-    { text: "-".repeat(MIN_SLIP_COLS) },
-    { text: tens, bold: true },
-    { text: digits, bold: true },
-    { text: "#".repeat(max), bold: true },
-    { text: "-".repeat(MIN_SLIP_COLS) },
-    { text: "Count to the last digit" },
-    { text: "printed in full: that is" },
-    { text: "Characters per line." },
-    { text: "Example: 2 under 2 = 22." },
-  ];
-  return { paper, lines: L, marginMm, endFeedMm: KOT_END_FEED_MM };
+  return { paper, lines: fitLines(L, cols), startFeedMm: KOT_START_FEED_MM, endFeedMm, marginMm, cols };
 }
 
 /* ---------------- ESC/POS ---------------- */

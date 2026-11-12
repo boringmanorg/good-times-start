@@ -8,7 +8,7 @@ import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis
 import { AppShell, useRestaurantSettings } from "@/components/AppShell";
 import { gstr1Workbook } from "@/lib/gstr1";
 import { gstr1Pdf } from "@/lib/gstr1-pdf";
-import { reportsWorkbook } from "@/lib/report-excel";
+import { rangeLabel, reportsWorkbook } from "@/lib/report-excel";
 import { downloadXlsx } from "@/lib/xlsx";
 import { Receipt } from "@/components/Receipt";
 import { BillPrintButton } from "@/components/BillPrintButton";
@@ -69,11 +69,12 @@ function fromInputDate(value: string, endOfDay = false) {
   return endOfDay ? new Date(y, m - 1, d, 23, 59, 59, 999).getTime() : new Date(y, m - 1, d).getTime();
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: string }) {
   return (
-    <div className="card-elevated p-4">
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-bold">{value}</div>
+    <div className="card-elevated relative overflow-hidden p-4">
+      <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: accent ?? "var(--color-primary)" }} />
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1.5 text-2xl font-bold tabular-nums tracking-tight">{value}</div>
       {hint ? <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div> : null}
     </div>
   );
@@ -90,9 +91,9 @@ function Overview({ orders, range }: { orders: Order[]; range: Range }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Net sales" value={formatINR(s.net, 0)} hint="Including GST" />
-        <Stat label="Bills" value={String(s.bills)} hint={`Average ${formatINR(s.average, 0)}`} />
-        <Stat label="GST collected" value={formatINR(s.cgst + s.sgst)} />
-        <Stat label="Discounts given" value={formatINR(s.discounts, 0)} hint={s.voids ? `${s.voids} void bill${s.voids === 1 ? "" : "s"}, ${formatINR(s.voidValue, 0)}` : "No void bills"} />
+        <Stat label="Bills" value={String(s.bills)} hint={`Average ${formatINR(s.average, 0)}`} accent="var(--color-gold)" />
+        <Stat label="GST collected" value={formatINR(s.cgst + s.sgst)} accent="var(--color-success)" />
+        <Stat label="Discounts given" value={formatINR(s.discounts, 0)} hint={s.voids ? `${s.voids} void bill${s.voids === 1 ? "" : "s"}, ${formatINR(s.voidValue, 0)}` : "No void bills"} accent="var(--color-destructive)" />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card-elevated p-4 lg:col-span-2">
@@ -367,34 +368,51 @@ function ReportsPage() {
     { v: "overview", l: "Overview" }, { v: "summary", l: "Sales Summary" }, { v: "items", l: "Items" }, { v: "gst", l: "GST" }, { v: "staff", l: "Staff" }, { v: "bills", l: "Bills" }, { v: "close", l: "Cash counter" },
   ] : staffTabs;
 
+  const dateChips = showDates ? (
+    <div role="group" aria-label="Report dates" className="flex flex-wrap items-center gap-1 rounded-xl bg-secondary/70 p-1">
+      {presets.map((p) => (
+        <button key={p.v} type="button" aria-pressed={preset === p.v} onClick={() => setPreset(p.v)}
+          className={cn("rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors", preset === p.v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{p.l}</button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <AppShell>
-      <div className="p-4 lg:p-6">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
+        <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">Summary</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{restaurant || "Restaurant"}</p>
+            <h1 className="text-2xl font-bold tracking-tight">Summary</h1>
             <p className="text-sm text-muted-foreground">{full || pos ? "Bills from every device in the restaurant that has synced." : "Day-end cash for this counter."}</p>
           </div>
-          {tab !== "close" && (full || staffTabs.some((t) => t.v === "close")) ? <Button size="sm" onClick={() => setTab("close")}><Wallet />Cash counter</Button> : null}
-          {full && can(user, "reports.export") ? <Button variant="outline" size="sm" disabled={!orders.length} onClick={() => void exportAll()}><Download />Excel (all reports)</Button> : null}
-          <div className={`flex flex-wrap items-center gap-1.5 ${showDates ? "" : "hidden"}`}>
-            {presets.map((p) => (
-              <button key={p.v} onClick={() => setPreset(p.v)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${preset === p.v ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{p.l}</button>
-            ))}
-            {preset === "custom" ? (
-              <span className="flex items-center gap-1.5 text-xs">
-                <input type="date" aria-label="From" value={toInputDate(custom.from)} onChange={(e) => { const from = fromInputDate(e.target.value); if (from !== null) setCustom({ ...custom, from }); }} className="rounded-lg border border-input bg-card px-2 py-1" />
-                to
-                <input type="date" aria-label="To" value={toInputDate(custom.to)} onChange={(e) => { const to = fromInputDate(e.target.value, true); if (to !== null) setCustom({ ...custom, to }); }} className="rounded-lg border border-input bg-card px-2 py-1" />
-              </span>
-            ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {full && can(user, "reports.export") && tab !== "close" ? <Button variant="outline" disabled={!orders.length} onClick={() => void exportAll()}><Download />Excel (all reports)</Button> : null}
+            {tab !== "close" && (full || staffTabs.some((t) => t.v === "close")) ? <Button onClick={() => setTab("close")}><Wallet />Cash counter</Button> : null}
           </div>
-        </div>
+        </header>
 
         {full || pos || can(user, "reports.summary") ? <LiveTotals /> : null}
-        {tabs.length > 1 ? <Segmented ariaLabel="Report" className="mb-5" value={tab} onChange={setTab} options={tabs.map((t) => ({ value: t.v, label: t.l }))} /> : null}
+
+        <section aria-label="Reports" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+            {tabs.length > 1 ? <Segmented ariaLabel="Report" value={tab} onChange={setTab} options={tabs.map((t) => ({ value: t.v, label: t.l }))} /> : <span />}
+            {dateChips}
+          </div>
+          {showDates ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>Showing <strong className="font-semibold text-foreground">{presets.find((p) => p.v === preset)?.l ?? "Dates"}</strong> · {rangeLabel(range)}</span>
+              {preset === "custom" ? (
+                <span className="flex items-center gap-1.5 text-xs">
+                  <input type="date" aria-label="From" value={toInputDate(custom.from)} onChange={(e) => { const from = fromInputDate(e.target.value); if (from !== null) setCustom({ ...custom, from }); }} className="rounded-lg border border-input bg-card px-2 py-1" />
+                  to
+                  <input type="date" aria-label="To" value={toInputDate(custom.to)} onChange={(e) => { const to = fromInputDate(e.target.value, true); if (to !== null) setCustom({ ...custom, to }); }} className="rounded-lg border border-input bg-card px-2 py-1" />
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         {tab === "close" ? (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-2">
             <div className="flex items-center gap-2">
               <Wallet className="size-4 text-muted-foreground" />
               <div>
@@ -414,6 +432,7 @@ function ReportsPage() {
         {tab === "bills" ? <BillsList orders={orders} /> : null}
         {tab === "close" && (full || staffTabs.some((t) => t.v === "close")) ? <DayCloseTab /> : null}
         {!full && !staffTabs.length ? <p className="py-10 text-center text-sm text-muted-foreground">Reports aren't switched on for this login. Ask the admin.</p> : null}
+        </section>
       </div>
     </AppShell>
   );

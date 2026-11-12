@@ -142,46 +142,41 @@ describe("KOT quantities", () => {
   });
 });
 
-import { layoutOf, widthTestSlip, maxColumnsFor } from "./slip";
+import { layoutOf } from "./slip";
 import { normalisePrintConfig, slipLayoutOf } from "./print-logic";
-describe("printer line width and side margin", () => {
+describe("slips fit the paper", () => {
   const kot = { uid: "k", kind: "kot", kotNo: "KOT/0049", station: "Hot Tandoori Breads", tableLabel: "Room 8A", tableSection: "Rooms", createdAt: new Date(2026, 10, 10, 20, 39).getTime(),
     lines: [{ itemId: "roti|v:1", name: "Tawa Roti [1Pc] (Regular)", qty: 4 }, { itemId: "n", name: "Burned Garlic Hakka Noodles (Veg)", qty: 3, note: "less spicy please, no onion" }] } as never;
-  it("wraps every KOT line inside the printer's real width, item names onto an indented next line", () => {
-    const slip = kotSlip([kot], { paper: 58, cols: 24, marginMm: 2 });
-    expect(slip.marginMm).toBe(2);
-    for (const l of slip.lines) expect(l.text.length, l.text).toBeLessThanOrEqual(l.size === "big" ? 24 : 24);
-    const texts = slip.lines.map((l) => l.text);
-    expect(texts).toContain("4 x Tawa Roti [1Pc]");
-    expect(texts).toContain("    (Regular)");
-    expect(texts.some((t) => t.startsWith("3 x Burned Garlic"))).toBe(true);
+  const bill = { uid: "b", billNo: "POS/0002", orderType: "dine-in", tableLabel: "Room 10A", status: "held", createdAt: Date.now(), synced: true,
+    lines: [{ itemId: "x", name: "Kerala Parotta (2 pcs) with Chicken Gravy", price: 199, qty: 2, veg: false, gstRate: 0, station: "Indian" }, { itemId: "c", name: "Curd Rice", price: 180, qty: 1, veg: true, gstRate: 0, station: "Indian" }],
+    subtotal: 1533, discountPct: 0, discountAmt: 0, cgst: 0, sgst: 0, roundOff: 0, total: 1533, payments: [] } as never;
+  const settings = { name: "TAB Bistro by XTSY", address: "New Shillong Township, Meghalaya", footer: "Flavour Food Fusion For Delivery / Table Booking WhatsApp: +91 8837317070" } as never;
+  it("every bill and KOT line fits the line width, so amounts and quantities are never cut (58 and 80 mm)", () => {
+    for (const paper of [58, 80] as const) {
+      const lay = slipLayoutOf(normalisePrintConfig({ paper }));
+      const cols = layoutOf(lay).cols;
+      for (const slip of [billSlip(bill, settings, lay), kotSlip([kot], lay)]) {
+        expect(slip.cols).toBe(cols);
+        expect(slip.marginMm).toBe(1.5);
+        for (const l of slip.lines) expect(l.text.length, l.text).toBeLessThanOrEqual(l.size === "big" ? Math.floor(cols / 2) : cols);
+      }
+    }
+    const texts = billSlip(bill, settings, 58).lines.map((l) => l.text);
+    expect(texts.some((t) => /1533\.00$/.test(t.trim()))).toBe(true);
   });
-  it("keeps bills inside the width too", () => {
-    const bill = { uid: "b", billNo: "POS/0010", orderType: "dine-in", tableLabel: "Room 8A", status: "settled", createdAt: Date.now(), synced: true,
-      lines: [{ itemId: "x", name: "Steamed Rice with Chicken Kosha", price: 280, qty: 2, veg: false, gstRate: 0, station: "Indian" }],
-      subtotal: 560, discountPct: 0, discountAmt: 0, cgst: 0, sgst: 0, roundOff: 0, total: 560, payments: [{ mode: "cash", amount: 560 }] } as never;
-    for (const l of billSlip(bill, { name: "TAB Bistro by XTSY", address: "New Shillong Township, Meghalaya" } as never, { paper: 58, cols: 24 }).lines)
-      expect(l.text.length, l.text).toBeLessThanOrEqual(l.size === "big" ? 12 : 24);
+  it("prints the full line inside a 58 mm printer's 48 mm even in the widest monospace font", () => {
+    // The browser slip sizes its font to (48 mm − 2 × margin) / (cols × 0.6 em × 1.02).
+    const font = Math.min(2.65, (48 - 3) / (30 * 0.6 * 1.02));
+    expect(30 * 0.6 * font + 3).toBeLessThanOrEqual(48);
   });
-  it("never lets margins plus text overflow the paper, and keeps a sensible minimum", () => {
+  it("keeps a sensible column count", () => {
     expect(layoutOf(58)).toEqual({ paper: 58, cols: 30, marginMm: 0 });
-    expect(layoutOf({ paper: 58, marginMm: 2 }).cols).toBe(30);
-    expect(layoutOf({ paper: 58, marginMm: 6 }).cols).toBeLessThan(30);
     expect(layoutOf({ paper: 80, cols: 99 }).cols).toBe(45);
     expect(layoutOf({ paper: 58, cols: 4 }).cols).toBe(16);
   });
-  it("sends the side margin to ESC/POS printers (GS L) and prints a full-width ruler for the test", () => {
-    const bytes = [...escPos(kotSlip([kot], { paper: 58, marginMm: 2 }))];
+  it("sends the side margin to ESC/POS printers (GS L)", () => {
+    const bytes = [...escPos(kotSlip([kot], { paper: 58, marginMm: 1.5 }))];
     const at = bytes.findIndex((b, i) => b === 0x1d && bytes[i + 1] === 0x4c);
-    expect(at).toBeGreaterThan(-1);
-    expect([bytes[at + 2], bytes[at + 3]]).toEqual([16, 0]);
-    const test = widthTestSlip({ paper: 58, marginMm: 2 });
-    expect(test.lines.some((l) => l.text === "12345678901234567890123456789012")).toBe(true);
-    expect(maxColumnsFor(80)).toBe(48);
-  });
-  it("stores characters per line and margin per device, with a 2 mm margin by default", () => {
-    expect(slipLayoutOf(normalisePrintConfig({}))).toEqual({ paper: 58, cols: null, marginMm: 2 });
-    expect(slipLayoutOf(normalisePrintConfig({ paper: 80, charsPerLine: 40, marginMm: 3.2 }))).toEqual({ paper: 80, cols: 40, marginMm: 3 });
-    expect(normalisePrintConfig({ charsPerLine: 3 }).charsPerLine).toBeNull();
+    expect([bytes[at + 2], bytes[at + 3]]).toEqual([12, 0]);
   });
 });

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { billSlip, type Slip } from "@/lib/slip";
+import { billSlip, columnsFor, type Slip } from "@/lib/slip";
 import { usePrintConfig } from "@/lib/print-config";
 import { slipLayoutOf } from "@/lib/print-logic";
 import { useRestaurantSettings } from "@/lib/use-settings";
@@ -13,10 +13,14 @@ import { THERMAL } from "@/lib/thermal-tokens";
  */
 export function SlipView({ slip, qrDataUrl }: { slip: Slip; qrDataUrl?: string | undefined }) {
   const width = THERMAL.widths[slip.paper];
-  const font = THERMAL.fontMm;
+  const margin = slip.marginMm ?? 0;
+  // Size the font so a full line always fits between the margins, whatever monospace font the computer
+  // has: Courier New (the widest common one, 0.6 em a character) is the worst case, with a little spare.
+  const cols = slip.cols ?? columnsFor(slip.paper);
+  const font = Math.min(THERMAL.fontMm, (width - 2 * margin) / (cols * THERMAL.charEm * 1.02));
   const base: CSSProperties = { fontSize: `${font}mm`, lineHeight: THERMAL.lineHeight, whiteSpace: "pre", fontWeight: THERMAL.normalWeight };
   return (
-    <div className="slip bg-white text-black" style={{ width: `${width}mm`, fontFamily: THERMAL.fontFamily, boxSizing: "border-box", paddingLeft: `${slip.marginMm ?? 0}mm`, paddingRight: `${slip.marginMm ?? 0}mm`, overflow: "hidden" }}>
+    <div className="slip bg-white text-black" style={{ width: `${width}mm`, fontFamily: THERMAL.fontFamily, boxSizing: "border-box", paddingLeft: `${margin}mm`, paddingRight: `${margin}mm`, overflow: "hidden" }}>
       {slip.startFeedMm ? <div className="print-slip-start-feed" aria-hidden="true" style={{ height: String(slip.startFeedMm) + "mm" }} /> : null}
       {slip.lines.map((line, i) => {
         const style: CSSProperties = { ...base, textAlign: line.align ?? "left", fontWeight: line.bold ? THERMAL.boldWeight : THERMAL.normalWeight };

@@ -10,10 +10,9 @@ import { useStaff } from "@/lib/auth-context";
 import { allow } from "@/lib/pin-gate";
 import { paymentLabel, seriesOf, summaryAt, type Range } from "@/lib/report-logic";
 import { rangeLabel } from "@/lib/report-excel";
-import { openFor } from "@/lib/orders-history";
 import { downloadXlsx } from "@/lib/xlsx";
 import {
-  NO_FILTERS, ORDER_TYPE_LABELS, STATUS_LABELS, balanceOf, filterBills, itemsOf, paymentOf, runningSheet, splitRunning, summarySheet, summaryTotals, type SummaryFilters,
+  NO_FILTERS, ORDER_TYPE_LABELS, STATUS_LABELS, balanceOf, filterBills, itemsOf, paymentOf, salesBills, summarySheet, summaryTotals, type SummaryFilters,
 } from "@/lib/sales-summary-logic";
 import type { Order, PaymentMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -37,10 +36,9 @@ export function SalesSummary({ orders, range, restaurant, canExport }: { orders:
   const [showSplit, setShowSplit] = useState(false);
   const [open, setOpen] = useState<Order | null>(null);
   const set = (patch: Partial<SummaryFilters>) => setF((x) => ({ ...x, ...patch }));
-  const bills = useMemo(() => filterBills(orders, f), [orders, f]);
-  // Running bills aren't sales yet: they sit in their own section below, with their own total.
-  const { closed, running } = useMemo(() => splitRunning(bills), [bills]);
-  const runningDue = running.reduce((s, o) => s + o.total, 0);
+  // Sales only: settled bills (including NC) and cancelled bills. Running bills live in "Today · live".
+  const closed = useMemo(() => filterBills(salesBills(orders), f), [orders, f]);
+  const bills = closed;
   const t = summaryTotals(closed);
   const series = useMemo(() => [...new Set(orders.map((o) => seriesOf(o.billNo)).filter(Boolean))].sort(), [orders]);
   const modes = useMemo(() => (showSplit ? [...new Set(closed.flatMap((o) => o.payments.map((p) => p.mode)))] : []), [closed, showSplit]);
@@ -48,7 +46,6 @@ export function SalesSummary({ orders, range, restaurant, canExport }: { orders:
 
   const exportXlsx = () => downloadXlsx(`sales-summary-${new Date(range.from).toISOString().slice(0, 10)}`, [
     summarySheet(closed, { items: showItems, tax: showTax, split: showSplit }, restaurant, rangeLabel(range)),
-    ...(running.length ? [runningSheet(running, restaurant, rangeLabel(range))] : []),
   ], { title: `${restaurant} Sales Summary` });
 
   const tiles: [string, string][] = [
@@ -78,7 +75,7 @@ export function SalesSummary({ orders, range, restaurant, canExport }: { orders:
           </div>
           <div className="text-sm font-medium">Order status
             <Dropdown ariaLabel="Order status" className="mt-1" value={f.status} onChange={(v) => set({ status: v })}
-              options={[{ value: "", label: "All statuses" }, ...(Object.keys(STATUS_LABELS) as Order["status"][]).map((k) => ({ value: k, label: STATUS_LABELS[k] }))]} />
+              options={[{ value: "", label: "All statuses" }, ...(["settled", "void"] as Order["status"][]).map((k) => ({ value: k, label: STATUS_LABELS[k] }))]} />
           </div>
           <div className="text-sm font-medium">Terminal
             <Dropdown ariaLabel="Terminal" className="mt-1" value={f.series} onChange={(v) => set({ series: v })}
@@ -138,45 +135,11 @@ export function SalesSummary({ orders, range, restaurant, canExport }: { orders:
                     {showItems ? <td className="min-w-[18rem] px-3 py-2.5 text-xs">{itemsOf(o)}</td> : null}
                   </tr>
                 );
-              }) : <tr><td colSpan={30} className="px-3 py-10 text-center text-sm text-muted-foreground">{filtered ? "No paid bills match these filters." : "No paid bills in this period."}</td></tr>}
+              }) : <tr><td colSpan={30} className="px-3 py-10 text-center text-sm text-muted-foreground">{filtered ? "No bills match these filters." : "No settled or cancelled bills in this period."}</td></tr>}
             </tbody>
           </table>
         </div>
       </section>
-
-      {running.length ? (
-        <section className="overflow-hidden rounded-2xl border border-gold/50 bg-card" aria-label="Running bills">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-gold/10 px-4 py-3">
-            <div><h2 className="text-base font-bold">Running bills · not paid yet</h2>
-              <p className="text-xs text-muted-foreground">Open bills aren't counted in the sales above until they're settled.</p></div>
-            <div className="text-right"><div className="text-xl font-bold tabular-nums">{money(runningDue)}</div><div className="text-xs text-muted-foreground">{running.length} open {running.length === 1 ? "bill" : "bills"}</div></div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[56rem]">
-              <thead className="border-b border-border bg-secondary/60"><tr>
-                {["Bill", "Opened", "Open for", "Type", "Customer", "Mobile no.", "Table", "Items", "Amount due"].map((h) => <th key={h} className={th}>{h}</th>)}
-                {showItems ? <th className={th}>Item list</th> : null}
-              </tr></thead>
-              <tbody className="divide-y divide-border">
-                {running.map((o) => (
-                  <tr key={o.uid ?? o.billNo} className="hover:bg-secondary/40">
-                    <td className={td}><div className="flex items-center gap-2"><Button variant="link" size="sm" onClick={() => setOpen(o)}>{o.billNo || "Running bill"}</Button><BillPrintButton order={o} action="bill.reprintOld" /></div></td>
-                    <td className={td}>{new Date(o.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" })}</td>
-                    <td className={cn(td, "font-semibold", Date.now() - o.createdAt >= 3 * 3_600_000 && "text-warning")}>{openFor(o.createdAt)}</td>
-                    <td className={td}>{ORDER_TYPE_LABELS[o.orderType]}</td>
-                    <td className={td}>{o.customer?.name ?? "—"}</td>
-                    <td className={td}>{o.customer?.phone ?? "—"}</td>
-                    <td className={td}>{o.tableLabel ?? "—"}</td>
-                    <td className={td}>{o.lines.reduce((n, l) => n + l.qty, 0)}</td>
-                    <td className={cn(td, "font-semibold")}>{money(o.total)}</td>
-                    {showItems ? <td className="min-w-[18rem] px-3 py-2.5 text-xs">{itemsOf(o)}</td> : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
 
       <Dialog open={!!open} onOpenChange={(o) => { if (!o) setOpen(null); }}>
         <DialogContent className="max-h-[92vh] max-w-sm overflow-y-auto">

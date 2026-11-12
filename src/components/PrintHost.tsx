@@ -7,7 +7,7 @@ import { getDb, getSettings } from "@/lib/db";
 import type { Kot, Order } from "@/lib/types";
 import QRCode from "qrcode";
 import { upiLink } from "@/lib/billing";
-import { billSlip, escPos, kotSlip, rawbtIntent, widthTestSlip, KOT_END_FEED_MM } from "@/lib/slip";
+import { billSlip, escPos, kotSlip, rawbtIntent, KOT_END_FEED_MM } from "@/lib/slip";
 import { SlipView } from "./Slip";
 import { getChosenApp, useAppMode } from '@/lib/app-mode';
 import { useStaff } from '@/lib/auth-context';
@@ -86,14 +86,6 @@ export async function printKots(kots: Kot[], source: "sent" | "incoming" | "repr
   const slips = groups.map((g) => kotSlip(g, slipLayoutOf(config), settings.kotHeader ?? "", config.largeKotText));
   if (config.method === "rawbt") { sendToRawbt(slips.map((slip) => escPos(slip, { cutter: config.cutter }))); return; }
   printDocuments(slips.map((slip, i) => <div key={`${groups[i]?.[0]?.uid ?? i}-${i}`} className="kot-print-slip"><SlipView slip={slip} /></div>));
-}
-
-/** Print the width test on this device's printer, with its saved paper and margin. */
-export async function printWidthTest(): Promise<void> {
-  const config = await getPrintConfig();
-  const slip = widthTestSlip(slipLayoutOf(config));
-  if (config.method === "rawbt") { sendToRawbt([escPos(slip, { cutter: config.cutter })]); return; }
-  printDocuments([<div key="width-test" className="kot-print-slip"><SlipView slip={slip} /></div>]);
 }
 
 /** Mark KOTs as already handled on this device (e.g. ones present when a screen opens). */
