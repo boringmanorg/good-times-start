@@ -145,3 +145,45 @@ export function purchaseAlerts(entries: StockEntry[], seen: Record<string, strin
   }
   return out;
 }
+
+export type SpendPeriod = "day" | "week" | "month";
+export interface SpendBucket { key: string; label: string; start: number; total: number; bySupplier: Record<string, number> }
+export interface SpendView { buckets: SpendBucket[]; suppliers: { key: string; name: string; amount: number }[]; total: number }
+
+function bucketStart(at: number, period: SpendPeriod): Date {
+  const d = new Date(at); d.setHours(0, 0, 0, 0);
+  if (period === "week") d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // weeks start Monday
+  if (period === "month") d.setDate(1);
+  return d;
+}
+function stepBack(d: Date, period: SpendPeriod): Date {
+  const n = new Date(d);
+  if (period === "day") n.setDate(n.getDate() - 1); else if (period === "week") n.setDate(n.getDate() - 7); else n.setMonth(n.getMonth() - 1);
+  return n;
+}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function bucketLabel(d: Date, period: SpendPeriod): string {
+  return period === "month" ? `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` : `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
+/** Approved spend (net of returns) per supplier for the last `count` days, weeks (Mon–Sun) or months, oldest first. */
+export function spendBySupplier(entries: StockEntry[], suppliers: { id: string; name: string }[], period: SpendPeriod, now = Date.now(), count = period === "day" ? 14 : 12): SpendView {
+  const starts: Date[] = [];
+  let d = bucketStart(now, period);
+  for (let i = 0; i < count; i++) { starts.unshift(d); d = stepBack(d, period); }
+  const buckets: SpendBucket[] = starts.map((s) => ({ key: localDay(s.getTime()), label: bucketLabel(s, period), start: s.getTime(), total: 0, bySupplier: {} }));
+  const byKey = new Map(buckets.map((b) => [b.key, b]));
+  const totals = new Map<string, { key: string; name: string; amount: number }>();
+  for (const v of supplierHistories(entries, suppliers)) for (const day of v.days) for (const e of day.entries) {
+    const b = byKey.get(localDay(bucketStart(e.at, period).getTime()));
+    if (!b) continue;
+    const amt = entryAmount(e);
+    b.bySupplier[v.key] = Math.round(((b.bySupplier[v.key] ?? 0) + amt) * 100) / 100;
+    b.total = Math.round((b.total + amt) * 100) / 100;
+    const t = totals.get(v.key) ?? { key: v.key, name: v.name, amount: 0 };
+    t.amount = Math.round((t.amount + amt) * 100) / 100;
+    totals.set(v.key, t);
+  }
+  const list = [...totals.values()].sort((a, b) => b.amount - a.amount);
+  return { buckets, suppliers: list, total: Math.round(list.reduce((n, s) => n + s.amount, 0) * 100) / 100 };
+}
