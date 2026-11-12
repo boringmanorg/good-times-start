@@ -4,6 +4,7 @@ import { REMOTE_SYNC_EVENT } from "@/lib/terminal-signal";
 import { useStaff } from "@/lib/auth-context";
 import { startLiveSync } from "@/lib/cloud-sync";
 import { prepareOfflineNumbers } from "@/lib/restaurant-numbering";
+import { PurchaseAlerts } from "@/components/PurchaseAlerts";
 import { BookingAlerts } from "./BookingAlerts";
 import { allowAppWorker } from "@/lib/app-install-logic";
 
@@ -42,5 +43,5 @@ export function LiveSync() {
     const timer = window.setInterval(refill, 60_000);
     return () => { window.removeEventListener("online", refill); window.clearInterval(timer); };
   }, [restaurantId, preparesNumbers]);
-  return <BookingAlerts />;
+  return <><BookingAlerts /><PurchaseAlerts /></>;
 }

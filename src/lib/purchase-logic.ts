@@ -2,13 +2,21 @@ import type { Material, StockEntry } from "./types";
 
 export const PURCHASE_RETURN_WINDOW_MS = 48 * 60 * 60 * 1000;
 
+/** Approved, waiting, or rejected. Entries an admin recorded directly have no approval and count as approved. */
+export function approvalStatus(entry: Pick<StockEntry, "approval">): "approved" | "pending" | "rejected" {
+  return entry.approval?.status ?? "approved";
+}
+/** Only approved purchases and returns count in history, totals and vendor amounts. */
+export const counts = (entry: Pick<StockEntry, "approval">) => approvalStatus(entry) === "approved";
+
 export function canReturnPurchase(purchase: StockEntry, now = Date.now()): boolean {
-  return purchase.type === "purchase" && now >= purchase.at && now <= purchase.at + PURCHASE_RETURN_WINDOW_MS;
+  return purchase.type === "purchase" && counts(purchase) && now >= purchase.at && now <= purchase.at + PURCHASE_RETURN_WINDOW_MS;
 }
 
 export function remainingPurchaseQty(purchase: StockEntry, returns: StockEntry[], materialId: string): number {
   const bought = purchase.items.filter((i) => i.materialId === materialId).reduce((n, i) => n + i.qty, 0);
-  const returned = returns.filter((e) => e.purchaseId === purchase.id).flatMap((e) => e.items)
+  // Returns still waiting for approval count too, so two requests can't over-return; rejected ones don't.
+  const returned = returns.filter((e) => e.purchaseId === purchase.id && approvalStatus(e) !== "rejected").flatMap((e) => e.items)
     .filter((i) => i.materialId === materialId).reduce((n, i) => n + Math.abs(i.qty), 0);
   return Math.max(0, Math.round((bought - returned) * 1000) / 1000);
 }
@@ -57,7 +65,7 @@ function supplierLabel(entry: StockEntry, suppliers: { id: string; name: string 
 
 /** Every purchase and return of one item, newest first. */
 export function itemPurchaseLines(materialId: string, entries: StockEntry[], suppliers: { id: string; name: string }[]): PurchaseLineView[] {
-  return entries.filter((e) => e.type === "purchase" || (e.type === "return" && e.purchaseId))
+  return entries.filter((e) => counts(e) && (e.type === "purchase" || (e.type === "return" && e.purchaseId)))
     .flatMap((e) => e.items.filter((i) => i.materialId === materialId).map((i) => {
       const kind = e.type === "return" ? "return" as const : "purchase" as const;
       const qty = Math.abs(i.qty);
@@ -84,7 +92,7 @@ function localDay(at: number): string {
 
 /** Purchase amounts per vendor (net of returns), each split into days, newest first. */
 export function supplierHistories(entries: StockEntry[], suppliers: { id: string; name: string }[]): SupplierHistory[] {
-  const relevant = entries.filter((e) => e.type === "purchase" || (e.type === "return" && e.purchaseId));
+  const relevant = entries.filter((e) => counts(e) && (e.type === "purchase" || (e.type === "return" && e.purchaseId)));
   const groups = new Map<string, SupplierHistory>();
   for (const e of relevant) {
     const original = e.purchaseId ? relevant.find((p) => p.id === e.purchaseId) : undefined;
@@ -106,4 +114,34 @@ export function supplierHistories(entries: StockEntry[], suppliers: { id: string
     for (const d of g.days) d.entries.sort((a, b) => b.at - a.at);
   }
   return [...groups.values()].sort((a, b) => b.lastAt - a.lastAt);
+}
+
+/** Recorded by this login (the bill desk shares one login across its terminals). */
+export function requestedByMe(entry: Pick<StockEntry, "approval">, me: { name: string; login?: string | undefined }): boolean {
+  const a = entry.approval;
+  if (!a) return false;
+  return a.requestedLogin ? a.requestedLogin === me.login : a.requestedBy === me.name;
+}
+
+/** The bill desk may return only purchases it recorded itself (and that the admin approved). */
+export function canRequestReturn(purchase: StockEntry, me: { name: string; login?: string | undefined }, now = Date.now()): boolean {
+  return canReturnPurchase(purchase, now) && requestedByMe(purchase, me);
+}
+
+/** What changed since this device last looked, for sound + pop-up alerts in both directions. */
+export interface PurchaseAlert { id: string; kind: "requested" | "approved" | "rejected"; entry: StockEntry }
+export function purchaseAlerts(entries: StockEntry[], seen: Record<string, string>, me: { admin: boolean; name: string; login?: string | undefined }): PurchaseAlert[] {
+  const out: PurchaseAlert[] = [];
+  for (const e of entries) {
+    if (!e.approval) continue;
+    const status = e.approval.status;
+    if (seen[e.id] === status) continue;
+    const mine = requestedByMe(e, me);
+    // Admins hear every new request; the sender hears the decision; other admins hear a decision they didn't make.
+    if (status === "pending" && me.admin && !mine) out.push({ id: e.id, kind: "requested", entry: e });
+    const decided = status === "approved" || status === "rejected";
+    const decidedByMe = e.approval.decidedBy === me.name;
+    if (decided && seen[e.id] !== undefined && (mine || (me.admin && !decidedByMe))) out.push({ id: e.id, kind: status, entry: e });
+  }
+  return out;
 }

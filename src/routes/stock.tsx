@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
-import { ChevronRight, Download, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -11,8 +11,8 @@ import { useStaff } from "@/lib/auth-context";
 import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
 import { STOCK_UNITS, formatQty, purchaseTotal } from "@/lib/stock-logic";
-import { deleteMaterial, deletePurchase, deleteSupplier, recordStockEntry, updatePurchase, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
-import { canReturnPurchase, entryAmount, itemPurchaseLines, itemTotals, remainingPurchaseQty, supplierHistories } from "@/lib/purchase-logic";
+import { decidePurchase, deleteMaterial, deletePurchase, deleteSupplier, recordStockEntry, updatePurchase, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
+import { approvalStatus, canRequestReturn, canReturnPurchase, entryAmount, itemPurchaseLines, itemTotals, remainingPurchaseQty, supplierHistories } from "@/lib/purchase-logic";
 import { gstinError } from "@/lib/validation";
 import { downloadXlsx } from "@/lib/xlsx";
 import { dayKey } from "@/lib/report-logic";
@@ -81,8 +81,53 @@ function MaterialForm({ material, onDone }: { material?: Material; onDone: () =>
   </form>;
 }
 
+/** Waiting / approved / rejected badge for purchases and returns the bill desk recorded. */
+function ApprovalChip({ entry }: { entry: StockEntry }) {
+  const a = entry.approval;
+  if (!a) return null;
+  const when = (t?: number) => (t ? new Date(t).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "");
+  if (a.status === "pending") return <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-gold-foreground">Waiting for approval · sent by {a.requestedBy}</span>;
+  if (a.status === "approved") return <span title={`Approved by ${a.decidedBy ?? "admin"} ${when(a.decidedAt)}${a.billChecked ? ", supplier bill checked" : ""}`} className="ml-2 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-bold text-success">Approved{a.billChecked ? " · bill checked" : ""}</span>;
+  return <span title={a.note} className="ml-2 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-bold text-destructive">Rejected{a.note ? `: ${a.note}` : ""}</span>;
+}
+
+/** Admin: check the supplier bill, then approve; or reject with a reason. */
+function ApprovePanel({ entry }: { entry: StockEntry }) {
+  const { user } = useStaff();
+  const [checked, setChecked] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const decide = async (decision: "approved" | "rejected") => {
+    setBusy(true);
+    try {
+      await decidePurchase(entry.id, decision, { name: user?.displayName ?? "Admin" }, decision === "approved" ? { billChecked: checked } : { note: reason });
+      toast.success(decision === "approved" ? `${entry.purchaseId ? "Return" : "Purchase"} approved` : `${entry.purchaseId ? "Return" : "Purchase"} rejected`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not save"); } finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-3 rounded-xl border border-gold/50 bg-gold/5 p-3">
+      <p className="text-xs text-muted-foreground">Sent by <strong className="text-foreground">{entry.approval?.requestedBy}</strong> · {new Date(entry.approval?.requestedAt ?? entry.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}. Compare it with the supplier's bill: invoice no., items, quantities and prices.</p>
+      {rejecting ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input autoFocus value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder="Reason, e.g. price doesn't match the bill" aria-label="Reason for rejecting" className="min-w-56 flex-1 rounded-lg border border-input bg-card px-3 py-2 text-sm" />
+          <Button size="sm" variant="destructive" disabled={busy || !reason.trim()} onClick={() => void decide("rejected")}><X />Reject</Button>
+          <Button size="sm" variant="ghost" onClick={() => setRejecting(false)}>Back</Button>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4" checked={checked} onChange={(e) => setChecked(e.target.checked)} />Supplier bill checked</label>
+          <Button size="sm" disabled={busy || !checked} onClick={() => void decide("approved")}><Check />Approve</Button>
+          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setRejecting(true)}><X />Reject</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: Material[]; suppliers: Supplier[]; purchase?: StockEntry; onDone: () => void }) {
   const { user } = useStaff();
+  const needsApproval = !can(user, "stock.purchase");
   const [supplierId, setSupplierId] = useState(purchase?.supplierId ?? "");
   const [reference, setReference] = useState(purchase?.reference ?? "");
   const [rows, setRows] = useState(purchase ? purchase.items.map((i) => ({ key: newUid(), materialId: i.materialId, qty: String(i.qty), cost: String(i.unitCost ?? 0) })) : [{ key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }]);
@@ -100,9 +145,11 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
         await updatePurchase(purchase.id, { items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}) });
         toast.success("Purchase bill updated"); onDone(); return;
       }
-      await recordStockEntry({ type: "purchase", items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) });
+      if (needsApproval && !reference.trim()) { setError("Enter the supplier's invoice number, so the admin can check the bill."); return; }
+      await recordStockEntry({ type: "purchase", items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) },
+        needsApproval && user ? { by: user.displayName, ...(user.login ? { login: user.login } : {}) } : undefined);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not record purchase"); return; }
-    toast.success(`Purchase of ${formatINR(total, 0)} recorded`);
+    toast.success(needsApproval ? `Purchase of ${formatINR(total, 0)} sent to the admin for approval` : `Purchase of ${formatINR(total, 0)} recorded`);
     onDone();
   };
 
@@ -181,6 +228,7 @@ function SupplierForm({ supplier, onDone }: { supplier: Supplier | null; onDone:
 
 function ReturnForm({ purchase, entries, materials, onDone }: { purchase: StockEntry; entries: StockEntry[]; materials: Material[]; onDone: () => void }) {
   const { user } = useStaff();
+  const needsApproval = !can(user, "stock.purchase");
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -194,8 +242,9 @@ function ReturnForm({ purchase, entries, materials, onDone }: { purchase: StockE
         if (qty === null || qty <= 0) throw new Error("Enter a positive return quantity.");
         return [{ materialId: id, qty: -qty }];
       });
-      await recordStockEntry({ type: "return", purchaseId: purchase.id, items, ...(purchase.supplierId ? { supplierId: purchase.supplierId } : {}), ...(purchase.reference ? { reference: purchase.reference } : {}), ...(user ? { by: user.displayName } : {}) });
-      toast.success("Supplier return recorded"); onDone();
+      await recordStockEntry({ type: "return", purchaseId: purchase.id, items, ...(purchase.supplierId ? { supplierId: purchase.supplierId } : {}), ...(purchase.reference ? { reference: purchase.reference } : {}), ...(user ? { by: user.displayName } : {}) },
+        needsApproval && user ? { by: user.displayName, ...(user.login ? { login: user.login } : {}) } : undefined);
+      toast.success(needsApproval ? "Supplier return sent to the admin for approval" : "Supplier return recorded"); onDone();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not record return"); } finally { setBusy(false); }
   };
   return <form onSubmit={(e) => void submit(e)} className="space-y-4">
@@ -219,6 +268,8 @@ const timeText = (at: number) => new Date(at).toLocaleTimeString("en-IN", { hour
 function StockPage() {
   const { user } = useStaff();
   const admin = can(user, "stock.purchase");
+  // The bill desk records purchases and returns; each waits for the admin's approval.
+  const requester = !admin && can(user, "stock.request");
   const materials = useLiveQuery(() => getDb().materials.toArray(), [], []);
   const suppliers = useLiveQuery(() => getDb().suppliers.toArray(), [], []);
   const entries = useLiveQuery(() => getDb().stockEntries.orderBy("at").reverse().toArray(), [], []);
@@ -243,13 +294,15 @@ function StockPage() {
     { name: "History", title: "Purchase and return history", columns: [{ header: "Date", format: "datetime" }, { header: "Type" }, { header: "Vendor" }, { header: "Invoice" }, { header: "Item" }, { header: "Quantity", format: "qty" }, { header: "Unit" }, { header: "Unit price", format: "inr" }, { header: "Amount", format: "inr" }], rows: history.flatMap((e) => e.items.map((i) => [e.at, e.purchaseId ? "Supplier return" : "Purchase", e.supplierName ?? suppliers.find((s) => s.id === e.supplierId)?.name ?? "", e.reference ?? "", lineName(i), Math.abs(i.qty), lineUnit(i), i.unitCost ?? null, (e.purchaseId ? -1 : 1) * Math.abs(i.qty) * (i.unitCost ?? 0)])) },
   ], { title: "Purchase" });
 
+  const pending = entries.filter((e) => approvalStatus(e) === "pending").sort((a, b) => (a.approval?.requestedAt ?? a.at) - (b.approval?.requestedAt ?? b.at));
   const billCard = (p: StockEntry) => <li key={p.id} className="py-3 text-sm">
-    <div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold">{p.purchaseId ? "Supplier return" : "Purchase"} · {p.supplierName ?? suppliers.find((s) => s.id === p.supplierId)?.name ?? "Supplier not recorded"}<span className="ml-2 font-normal text-muted-foreground">{p.reference ? `Invoice ${p.reference}` : ""}</span></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold">{p.purchaseId ? "Supplier return" : "Purchase"} · {p.supplierName ?? suppliers.find((s) => s.id === p.supplierId)?.name ?? "Supplier not recorded"}<span className="ml-2 font-normal text-muted-foreground">{p.reference ? `Invoice ${p.reference}` : ""}</span><ApprovalChip entry={p} /></div>
       <span className={cn("font-semibold tabular-nums", p.purchaseId && "text-destructive")}>{formatINR(entryAmount(p))}</span></div>
     <p className="mt-0.5 text-xs text-muted-foreground">{dateText(p.at)}, {timeText(p.at)}{p.by ? ` · ${p.by}` : ""}</p>
     <table className="mt-2 w-full text-xs"><tbody>{p.items.map((i, index) => <tr key={index} className="border-t border-border/60"><td className="py-1 pr-2">{lineName(i)}</td><td className="py-1 pr-2 text-right tabular-nums">{formatQty(Math.abs(i.qty), lineUnit(i))}</td><td className="py-1 pr-2 text-right tabular-nums">{i.unitCost !== undefined ? `${formatINR(i.unitCost)} / ${lineUnit(i)}` : "—"}</td><td className="py-1 text-right font-semibold tabular-nums">{formatINR(Math.abs(i.qty) * (i.unitCost ?? 0))}</td></tr>)}</tbody></table>
-    {admin && canReturnPurchase(p) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0) ? <Button size="sm" variant="outline" className="mt-2" onClick={() => setSheet({ kind: "return", purchase: p })}>Return items</Button> : null}
-    {admin && !p.purchaseId && !entries.some((e) => e.purchaseId === p.id) ? <div className="mt-2 inline-flex gap-2 pl-2">
+    {(admin ? canReturnPurchase(p) : requester && user ? canRequestReturn(p, { name: user.displayName, login: user.login ?? undefined }) : false) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0) ? <Button size="sm" variant="outline" className="mt-2" onClick={() => setSheet({ kind: "return", purchase: p })}>Return items</Button> : null}
+    {admin && approvalStatus(p) === "pending" ? <ApprovePanel entry={p} /> : null}
+    {admin && !p.purchaseId && approvalStatus(p) !== "rejected" && !entries.some((e) => e.purchaseId === p.id) ? <div className="mt-2 inline-flex gap-2 pl-2">
       <Button size="sm" variant="outline" onClick={() => setSheet({ kind: "purchase", purchase: p })}><Pencil />Edit</Button>
       <ConfirmButton id={`delete-purchase-${p.id}`} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-destructive hover:text-destructive")} armedClassName="!bg-destructive !text-destructive-foreground"
         onConfirm={async () => { try { await deletePurchase(p.id); toast.success("Purchase bill deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete"); } }} confirm={<><Trash2 />Tap again to delete</>}><Trash2 />Delete</ConfirmButton>
@@ -259,8 +312,18 @@ function StockPage() {
 
   return <AppShell><div className="mx-auto max-w-6xl p-4 lg:p-6">
     <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Purchase</h1><p className="text-sm text-muted-foreground">{active.length} items · {purchases.length} purchase bills · {formatINR(vendors.reduce((n, v) => n + v.amount, 0), 0)} purchased</p></div>
-      {admin ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSheet({ kind: "item" })}><Plus/>Item</Button><Button variant="outline" onClick={exportPurchase}><Download/>Excel</Button><Button disabled={!active.length} onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase</Button></div> : null}
+      {admin ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSheet({ kind: "item" })}><Plus/>Item</Button><Button variant="outline" onClick={exportPurchase}><Download/>Excel</Button><Button disabled={!active.length} onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase</Button></div>
+        : requester ? <Button disabled={!active.length} onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase (needs approval)</Button> : null}
     </header>
+    {(admin || requester) && pending.length ? (
+      <section aria-label="Waiting for approval" className="mb-5 overflow-hidden rounded-2xl border border-gold/60 bg-card">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-gold/10 px-4 py-3">
+          <h2 className="flex items-center gap-2 text-base font-bold"><Clock className="size-4" />Waiting for admin approval <span className="rounded-full bg-gold px-2 text-xs text-gold-foreground">{pending.length}</span></h2>
+          <p className="text-xs text-muted-foreground">{admin ? "Check each supplier bill, then approve or reject. Nothing here counts in purchases until approved." : "The admin checks the supplier bill and approves it. You'll hear a chime when they do."}</p>
+        </div>
+        <ul className="divide-y divide-border px-4">{pending.map(billCard)}</ul>
+      </section>
+    ) : null}
     <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[{ value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, { value: "suppliers", label: "Vendors" }, { value: "history", label: "History" }]}/>
 
     {tab === "items" ? <div className="mt-4"><input aria-label="Find purchase item" placeholder="Find item" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"/>

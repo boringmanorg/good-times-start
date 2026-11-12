@@ -10,7 +10,7 @@ import { isAdminCodeKey, type AdminCodeKey } from "./admin-code";
 
 export type Action =
   // Menu, floor and stock set-up
-  | "menu.edit" | "menu.import" | "tables.edit" | "stock.setup" | "stock.purchase" | "stock.count"
+  | "menu.edit" | "menu.import" | "tables.edit" | "stock.setup" | "stock.purchase" | "stock.count" | "stock.request"
   // Money
   | "bill.void" | "bill.cancel" | "bill.bigDiscount" | "guests.points" | "guests.export"
   // Restaurant settings
@@ -33,7 +33,7 @@ const FLOOR: Role[] = ["owner", "manager", "cashier", "captain"];
 const COUNTER: Role[] = ["owner", "manager", "cashier"];
 
 const RULES: Record<Action, Role[]> = {
-  "menu.edit": ADMIN, "menu.import": ADMIN, "tables.edit": ADMIN, "stock.setup": ADMIN, "stock.purchase": ADMIN, "stock.count": ADMIN,
+  "menu.edit": ADMIN, "menu.import": ADMIN, "tables.edit": ADMIN, "stock.setup": ADMIN, "stock.purchase": ADMIN, "stock.count": ADMIN, "stock.request": ["owner", "manager", "cashier"],
   "bill.void": ADMIN, "bill.cancel": ADMIN, "bill.bigDiscount": ADMIN, "guests.points": ADMIN, "guests.export": ADMIN,
   "settings.restaurant": ADMIN, "settings.billing": ADMIN, "settings.ordering": ADMIN, "settings.series": ADMIN, "staff.manage": ADMIN, "device.reset": OWNER,
   "reports.view": ADMIN, "reports.export": ADMIN, "dashboard.view": ADMIN, "outlets.manage": OWNER, "marketing.manage": ADMIN,

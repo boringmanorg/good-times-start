@@ -4,9 +4,12 @@ import { newUid } from "./sync-core";
 import type { CartLine, Material, StockEntry, Supplier } from "./types";
 
 /** Add a stock movement to the ledger and share it. */
-export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { id?: string; at?: number }): Promise<StockEntry> {
+export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { id?: string; at?: number }, request?: { by: string; login?: string }): Promise<StockEntry> {
   const db = getDb();
-  const saved: StockEntry = { ...entry, id: entry.id ?? newUid(), at: entry.at ?? Date.now(), items: entry.items.filter((i) => i.qty !== 0) };
+  const now = Date.now();
+  const saved: StockEntry = { ...entry, id: entry.id ?? newUid(), at: entry.at ?? now, items: entry.items.filter((i) => i.qty !== 0),
+    // The bill desk records it; it waits for the admin's approval before it counts.
+    ...(request ? { approval: { status: "pending" as const, requestedBy: request.by, ...(request.login ? { requestedLogin: request.login } : {}), requestedAt: now } } : {}) };
   await db.transaction("rw", db.stockEntries, db.materialLevels, db.materials, async () => {
     const existing = await db.stockEntries.get(saved.id);
     if (existing) {
@@ -127,4 +130,22 @@ export async function deletePurchase(id: string): Promise<void> {
     await db.stockEntries.delete(id);
   });
   await markDirty(["stock_entry", id]);
+}
+
+/** Admin: approve (after checking the supplier bill) or reject a purchase or return the bill desk recorded. */
+export async function decidePurchase(id: string, decision: "approved" | "rejected", admin: { name: string }, details: { billChecked?: boolean; note?: string } = {}): Promise<StockEntry> {
+  const db = getDb();
+  let saved!: StockEntry;
+  await db.transaction("rw", db.stockEntries, async () => {
+    const prior = await db.stockEntries.get(id);
+    if (!prior?.approval) throw new Error("This entry doesn't need approval.");
+    if (prior.approval.status !== "pending") throw new Error(prior.approval.status === "approved" ? "Already approved." : "Already rejected.");
+    if (decision === "approved" && !details.billChecked) throw new Error("Check the supplier bill first, then tick \"Supplier bill checked\".");
+    if (decision === "rejected" && !details.note?.trim()) throw new Error("Give a reason for rejecting.");
+    saved = { ...prior, approval: { ...prior.approval, status: decision, decidedBy: admin.name, decidedAt: Date.now(),
+      ...(decision === "approved" ? { billChecked: true } : {}), ...(details.note?.trim() ? { note: details.note.trim().slice(0, 200) } : {}) } };
+    await db.stockEntries.put(saved);
+  });
+  await markDirty(["stock_entry", id]);
+  return saved;
 }

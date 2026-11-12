@@ -38,7 +38,7 @@ export const POLICY_ACTIONS: { id: PolicyAction; label: string; hint: string; ro
 export type PolicyScreen = "/tables" | "/menu" | "/stock" | "/customers" | "/reports";
 export const POLICY_SCREENS: { path: PolicyScreen; label: string; hint: string }[] = [
   { path: "/menu", label: "Menu (view)", hint: "See dishes and mark sold out; editing stays admin-only" },
-  { path: "/stock", label: "Purchase (view)", hint: "Items and purchase history; recording and returns stay admin-only" },
+  { path: "/stock", label: "Purchase (view)", hint: "Items and purchase history. The bill desk can record purchases and returns; each waits for the admin's approval" },
   { path: "/customers", label: "Guests", hint: "Guest list, dues and WhatsApp consent" },
   { path: "/reports", label: "Reports", hint: "Daily summary, and Sales Summary if allowed below" },
 ];

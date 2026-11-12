@@ -45,3 +45,18 @@ describe("immutable purchase records", () => {
     expect(await db.getDb().outbox.count()).toBe(0);
   });
 });
+describe("bill desk purchases wait for the admin", () => {
+  it("records a purchase as waiting, then an admin approves it only after checking the bill, or rejects it with a reason", async () => {
+    await actions.saveMaterial({ id: "oil", name: "Oil", unit: "l", costPerUnit: 150, lowStockLevel: 0 });
+    const p = await actions.recordStockEntry({ type: "purchase", reference: "INV-9", items: [{ materialId: "oil", qty: 5, unitCost: 150 }] }, { by: "Billdesk", login: "billdesk" });
+    expect(p.approval).toMatchObject({ status: "pending", requestedBy: "Billdesk", requestedLogin: "billdesk" });
+    await expect(actions.decidePurchase(p.id, "approved", { name: "Admin" })).rejects.toThrow(/Supplier bill checked/);
+    await expect(actions.decidePurchase(p.id, "rejected", { name: "Admin" })).rejects.toThrow(/reason/);
+    const ok = await actions.decidePurchase(p.id, "approved", { name: "Admin" }, { billChecked: true });
+    expect(ok.approval).toMatchObject({ status: "approved", decidedBy: "Admin", billChecked: true });
+    await expect(actions.decidePurchase(p.id, "rejected", { name: "Admin" }, { note: "late" })).rejects.toThrow(/Already approved/);
+    const q = await actions.recordStockEntry({ type: "purchase", reference: "INV-10", items: [{ materialId: "oil", qty: 1, unitCost: 999 }] }, { by: "Billdesk" });
+    const no = await actions.decidePurchase(q.id, "rejected", { name: "Admin" }, { note: "Price doesn't match the bill" });
+    expect(no.approval).toMatchObject({ status: "rejected", note: "Price doesn't match the bill" });
+  });
+});

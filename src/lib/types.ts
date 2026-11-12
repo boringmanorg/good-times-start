@@ -274,6 +274,22 @@ export interface StockEntry {
   /** Original supplier purchase; only linked returns use this field. */
   purchaseId?: string;
   supplierName?: string;
+  /** Purchases and returns recorded by the bill desk wait for an admin's approval; none = recorded by an admin (approved). */
+  approval?: PurchaseApproval;
+}
+
+export interface PurchaseApproval {
+  status: "pending" | "approved" | "rejected";
+  /** Display name and login of who recorded it. */
+  requestedBy: string;
+  requestedLogin?: string;
+  requestedAt: number;
+  decidedBy?: string;
+  decidedAt?: number;
+  /** The admin checked the supplier bill (invoice no., items, quantities, prices) before approving. */
+  billChecked?: boolean;
+  /** Reason for a rejection, or a note with the approval. */
+  note?: string;
 }
 
 export interface Customer {
