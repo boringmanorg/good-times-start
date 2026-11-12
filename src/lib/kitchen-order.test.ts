@@ -164,3 +164,12 @@ describe("after a KOT is sent, its items leave the New items queue", () => {
     expect(linesAfterSharedChange(local, { naan: 1 }, [l("naan", 1)], { orderUid: "OTHER", submitted: { naan: 5 } }, "D2").map((x: { qty: number }) => x.qty)).toEqual([2]);
   });
 });
+
+import { sentCovered } from "./kitchen-order";
+describe("forgetting the device's own send once it has come back", () => {
+  it("is covered when the shared bill holds at least what was sent", () => {
+    expect(sentCovered({ naan: 2, mandi: 1 }, { naan: 2, mandi: 1 })).toBe(true);
+    expect(sentCovered({ naan: 1 }, { naan: 2, mandi: 1 })).toBe(false);
+    expect(sentCovered({ naan: 3 }, {})).toBe(true);
+  });
+});

@@ -164,3 +164,8 @@ export function linesAfterSharedChange(
   }
   return merged;
 }
+
+/** True once the shared bill records at least everything this device sent (its own save has come back). */
+export function sentCovered(shared: Record<string, number>, own: Record<string, number>): boolean {
+  return Object.entries(own).every(([id, qty]) => (shared[id] ?? 0) >= qty);
+}

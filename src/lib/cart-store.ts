@@ -6,7 +6,7 @@ import type { CartLine, Kot, MenuItem, Order, OrderType, PaymentMode } from "./t
 import { computeTotals } from "./billing";
 import { getDb, markDirty } from "./db";
 import { allocateRestaurantNumber, allocatedNumberRequestId } from "./restaurant-numbering";
-import { additionsNotInShared, accumulateSubmittedQuantities, cancelledKitchenLines, guestDetailsError, linesAfterSharedChange, removeCancelled, reopenedLines, submittedQuantitiesFromKots, subtractSettledQuantities, subtractSubmittedQuantities, unsentKitchenLines } from "./kitchen-order";
+import { additionsNotInShared, accumulateSubmittedQuantities, cancelledKitchenLines, guestDetailsError, linesAfterSharedChange, sentCovered, removeCancelled, reopenedLines, submittedQuantitiesFromKots, subtractSettledQuantities, subtractSubmittedQuantities, unsentKitchenLines } from "./kitchen-order";
 import { mergeSentLines, newUid, sameLines, type RecordKind } from "./sync-core";
 import { applyLocalStockSale } from "./cloud-sync";
 import { buildLine, priceFor } from "./menu-logic";
@@ -212,6 +212,8 @@ export function useCart(initialTableId?: string) {
     // Items this device hasn't sent yet stay on top of whatever the shared order now holds; what this
     // device has just sent itself never comes back as "new".
     const next = linesAfterSharedChange(lines, activeOrder?.kotSubmittedQty ?? {}, liveOrder.lines, ownSentRef.current, liveOrder.uid);
+    // Once the shared bill shows this device's own send, forget it: later cancels from other devices count again.
+    if (ownSentRef.current && ownSentRef.current.orderUid === liveOrder.uid && sentCovered(liveOrder.kotSubmittedQty ?? {}, ownSentRef.current.submitted)) ownSentRef.current = null;
     setActiveOrder(liveOrder);
     if (!sameLines(next, lines)) setLines(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- react only to changes in the shared order
