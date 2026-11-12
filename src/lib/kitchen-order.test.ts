@@ -140,3 +140,27 @@ describe("Room 666: bill counter ahead of saved tickets", () => {
     expect(unsent.map((l) => l.qty)).toEqual([4]);
   });
 });
+
+import { linesAfterSharedChange } from "./kitchen-order";
+describe("after a KOT is sent, its items leave the New items queue", () => {
+  const l = (itemId: string, qty: number) => ({ itemId, name: itemId, price: 10, qty, veg: true, gstRate: 0 }) as never;
+  it("D2: the device's own send never comes back as new (stale screen state)", () => {
+    // Screen still holds the pre-send view: Naan sent once, Mandi never; its cart has Naan 2, Mandi 1.
+    const local = [l("khichdi", 1), l("naan", 2), l("mandi", 1)];
+    const lastSeen = { khichdi: 1, naan: 1 };
+    const shared = [l("khichdi", 1), l("naan", 2), l("mandi", 1)]; // the saved bill after KOT/0069
+    const own = { orderUid: "D2", submitted: { khichdi: 1, naan: 2, mandi: 1 } };
+    expect(linesAfterSharedChange(local, lastSeen, shared, own, "D2")).toEqual(shared);
+    // Without remembering its own send, the old logic doubled them: Naan 3, Mandi 2.
+    expect(linesAfterSharedChange(local, lastSeen, shared, null, "D2").map((x: { qty: number }) => x.qty)).toEqual([1, 3, 2]);
+  });
+  it("keeps this device's unsent additions when another device sends to the same bill", () => {
+    const local = [l("naan", 2)]; // 1 sent + 1 added here, not sent
+    const shared = [l("naan", 2), l("chai", 1)]; // another device sent 1 Naan and a Chai
+    expect(linesAfterSharedChange(local, { naan: 1 }, shared, null, "D2").map((x: { itemId: string; qty: number }) => [x.itemId, x.qty])).toEqual([["naan", 3], ["chai", 1]]);
+  });
+  it("ignores a remembered send for a different bill", () => {
+    const local = [l("naan", 2)];
+    expect(linesAfterSharedChange(local, { naan: 1 }, [l("naan", 1)], { orderUid: "OTHER", submitted: { naan: 5 } }, "D2").map((x: { qty: number }) => x.qty)).toEqual([2]);
+  });
+});

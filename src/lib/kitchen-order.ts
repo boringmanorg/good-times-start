@@ -139,3 +139,28 @@ export function subtractSettledQuantities(
       .filter(([, qty]) => qty > 0),
   );
 }
+
+/**
+ * What this screen should show when the shared running bill changes: the shared lines plus items this
+ * device added but hasn't sent. "Sent" counts what this screen last saw sent AND what it just sent
+ * itself (ownSent), whichever is more: a device's own KOT save arrives back before its screen state
+ * catches up, and counting only the older figure added the just-sent items back as new (D2, 12 Nov).
+ */
+export function linesAfterSharedChange(
+  local: CartLine[],
+  lastSeenSubmitted: Record<string, number>,
+  shared: CartLine[],
+  ownSent: { orderUid: string; submitted: Record<string, number> } | null,
+  sharedUid: string | undefined,
+): CartLine[] {
+  const known: Record<string, number> = { ...lastSeenSubmitted };
+  if (ownSent && sharedUid && ownSent.orderUid === sharedUid) {
+    for (const [id, qty] of Object.entries(ownSent.submitted)) known[id] = Math.max(known[id] ?? 0, qty);
+  }
+  const merged = shared.map((line) => ({ ...line }));
+  for (const add of unsentKitchenLines(local, known)) {
+    const existing = merged.find((line) => line.itemId === add.itemId);
+    if (existing) existing.qty += add.qty; else merged.push({ ...add });
+  }
+  return merged;
+}

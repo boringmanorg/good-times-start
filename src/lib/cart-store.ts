@@ -6,7 +6,7 @@ import type { CartLine, Kot, MenuItem, Order, OrderType, PaymentMode } from "./t
 import { computeTotals } from "./billing";
 import { getDb, markDirty } from "./db";
 import { allocateRestaurantNumber, allocatedNumberRequestId } from "./restaurant-numbering";
-import { additionsNotInShared, accumulateSubmittedQuantities, cancelledKitchenLines, guestDetailsError, removeCancelled, reopenedLines, submittedQuantitiesFromKots, subtractSettledQuantities, subtractSubmittedQuantities, unsentKitchenLines } from "./kitchen-order";
+import { additionsNotInShared, accumulateSubmittedQuantities, cancelledKitchenLines, guestDetailsError, linesAfterSharedChange, removeCancelled, reopenedLines, submittedQuantitiesFromKots, subtractSettledQuantities, subtractSubmittedQuantities, unsentKitchenLines } from "./kitchen-order";
 import { mergeSentLines, newUid, sameLines, type RecordKind } from "./sync-core";
 import { applyLocalStockSale } from "./cloud-sync";
 import { buildLine, priceFor } from "./menu-logic";
@@ -69,6 +69,8 @@ export function useCart(initialTableId?: string) {
   const [reservationId, setReservationId] = useState<string | undefined>();
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [submittedOverride, setSubmittedOverride] = useState<{ orderUid: string; quantities: Record<string, number> } | null>(null);
+  /** What this device last sent to the kitchen, set before the save so the screen never re-adds it. */
+  const ownSentRef = useRef<{ orderUid: string; submitted: Record<string, number> } | null>(null);
   const storedKots = useLiveQuery(async () => activeOrder?.id === undefined ? [] : kotsForOrder(activeOrder.id, activeOrder.uid), [activeOrder?.id, activeOrder?.uid], [] as Kot[]);
   const persistedSubmitted = submittedQuantitiesFromKots(storedKots);
   const persistedEffectiveSubmitted = subtractSettledQuantities(persistedSubmitted, activeOrder?.kotSettledQty ?? {});
@@ -207,9 +209,9 @@ export function useCart(initialTableId?: string) {
     }
     if (activeOrder && liveOrder.uid === activeOrder.uid && sameLines(liveOrder.lines, activeOrder.lines) &&
       JSON.stringify(liveOrder.kotSubmittedQty ?? {}) === JSON.stringify(activeOrder.kotSubmittedQty ?? {})) return;
-    // Items this device hasn't sent yet stay on top of whatever the shared order now holds.
-    const pending = unsentKitchenLines(lines, activeOrder?.kotSubmittedQty ?? {});
-    const next = mergeSentLines(liveOrder.lines, pending);
+    // Items this device hasn't sent yet stay on top of whatever the shared order now holds; what this
+    // device has just sent itself never comes back as "new".
+    const next = linesAfterSharedChange(lines, activeOrder?.kotSubmittedQty ?? {}, liveOrder.lines, ownSentRef.current, liveOrder.uid);
     setActiveOrder(liveOrder);
     if (!sameLines(next, lines)) setLines(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- react only to changes in the shared order
@@ -403,6 +405,7 @@ export function useCart(initialTableId?: string) {
     order.uid = orderUid;
     const nextSubmitted = subtractSubmittedQuantities(accumulateSubmittedQuantities(base ? baseRawSubmitted : {}, ticketsToSend), pendingCancelLines);
     const allCancelled = merged.length === 0;
+    ownSentRef.current = { orderUid, submitted: { ...nextSubmitted } };
     const saved: Order = {
       ...order, kotSubmittedQty: nextSubmitted, synced: false,
       ...(allCancelled ? { status: "void" as const, cancelledAt: now, voidReason: "All items cancelled before billing" } : {}),
