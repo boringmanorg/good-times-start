@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Ban, Check, MapPin, Save, Trash2 } from "lucide-react";
+import { Ban, Check, History, IndianRupee, MapPin, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ago, loadPlans, loadRestaurants, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
+import { ago, loadPayments, loadPlans, loadRestaurants, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
 import { FEATURES, FEATURE_NAMES, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Panel, field } from "./ConsoleBits";
@@ -25,6 +25,127 @@ export function ConsoleRestaurants() {
         <p className="text-sm text-muted-foreground">Plans, subscriptions, feature switches, logins and devices. Payments happen outside the software: record renewals here.</p>
       </div>
       {rows.data.map((r) => <RestaurantCard key={r.id} r={r} plans={plans.data ?? []} />)}
+    </div>
+  );
+}
+
+/** Restaurant info is edited only here (exclusive to the super admin): name, QR address, city, billing contacts. */
+function RestaurantInfo({ r }: { r: RestaurantRow }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState(r.name);
+  const [slug, setSlug] = useState(r.slug ?? "");
+  const [city, setCity] = useState(r.city);
+  const [phone, setPhone] = useState(r.account?.billingPhone ?? "");
+  const [email, setEmail] = useState(r.account?.billingEmail ?? "");
+  const [busy, setBusy] = useState(false);
+  const dirty = name !== r.name || slug !== (r.slug ?? "") || city !== r.city || phone !== (r.account?.billingPhone ?? "") || email !== (r.account?.billingEmail ?? "");
+  const save = async () => {
+    setBusy(true);
+    try {
+      await saveRestaurantInfo({ id: r.id, name, slug, city, billingPhone: phone, billingEmail: email });
+      toast.success("Restaurant info saved");
+      await queryClient.invalidateQueries({ queryKey: ["console"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="mb-4 rounded-xl border border-border p-3">
+      <h3 className="text-sm font-semibold">Restaurant info <span className="font-normal text-muted-foreground">· changed only here; restaurants can't edit these themselves</span></h3>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <label className="text-sm font-medium lg:col-span-2">Name
+          <input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} className={field} />
+        </label>
+        <label className="text-sm font-medium">QR address (slug)
+          <input value={slug} maxLength={40} spellCheck={false} onChange={(e) => setSlug(e.target.value)} className={cn(field, "font-mono")} />
+        </label>
+        <label className="text-sm font-medium">City
+          <input value={city} maxLength={80} onChange={(e) => setCity(e.target.value)} className={field} />
+        </label>
+        <label className="text-sm font-medium">Billing phone
+          <input value={phone} maxLength={20} inputMode="tel" onChange={(e) => setPhone(e.target.value)} className={field} />
+        </label>
+        <label className="text-sm font-medium lg:col-span-2">Billing email
+          <input value={email} maxLength={120} inputMode="email" onChange={(e) => setEmail(e.target.value)} className={field} />
+        </label>
+      </div>
+      {slug !== (r.slug ?? "") ? <p className="mt-2 text-xs text-warning">Changing the QR address breaks every printed QR card for /order/{r.slug ?? "…"} — reprint them after saving.</p> : null}
+      <Button size="sm" className="mt-3" disabled={!dirty || busy || name.trim().length < 2} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save info"}</Button>
+    </div>
+  );
+}
+
+/**
+ * Renewals and payment status live here and nowhere else: restaurants have no self-serve path.
+ * Recording a payment moves the paid-until date forward (never losing time already paid for) and
+ * makes the account live again.
+ */
+function Renewal({ r, price }: { r: RestaurantRow; price: number }) {
+  const queryClient = useQueryClient();
+  const a = r.account!;
+  const [amount, setAmount] = useState(String(price));
+  const [months, setMonths] = useState(1);
+  const [method, setMethod] = useState("upi");
+  const [reference, setReference] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const payments = useQuery({ queryKey: ["console", "payments", a.id], queryFn: () => loadPayments(a.id), enabled: showHistory });
+
+  const from = a.paidUntil && Date.parse(a.paidUntil) > Date.now() ? new Date(a.paidUntil) : new Date();
+  const until = new Date(from); until.setMonth(until.getMonth() + months);
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await recordPayment({ account: a.id, amount: Number(amount || 0), months, method, reference });
+      toast.success(`Payment recorded · live until ${new Date(res.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`);
+      setReference("");
+      await queryClient.invalidateQueries({ queryKey: ["console"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't record the payment"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className={cn("mt-4 rounded-xl border p-3", a.live ? "border-border" : "border-gold/60 bg-gold/10")}>
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold"><IndianRupee className="size-4 text-primary" />Renewal and payment
+        <span className="font-normal text-muted-foreground">· only XTSY can renew; restaurants cannot pay themselves in</span></h3>
+      {!a.live ? <p className="mt-1 text-xs font-semibold text-warning">This restaurant is stopped right now. Recording a payment switches it back on at once.</p> : null}
+      <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <label className="text-sm font-medium">Amount received (₹)
+          <input value={amount} inputMode="decimal" onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, "").slice(0, 9))} className={cn(field, "tabular-nums")} />
+        </label>
+        <label className="text-sm font-medium">Renew for
+          <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className={field}>
+            {[1, 3, 6, 12].map((m) => <option key={m} value={m}>{m} month{m === 1 ? "" : "s"}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium">Paid by
+          <select value={method} onChange={(e) => setMethod(e.target.value)} className={field}>
+            {[["upi", "UPI"], ["cash", "Cash"], ["bank", "Bank transfer"], ["card", "Card"], ["other", "Other"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium lg:col-span-2">Reference <span className="font-normal text-muted-foreground">(UPI ref, receipt no.)</span>
+          <input value={reference} maxLength={120} onChange={(e) => setReference(e.target.value)} className={field} />
+        </label>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        New paid-until date: <strong className="text-foreground">{until.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</strong>
+        {a.paidUntil && Date.parse(a.paidUntil) > Date.now() ? " (added to the time already paid for)" : " (from today)"} · the restaurant keeps working for 7 days after it, then stops.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" disabled={busy} onClick={() => void save()}><IndianRupee />{busy ? "Recording…" : "Record payment and renew"}</Button>
+        <Button size="sm" variant="outline" onClick={() => setShowHistory((v) => !v)}><History />{showHistory ? "Hide payments" : "Payment history"}</Button>
+      </div>
+      {showHistory ? (
+        <ul className="mt-3 space-y-1.5 text-xs">
+          {payments.isLoading ? <li className="text-muted-foreground">Loading…</li> : null}
+          {(payments.data ?? []).map((p) => (
+            <li key={p.at} className="flex flex-wrap justify-between gap-2 rounded-lg bg-secondary px-2.5 py-1.5">
+              <span>{new Date(p.at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · ₹{Number(p.detail.amount).toLocaleString("en-IN")} · {p.detail.method}{p.detail.reference ? ` · ${p.detail.reference}` : ""}</span>
+              <span className="text-muted-foreground">{p.detail.months} month{p.detail.months === 1 ? "" : "s"} → {new Date(p.detail.until).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+            </li>
+          ))}
+          {!payments.isLoading && !(payments.data ?? []).length ? <li className="text-muted-foreground">No payments recorded yet.</li> : null}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -64,6 +185,8 @@ function RestaurantCard({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
         {r.city ? <><MapPin className="mr-0.5 inline size-3" />{r.city} · </> : null}{r.slug ? `/${r.slug} · ` : ""}joined {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
         {" · "}last activity {ago(r.lastActivity)} · {r.bills30d} bill changes in 30 days · {r.guestOrders7d} QR orders in 7 days
       </p>
+
+      <RestaurantInfo r={r} />
 
       <div className="grid gap-3 sm:grid-cols-3">
         {(["pos", "waiter", "manager"] as SeatApp[]).map((app) => {
@@ -131,6 +254,7 @@ function RestaurantCard({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
             </ul>
           </fieldset>
           <div className="lg:col-span-2"><Button disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save subscription"}</Button></div>
+          <div className="lg:col-span-2"><Renewal r={r} price={planRow?.monthly_price ?? 0} /></div>
         </div>
       ) : <p className="mt-4 text-sm text-warning">This restaurant has no subscription account yet.</p>}
 
@@ -148,7 +272,7 @@ function RestaurantCard({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
                 <td className="pr-3 text-muted-foreground">{d.login.replace("@xtsy.pos", "")}</td>
                 <td className="pr-3 text-muted-foreground">{ago(d.lastSeen)}</td>
                 <td className="pr-3"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", d.status === "active" ? "bg-success/15 text-success" : d.status === "blocked" ? "bg-destructive/15 text-destructive" : "bg-gold/15 text-warning")}>
-                  {d.status === "over_plan" ? "Waiting for a seat" : d.status === "blocked" ? "Blocked" : "Active"}</span></td>
+                  {d.status === "over_plan" ? "Waiting for a seat" : d.status === "pending" ? "Waiting for approval" : d.status === "blocked" ? "Blocked" : "Active"}</span></td>
                 <td className="whitespace-nowrap text-right">
                   {d.status !== "active" ? <Button size="sm" variant="ghost" onClick={() => void device(d.deviceId, "active")}><Check />Activate</Button>
                     : <Button size="sm" variant="ghost" onClick={() => void device(d.deviceId, "blocked")}><Ban />Block</Button>}

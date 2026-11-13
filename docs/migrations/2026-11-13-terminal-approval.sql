@@ -40,25 +40,20 @@ END $$;
 -- Check-in: a device seen for the first time waits for approval, unless an owner / manager signed in on it.
 CREATE OR REPLACE FUNCTION public.touch_terminal(_restaurant uuid, _device text, _series text, _app text, _kind text)
  RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $function$
-DECLARE result text; admin boolean;
+DECLARE result text;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.is_member(_restaurant, auth.uid()) THEN RETURN 'unknown'; END IF;
-  admin := public.has_restaurant_role(_restaurant, auth.uid(), ARRAY['owner','manager']::public.restaurant_role[]);
-  INSERT INTO terminals (restaurant_id, device_id, series, app, device_kind, login_email, user_id, status, approved_at, approved_by, approved_via)
+  -- Every device seen for the first time waits to be named and approved, the admin's own included;
+  -- an owner / manager names theirs without needing a code (see approve_this_terminal).
+  INSERT INTO terminals (restaurant_id, device_id, series, app, device_kind, login_email, user_id, status)
   VALUES (_restaurant, lower(_device), left(coalesce(_series, ''), 12),
           CASE WHEN _app IN ('manager', 'pos', 'waiter') THEN _app ELSE '' END,
           CASE WHEN _kind IN ('android', 'ios', 'desktop') THEN _kind ELSE '' END,
-          coalesce(auth.jwt() ->> 'email', ''), auth.uid(),
-          CASE WHEN admin THEN 'active' ELSE 'pending' END,
-          CASE WHEN admin THEN now() END, CASE WHEN admin THEN auth.uid() END, CASE WHEN admin THEN 'admin sign-in' END)
+          coalesce(auth.jwt() ->> 'email', ''), auth.uid(), 'pending')
   ON CONFLICT (restaurant_id, device_id) DO UPDATE SET
     series = EXCLUDED.series, app = EXCLUDED.app, device_kind = EXCLUDED.device_kind,
     login_email = EXCLUDED.login_email, user_id = EXCLUDED.user_id, last_seen = now(),
-    status = CASE WHEN terminals.status = 'over_plan' THEN 'active'
-                  WHEN terminals.status = 'pending' AND admin THEN 'active' ELSE terminals.status END,
-    approved_at = CASE WHEN terminals.status = 'pending' AND admin THEN now() ELSE terminals.approved_at END,
-    approved_by = CASE WHEN terminals.status = 'pending' AND admin THEN auth.uid() ELSE terminals.approved_by END,
-    approved_via = CASE WHEN terminals.status = 'pending' AND admin THEN 'admin sign-in' ELSE terminals.approved_via END
+    status = CASE WHEN terminals.status = 'over_plan' THEN 'active' ELSE terminals.status END
   RETURNING status INTO result;
   RETURN result;
 END $function$;
@@ -81,6 +76,12 @@ BEGIN
   IF t.status = 'blocked' THEN RAISE EXCEPTION 'This terminal is blocked by the admin.'; END IF;
   IF t.status <> 'pending' THEN
     UPDATE terminals SET description = left(trim(_name), 60) WHERE restaurant_id = _restaurant AND device_id = t.device_id RETURNING status INTO result;
+    RETURN result;
+  END IF;
+  -- The admin is the authority: on their own device a name is enough, no code to chase.
+  IF has_restaurant_role(_restaurant, auth.uid(), ARRAY['owner','manager']::restaurant_role[]) THEN
+    UPDATE terminals SET status = 'active', description = left(trim(_name), 60), approved_at = now(), approved_by = auth.uid(), approved_via = 'admin sign-in'
+    WHERE restaurant_id = _restaurant AND device_id = t.device_id RETURNING status INTO result;
     RETURN result;
   END IF;
   s := admin_code_step(_restaurant, _code);
@@ -110,3 +111,9 @@ END $$;
 REVOKE ALL ON FUNCTION public.admin_code_step(uuid, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.approve_this_terminal(uuid, text, text, text), public.decide_terminal(uuid, text, text, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.approve_this_terminal(uuid, text, text, text), public.decide_terminal(uuid, text, text, boolean) TO authenticated;
+
+-- One-time reset (owner's instruction, 13 Nov 2026): every already-registered terminal goes through
+-- first-login approval again — each device must be named and approved with the admin code (or from
+-- POS Manager → Settings → Terminals). Devices where an owner / manager login is signed in approve
+-- themselves on their next check-in. Blocked devices stay blocked.
+UPDATE public.terminals SET status = 'pending' WHERE status IN ('active', 'over_plan');

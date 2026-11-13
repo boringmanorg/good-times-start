@@ -9,7 +9,7 @@ import { useStaff } from "@/lib/staff";
 import { can } from "@/lib/permissions";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { APPS, DEVICE_LABELS } from "@/lib/staff-login-logic";
-import { decideTerminal, getDeviceId, loadTerminals, releaseTerminal, updateTerminal, type Terminal } from "@/lib/terminal-actions";
+import { decideTerminal, getDeviceId, loadTerminals, releaseTerminal, thisTerminalName, updateTerminal, type Terminal } from "@/lib/terminal-actions";
 import { setMarketingTerminal } from "@/lib/marketing-access";
 import { cn } from "@/lib/utils";
 
@@ -122,7 +122,8 @@ export function TerminalsSettings() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-base font-bold">Terminals</h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every device that uses {store}: the counter computer, waiter phones and tablets, the admin's phone. <strong className="text-foreground">Key</strong> is its bill series. <strong className="text-foreground">Block</strong> stops staff using it at once; <strong className="text-foreground">Release</strong> forgets a replaced or lost device. <strong className="text-foreground">Marketing</strong> opens only on terminals you switch on here; every other terminal, including POS Billdesk counters, can't open it.</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every device that uses {store}: the counter computer, waiter phones and tablets, the admin's phone. <strong className="text-foreground">Key</strong> is its bill series. <strong className="text-foreground">Block</strong> stops staff using it at once; <strong className="text-foreground">Release</strong> forgets a replaced or lost device. <strong className="text-foreground">Marketing</strong> opens only on terminals you switch on here; every other terminal, including POS Billdesk counters, can't open it. New devices wait for your approval and a name before they can be used.</p>
+          {thisTerminalName() ? <p className="mt-1 text-sm font-medium">This device: <span className="text-primary">{thisTerminalName()}</span></p> : null}
         </div>
         <Button size="sm" variant="outline" onClick={() => void q.refetch()}><RefreshCw className={q.isFetching ? "animate-spin" : ""} />Refresh</Button>
       </div>

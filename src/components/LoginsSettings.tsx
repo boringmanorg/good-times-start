@@ -11,8 +11,8 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { useStaff } from "@/lib/staff";
 import { can } from "@/lib/permissions";
 import { waNumber } from "@/lib/marketing-logic";
-import { APPS, APP_LINKS, DEVICE_LABELS, LOGINS, passwordProblem, type AppKind, type DeviceKind, type LoginId, type LoginRow } from "@/lib/staff-login-logic";
-import { ensureInternalLogins, resetLoginPassword } from "@/lib/staff-logins.functions";
+import { APPS, APP_LINKS, DEVICE_LABELS, LOGINS, type AppKind, type DeviceKind, type LoginId, type LoginRow } from "@/lib/staff-login-logic";
+import { ensureInternalLogins } from "@/lib/staff-logins.functions";
 import { cn } from "@/lib/utils";
 import { GUEST_ORDER_ORIGIN } from "@/lib/qr-ordering";
 
@@ -38,14 +38,12 @@ function LoginCard({ row, onSaved }: { row: LoginRow; onSaved: () => void }) {
   const [phone, setPhone] = useState(row.whatsapp ? `+${row.whatsapp}` : "");
   const [devices, setDevices] = useState<DeviceKind[]>(row.devices);
   const [active, setActive] = useState(row.active);
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => { setName(row.display_name); setPhone(row.whatsapp ? `+${row.whatsapp}` : ""); setDevices(row.devices); setActive(row.active); }, [row]);
 
   const wa = phone.trim() ? waNumber(phone) : "";
   const dirty = name.trim() !== row.display_name || (wa ?? "") !== row.whatsapp || devices.join() !== row.devices.join() || active !== row.active;
   const problem = !name.trim() ? "Add a name." : wa === null ? "Check the WhatsApp number." : !devices.length ? "Choose at least one kind of device." : null;
-  const pwProblem = password ? passwordProblem(password) : null;
 
   const save = async () => {
     setBusy(true);
@@ -54,15 +52,6 @@ function LoginCard({ row, onSaved }: { row: LoginRow; onSaved: () => void }) {
     if (error || !(data as unknown[] | null)?.length) { toast.error(error?.message ?? "Only the admin can change logins."); return; }
     toast.success(`${LOGINS[row.login].label} login saved${active !== row.active ? (active ? ": switched on" : ": switched off on every device") : ""}`);
     onSaved();
-  };
-  const setNewPassword = async () => {
-    try {
-      await resetLoginPassword({ data: { login: row.login, password } });
-      setPassword("");
-      toast.success(`New password set for ${emailOf(row)}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't change the password");
-    }
   };
 
   return (
@@ -82,7 +71,7 @@ function LoginCard({ row, onSaved }: { row: LoginRow; onSaved: () => void }) {
         <label className="block text-sm font-medium">Name shown on bills and KOTs
           <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} className={input} />
         </label>
-        <label className="block text-sm font-medium">WhatsApp for password reset
+        <label className="block text-sm font-medium">WhatsApp number
           <input value={phone} maxLength={18} inputMode="tel" onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={input} />
         </label>
       </div>
@@ -104,15 +93,7 @@ function LoginCard({ row, onSaved }: { row: LoginRow; onSaved: () => void }) {
         {dirty ? <Button variant="ghost" onClick={() => { setName(row.display_name); setPhone(row.whatsapp ? `+${row.whatsapp}` : ""); setDevices(row.devices); setActive(row.active); }}>Undo</Button> : null}
       </div>
 
-      <div className="mt-4 border-t border-border pt-4">
-        <label className="block text-sm font-medium">New password
-          <input type="password" autoComplete="new-password" value={password} maxLength={72} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters, letters and numbers" className={input} />
-        </label>
-        {pwProblem ? <p className="mt-1 text-xs text-destructive">{pwProblem}</p> : null}
-        <ConfirmButton id={`pw-${row.login}`} disabled={!password || !!pwProblem} onConfirm={setNewPassword} className={cn(buttonVariants({ variant: "outline" }), "mt-2")}
-          armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again to change the password">Set password</ConfirmButton>
-        <p className="mt-1 text-xs text-muted-foreground">Devices already signed in stay signed in.</p>
-      </div>
+      <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">Passwords for this login are set and reset only by XTSY (the super admin). Message XTSY on WhatsApp to change one; devices already signed in stay signed in.</p>
     </article>
   );
 }

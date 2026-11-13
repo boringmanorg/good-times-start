@@ -20,7 +20,7 @@ export interface Overview {
   events: { at: string; kind: string; account: string | null; detail: unknown }[];
   at: string;
 }
-export interface Device { deviceId: string; series: string; description: string; app: string; kind: string; login: string; status: "active" | "blocked" | "over_plan"; lastSeen: string | null; firstSeen: string | null; location: string | null }
+export interface Device { deviceId: string; series: string; description: string; app: string; kind: string; login: string; status: "active" | "blocked" | "over_plan" | "pending"; lastSeen: string | null; firstSeen: string | null; location: string | null }
 export interface Account {
   id: string; name: string; planId: string; status: string; paidUntil: string | null; trialEndsAt: string | null; notes: string; complimentary: boolean;
   seatOverrides: Partial<Record<SeatApp, number>>; featureOverrides: Partial<Record<Feature, boolean>>; live: boolean; billingPhone: string; billingEmail: string;
@@ -36,6 +36,15 @@ export interface PlanRow {
   features: Partial<Record<Feature, boolean>>; active: boolean; quote: boolean; tagline: string; sort: number;
 }
 
+export interface PaymentRow { at: string; detail: { amount: number; months: number; method: string; reference: string; from: string | null; until: string; planAtPayment: string } }
+
+/** Record a payment by hand: it extends the paid-until date and makes the account live again. */
+export const recordPayment = (p: { account: string; amount: number; months: number; method: string; reference: string }) =>
+  rpc<{ paidUntil: string; status: string }>("platform_record_payment", { _account: p.account, _amount: p.amount, _months: p.months, _method: p.method, _reference: p.reference });
+export const loadPayments = (account: string) => rpc<PaymentRow[]>("platform_payments", { _account: account });
+
+export const saveRestaurantInfo = (i: { id: string; name: string; slug: string; city: string; billingPhone: string; billingEmail: string }) =>
+  rpc<void>("platform_update_restaurant", { _id: i.id, _name: i.name, _slug: i.slug, _city: i.city, _billing_phone: i.billingPhone, _billing_email: i.billingEmail });
 export const whoami = () => rpc<WhoAmI>("platform_whoami");
 export const loadOverview = () => rpc<Overview>("platform_overview");
 export const loadRestaurants = () => rpc<RestaurantRow[]>("platform_restaurants");

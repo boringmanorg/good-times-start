@@ -22,25 +22,22 @@ export const ensureInternalLogins = createServerFn({ method: "POST" })
 export const resetLoginPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ login: loginId, password: z.string().min(8).max(72) }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { resetPassword } = await import("./staff-logins/logins.server");
-    await resetPassword((context as unknown as { userId: string }).userId, data.login, data.password);
-    return { ok: true };
+  .handler(async () => {
+    // Exclusive control (13 Nov 2026): passwords are set and reset only by XTSY in the super
+    // admin console. The restaurant-side path stays refused even if an old build calls it.
+    throw new Error("Passwords are managed by XTSY. Ask the admin to contact XTSY support.");
   });
 
 /** Send a 6-digit code to the login's WhatsApp number. */
 export const requestResetCode = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ login: loginId }).parse(input))
-  .handler(async ({ data }) => {
-    const { requestCode } = await import("./staff-logins/logins.server");
-    return requestCode(data.login);
+  .handler(async () => {
+    throw new Error("Password resets are handled by XTSY. Ask the admin to contact XTSY support.");
   });
 
 /** Check the code and set the new password. */
 export const confirmResetCode = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ login: loginId, code: z.string().regex(/^\d{6}$/), password: z.string().min(8).max(72) }).parse(input))
-  .handler(async ({ data }) => {
-    const { confirmCode } = await import("./staff-logins/logins.server");
-    await confirmCode(data.login, data.code, data.password);
-    return { ok: true };
+  .handler(async () => {
+    throw new Error("Password resets are handled by XTSY. Ask the admin to contact XTSY support.");
   });

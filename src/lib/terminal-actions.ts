@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isLovablePreview } from "./preview-host";
 import { getDb, getDeviceCode } from "./db";
 import type { AppKind, DeviceKind } from "./staff-login-logic";
 
@@ -47,6 +48,9 @@ export function useTerminalStatus(): Status {
 
 /** Check in. Quiet on failure: being offline never blocks a device (a new one waits for approval once it has checked in). */
 export async function touchTerminal(restaurantId: string, app: AppKind, kind: DeviceKind): Promise<void> {
+  // Lovable's editor preview is XTSY's workbench, never a restaurant terminal: it doesn't
+  // register, take a seat, or go through first-login approval.
+  if (isLovablePreview()) { setTerminalStatus("active"); return; }
   try {
     const [device, series] = await Promise.all([getDeviceId(), getDeviceCode()]);
     const { data, error } = await db().rpc("touch_terminal", { _restaurant: restaurantId, _device: device, _series: series, _app: app, _kind: kind });
@@ -76,12 +80,22 @@ export async function releaseTerminal(restaurantId: string, deviceId: string): P
   if (error) throw new Error("Couldn't release the terminal.");
 }
 
+const NAME_KEY = "xtsy-terminal-name";
+/** The name this device was approved under, kept on the device itself. */
+export function thisTerminalName(): string {
+  try { return window.localStorage.getItem(NAME_KEY) ?? ""; } catch { return ""; }
+}
+export function rememberTerminalName(name: string): void {
+  try { window.localStorage.setItem(NAME_KEY, name.trim().slice(0, 60)); } catch { /* storage unavailable */ }
+}
+
 /** The waiting device: the admin types the 60-second admin code here, and the terminal gets its name. */
 export async function approveThisTerminal(restaurantId: string, name: string, code: string): Promise<Status> {
   const device = await getDeviceId();
   const { data, error } = await db().rpc("approve_this_terminal", { _restaurant: restaurantId, _device: device, _name: name, _code: code.replace(/\D/g, "") });
   if (error) throw new Error(/does not exist|schema cache/i.test(error.message ?? "") ? "The cloud update for terminal approval isn't applied yet." : (error.message ?? "Couldn't approve. Check the internet."));
   if (isStatus(data)) setTerminalStatus(data);
+  if (data === "active" || data === "over_plan") rememberTerminalName(name);
   return isStatus(data) ? data : "pending";
 }
 
@@ -91,7 +105,3 @@ export async function decideTerminal(restaurantId: string, deviceId: string, nam
   if (error) throw new Error(error.message ?? "Couldn't save. Check the internet.");
   return String(data);
 }
-
-/** Names that are just the app's own, i.e. the terminal hasn't really been named. */
-export const unnamedTerminal = (description: string | null | undefined) =>
-  !description || /^(pos billdesk|pos manager|waiter pro|restro pos|pos business manager|pos waiter|business manager)$/i.test(description.trim());

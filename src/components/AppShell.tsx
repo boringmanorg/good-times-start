@@ -22,6 +22,7 @@ import { GuestOrdersButton } from "@/components/GuestOrders";
 import { AdminAlerts } from "@/components/AdminAlerts";
 import { currentDevice, setAppMode, syncAppModeFromUrl, useAppMode } from "@/lib/app-mode";
 import { touchTerminal, useTerminalStatus } from "@/lib/terminal-actions";
+import { isLovablePreview } from "@/lib/preview-host";
 import { APP_DEVICES, APPS, APP_LINKS, accessProblem, appsFor, type AppKind } from "@/lib/staff-login-logic";
 import { isTestBrowser } from "@/lib/test-browser";
 import { SyncConflictAlert } from "@/components/SyncConflictAlert";
@@ -32,7 +33,8 @@ import { isFramedPath } from "@/lib/framed-paths";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { SEAT_APPS, featureOn, subscriptionText, whatsappLink, type Feature } from "@/lib/plans";
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
-import { NameThisTerminal, TerminalWaiting } from "./TerminalApproval";
+import { TerminalWaiting } from "./TerminalApproval";
+import { SubscriptionExpired } from "./SubscriptionExpired";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -317,6 +319,11 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
       </div>
     );
   }
+  // The subscription ran out (7-day grace included) or XTSY paused it: the whole outlet stops,
+  // and only XTSY (the super admin) can switch it back on. Data stays safe on the devices.
+  if (staffApp && user && plan && !plan.live && !isLovablePreview()) {
+    return <SubscriptionExpired plan={plan} admin={isAdmin(user)} restaurantName={user.restaurantName || "This restaurant"} />;
+  }
   // A terminal the admin blocked stops working for staff; the admin can still sign in to fix it.
   if (staffApp && user && terminal === "blocked" && !isAdmin(user)) {
     return <AccessBlocked problem="This terminal is blocked by the admin. Ask the admin to release or unblock it in Settings → Terminals." own={null} />;
@@ -341,10 +348,10 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
     return <AccessBlocked problem={problem} own={other} />;
   }
   // A device seen for the first time waits for the admin to approve and name it (admin devices are approved at once).
-  if (staffApp && user && rid && terminal === "pending" && !isTestBrowser()) {
+  if (staffApp && user && rid && terminal === "pending" && !isTestBrowser() && !isLovablePreview()) {
     return <TerminalWaiting restaurantId={rid} app={pathname.startsWith("/waiter") ? "waiter" : app} device={currentDevice()} />;
   }
-  const gates = staffApp ? <><PolicySync /><PinGate />{rid && isAdmin(user) && !isTestBrowser() ? <NameThisTerminal restaurantId={rid} app={pathname.startsWith("/waiter") ? "waiter" : app} /> : null}</> : null;
+  const gates = staffApp ? <><PolicySync /><PinGate /></> : null;
   if (!framed) return <>{gates}{children}</>;
   return <FrameContext.Provider value={setTone}>{gates}<Frame tone={tone}>{children}</Frame></FrameContext.Provider>;
 }
