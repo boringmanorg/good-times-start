@@ -1,7 +1,8 @@
--- New terminals wait for the admin. The first sign-in on a device registers it as 'pending' (it can't
--- sync or be used) until the admin approves and names it: on the device with the 60-second admin
--- code, or from POS Manager → Settings → Terminals. Owner / manager devices are approved at once
--- (the admin is the approver) and only asked for a name. Existing terminals stay as they are.
+-- Every terminal names itself on first login. The first sign-in on a device registers it as 'pending'
+-- (it can't sync or be used) until it is named and approved: on the device with the 60-second admin
+-- code, or from POS Manager → Settings → Terminals. An owner / manager device needs only the name —
+-- they are the approver — so a brand-new restaurant can never deadlock waiting for a code.
+-- The last statement resets every existing terminal so they all go through this once.
 
 ALTER TABLE public.terminals DROP CONSTRAINT IF EXISTS terminals_status_check;
 ALTER TABLE public.terminals ADD CONSTRAINT terminals_status_check CHECK (status = ANY (ARRAY['active', 'blocked', 'over_plan', 'pending']));
@@ -85,7 +86,7 @@ BEGIN
     RETURN result;
   END IF;
   s := admin_code_step(_restaurant, _code);
-  IF s IS NULL THEN RAISE EXCEPTION 'That admin code isn''t right or has expired. Ask the admin for the code showing now.'; END IF;
+  IF s IS NULL THEN RAISE EXCEPTION 'That admin code isn''t right or has expired. Ask the admin for the code showing now, or have them approve this terminal in POS Manager -> Settings -> Terminals.'; END IF;
   UPDATE terminals SET status = 'active', description = left(trim(_name), 60), approved_at = now(), approved_by = auth.uid(), approved_via = 'admin code'
   WHERE restaurant_id = _restaurant AND device_id = t.device_id RETURNING status INTO result; -- seat limits apply (may become over_plan)
   RETURN result;
@@ -113,7 +114,7 @@ REVOKE ALL ON FUNCTION public.approve_this_terminal(uuid, text, text, text), pub
 GRANT EXECUTE ON FUNCTION public.approve_this_terminal(uuid, text, text, text), public.decide_terminal(uuid, text, text, boolean) TO authenticated;
 
 -- One-time reset (owner's instruction, 13 Nov 2026): every already-registered terminal goes through
--- first-login approval again — each device must be named and approved with the admin code (or from
--- POS Manager → Settings → Terminals). Devices where an owner / manager login is signed in approve
--- themselves on their next check-in. Blocked devices stay blocked.
+-- first-login naming again. Staff devices need a name and the admin code (or approval from POS
+-- Manager → Settings → Terminals); an owner / manager device needs only a name, so open POS Manager
+-- and name it first — that is where the code is shown. Blocked devices stay blocked.
 UPDATE public.terminals SET status = 'pending' WHERE status IN ('active', 'over_plan');

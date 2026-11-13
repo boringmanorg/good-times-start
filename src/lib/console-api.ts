@@ -5,7 +5,7 @@ import type { Feature, SeatApp } from "./plans";
 
 const rpc = async <T,>(fn: string, args: Record<string, unknown> = {}): Promise<T> => {
   const { data, error } = await (consoleClient().rpc.bind(consoleClient()) as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: T; error: { message: string } | null }>)(fn, args);
-  if (error) throw new Error(/function .* does not exist|schema cache/i.test(error.message) ? "The cloud update for plans and the console hasn't been applied yet." : error.message);
+  if (error) throw new Error(/function .* does not exist|schema cache/i.test(error.message) ? `This part of the console needs a cloud update that hasn't been applied yet (${fn}).` : error.message);
   return data;
 };
 
