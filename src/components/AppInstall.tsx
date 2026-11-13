@@ -3,22 +3,16 @@ import { useRouterState } from "@tanstack/react-router";
 import { Download, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { syncAppModeFromUrl, useChosenApp } from "@/lib/app-mode";
-import type { AppKind } from "@/lib/staff-login-logic";
 import { allowAppWorker, installKind, type InstallKind } from "@/lib/app-install-logic";
+import { useInstallPrompt, watchInstallPrompt } from "@/lib/install-prompt";
 
 /**
  * Three installable screens from one cloud codebase:
  *   /manager   POS Business Manager (admin: phone, tablet, computer)
-^ *   /tables?app=pos  Restro POS by XTSY (reception counter: Windows or Mac)
+ *   /tables?app=pos  Restro POS by XTSY (reception counter: Windows or Mac)
  *   /waiter    POS Waiter (waiters: Android phone or tablet)
  * Each has its own manifest, icon and theme, chosen by the window's app.
  */
-
-export function appForPath(pathname: string, chosen: AppKind | null): AppKind {
-  if (pathname === "/waiter" || pathname.startsWith("/waiter/")) return "waiter";
-  if (pathname === "/manager" || pathname.startsWith("/manager/")) return "manager";
-  return chosen ?? "pos";
-}
 
 const APP_META: Record<InstallKind, { title: string; theme: string }> = {
   manager: { title: "Business Manager", theme: "#000000" },
@@ -26,32 +20,10 @@ const APP_META: Record<InstallKind, { title: string; theme: string }> = {
   waiter: { title: "POS Waiter", theme: "#000000" },
 };
 
-/* ---- install prompt (Chrome / Edge / Android) ---- */
-
-interface InstallEvent extends Event { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
-let deferred: InstallEvent | null = null;
-const listeners = new Set<() => void>();
-const emit = () => { for (const l of listeners) l(); };
-
 function shouldRegisterServiceWorker(): boolean {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return false;
   if (window.location.protocol !== "https:") return false;
   return allowAppWorker(import.meta.env.PROD, window.location.hostname, window.self !== window.top, window.location.search);
-}
-
-export function useInstallPrompt() {
-  const available = useSyncExternalStore(
-    (l) => { listeners.add(l); return () => { listeners.delete(l); }; },
-    () => deferred !== null,
-    () => false,
-  );
-  const install = async () => {
-    if (!deferred) return;
-    await deferred.prompt();
-    deferred = null;
-    emit();
-  };
-  return { available, install };
 }
 
 const noopSubscribe = () => () => {};
@@ -73,10 +45,7 @@ export function AppInstall() {
   const meta = APP_META[app];
 
   useEffect(() => {
-    const onPrompt = (e: Event) => { e.preventDefault(); deferred = e as InstallEvent; emit(); };
-    const onInstalled = () => { deferred = null; emit(); };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
+    const stopWatching = watchInstallPrompt();
     if (shouldRegisterServiceWorker()) {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => { /* offline support is a bonus, never a blocker */ });
     } else if ("serviceWorker" in navigator) {
@@ -85,10 +54,7 @@ export function AppInstall() {
         return worker && new URL(worker.scriptURL).pathname === "/sw.js";
       }).map((r) => r.unregister()))).catch(() => {});
     }
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
+    return stopWatching;
   }, []);
 
   // Guests ordering from a QR code or link are on the restaurant's page, not a staff app.

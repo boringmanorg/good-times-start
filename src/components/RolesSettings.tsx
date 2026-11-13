@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { LiveAdminCode } from "@/components/PinGate";
 import { newAdminCodeKey } from "@/lib/admin-code";
 import { Switch } from "@/components/ui/switch";
 import { Segmented } from "@/components/Segmented";
 import { getSettings, saveSettings } from "@/lib/db";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { can } from "@/lib/permissions";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import {

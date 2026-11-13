@@ -6,7 +6,7 @@ import { Dropdown } from "@/components/Dropdown";
 import { Receipt } from "@/components/Receipt";
 import { BillPrintButton } from "./BillPrintButton";
 import { formatINR } from "@/lib/billing";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { allow } from "@/lib/pin-gate";
 import { paymentLabel, seriesOf, summaryAt, type Range } from "@/lib/report-logic";
 import { rangeLabel } from "@/lib/report-excel";

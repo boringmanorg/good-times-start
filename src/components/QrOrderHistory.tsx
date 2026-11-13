@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate } from "@tanstack/react-router";
 import { QrCode, ShoppingBag } from "lucide-react";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { getDb } from "@/lib/db";
 import { formatINR } from "@/lib/billing";
 import { placeName } from "@/lib/table-logic";

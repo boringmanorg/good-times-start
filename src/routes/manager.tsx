@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { setAppMode } from "@/lib/app-mode";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import logo from "@/assets/logo.png";
 
 /** Where POS Business Manager opens: marks this window as Business Manager, then goes to the dashboard. */

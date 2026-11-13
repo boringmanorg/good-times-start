@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { ROLE_LABELS } from "./auth-context";
+import { ROLE_LABELS } from "./staff";
 import { can, currentAdminCodeKey, needsPin, type Action } from "./permissions";
 
 /*

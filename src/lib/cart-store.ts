@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { billLabel, hasBillNumber, stampKotsWithBillNo, withBillNumber } from "./bill-numbering";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import { withCustomerId } from "./customer-logic";
 import { useRestaurantSettings } from "./use-settings";
 import { taxOptionsFor } from "./billing-config";
 import type { TaxOptions } from "./billing";
-import { useStaff } from "./auth-context";
+import { useStaff } from "./staff";
 import { getDeviceId } from "./terminal-actions";
 import { heldTable, holdByOther, withoutHold, type HeldBy } from "./table-hold";
 import { queueBillBookingCancellation } from "./booking-cancellation";
@@ -72,15 +72,16 @@ export function useCart(initialTableId?: string) {
   /** What this device last sent to the kitchen, set before the save so the screen never re-adds it. */
   const ownSentRef = useRef<{ orderUid: string; submitted: Record<string, number> } | null>(null);
   const storedKots = useLiveQuery(async () => activeOrder?.id === undefined ? [] : kotsForOrder(activeOrder.id, activeOrder.uid), [activeOrder?.id, activeOrder?.uid], [] as Kot[]);
-  const persistedSubmitted = submittedQuantitiesFromKots(storedKots);
-  const persistedEffectiveSubmitted = subtractSettledQuantities(persistedSubmitted, activeOrder?.kotSettledQty ?? {});
+  const persistedSubmitted = useMemo(() => submittedQuantitiesFromKots(storedKots), [storedKots]);
+  const settledQty = activeOrder?.kotSettledQty;
+  const persistedEffectiveSubmitted = useMemo(() => subtractSettledQuantities(persistedSubmitted, settledQty ?? {}), [persistedSubmitted, settledQty]);
   useEffect(() => {
     if (!submittedOverride || submittedOverride.orderUid !== activeOrder?.uid) return;
     const keys = new Set([...Object.keys(persistedSubmitted), ...Object.keys(submittedOverride.quantities)]);
     if ([...keys].every((key) => (persistedSubmitted[key] ?? 0) === (submittedOverride.quantities[key] ?? 0))) {
       setSubmittedOverride(null);
     }
-  }, [storedKots, activeOrder?.uid, submittedOverride]);
+  }, [persistedSubmitted, activeOrder?.uid, submittedOverride]);
   const [draftReady, setDraftReady] = useState(false);
   const settings = useRestaurantSettings();
   const { user } = useStaff();
@@ -88,8 +89,9 @@ export function useCart(initialTableId?: string) {
   const [myDevice, setMyDevice] = useState("");
   useEffect(() => { void getDeviceId().then(setMyDevice).catch(() => setMyDevice("")); }, []);
   // A running bill keeps the tax rules it started with; new bills follow current settings.
-  const tax: TaxOptions = activeOrder?.tax ?? taxOptionsFor(settings, orderType);
-  const taxKey = JSON.stringify(tax);
+  // Keyed by its contents, so the tax rules only count as "changed" when they really change.
+  const taxKey = JSON.stringify(activeOrder?.tax ?? taxOptionsFor(settings, orderType));
+  const tax = useMemo(() => JSON.parse(taxKey) as TaxOptions, [taxKey]);
 
   // Each load (a table's draft, or a bill opened by hand) takes a ticket; a slower, older load never overwrites a newer one.
   const loadTicket = useRef(0);
@@ -159,8 +161,7 @@ export function useCart(initialTableId?: string) {
       }
     }, 150);
     return () => window.clearTimeout(timeout);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- tax is tracked by taxKey
-  }, [draftReady, tableId, lines, discountPct, customer, guestCount, reservationId, serviceChargePct, activeOrder?.uid, taxKey, myDevice, staffName]);
+  }, [draftReady, tableId, lines, discountPct, customer, guestCount, reservationId, serviceChargePct, activeOrder, tax, myDevice, staffName]);
 
   // Who else is taking this table's first order, if anyone.
   const liveTable = useLiveQuery(async () => (tableId ? getDb().restTables.get(tableId) : undefined), [tableId]);
@@ -332,9 +333,10 @@ export function useCart(initialTableId?: string) {
   }, [activeOrder, tableId]);
 
   const totals = computeTotals(lines, discountPct, serviceChargePct, tax);
-  const submitted = submittedOverride !== null && submittedOverride.orderUid === activeOrder?.uid
+  const submitted = useMemo(() => submittedOverride !== null && submittedOverride.orderUid === activeOrder?.uid
     ? subtractSettledQuantities(submittedOverride.quantities, activeOrder?.kotSettledQty ?? {})
-    : storedKots.length ? persistedEffectiveSubmitted : activeOrder?.kotSubmittedQty ?? {};
+    : storedKots.length ? persistedEffectiveSubmitted : activeOrder?.kotSubmittedQty ?? {},
+  [submittedOverride, activeOrder, storedKots.length, persistedEffectiveSubmitted]);
   const pendingKitchenLines = unsentKitchenLines(lines, submitted);
   const pendingCancelLines = cancelledKitchenLines(lines, submitted, activeOrder?.lines ?? []);
 
@@ -461,7 +463,7 @@ export function useCart(initialTableId?: string) {
     setLines(merged);
     toast.success(`${kots.length} kitchen ticket${kots.length === 1 ? "" : "s"} sent`);
     return { kots, order: saved };
-  }, [activeOrder, customer, discountPct, finishTable, lines, orderType, pendingCancelLines, pendingKitchenLines, reservationId, serviceChargePct, tableId, taxKey, user?.login, user?.restaurantId]);
+  }, [activeOrder, customer, discountPct, finishTable, lines, orderType, pendingCancelLines, pendingKitchenLines, reservationId, serviceChargePct, tableId, tax, guestCount, user?.login, user?.restaurantId]);
 
   const sendKitchen = useCallback(async (): Promise<Kot[]> => (await sendKitchenWithOrder())?.kots ?? [], [sendKitchenWithOrder]);
 
@@ -492,7 +494,7 @@ export function useCart(initialTableId?: string) {
       return false;
     }
     return latest;
-  }, [activeOrder, customer, guestCount, lines, storedKots, submitted]);
+  }, [activeOrder, customer, guestCount, lines, storedKots, submitted, tableId]);
 
   const settle = useCallback(async (
     payment: PaymentMode | Payment[],
@@ -558,7 +560,7 @@ export function useCart(initialTableId?: string) {
     await finishTable([["order", order.uid ?? ""], ...ticketChanges]);
     toast.success(`Bill ${order.billNo} settled`);
     return order;
-  }, [checkStillOpen, customer, guestCount, discountPct, finishTable, lines, orderType, pendingCancelLines, pendingKitchenLines, reservationId, sendKitchenWithOrder, serviceChargePct, tableId, taxKey]);
+  }, [checkStillOpen, customer, guestCount, discountPct, finishTable, lines, orderType, pendingCancelLines, pendingKitchenLines, reservationId, sendKitchenWithOrder, serviceChargePct, tableId, tax]);
 
   /**
    * Settle part of a running bill now (guests paying separately). The chosen
@@ -623,7 +625,7 @@ export function useCart(initialTableId?: string) {
     setLines(remaining);
     toast.success(`Bill ${part.billNo} settled; the rest stays on the table`);
     return part;
-  }, [checkStillOpen, customer, guestCount, discountPct, lines, orderType, serviceChargePct, settle, tableId, taxKey]);
+  }, [checkStillOpen, customer, guestCount, discountPct, lines, orderType, serviceChargePct, settle, tableId, tax]);
 
   /** Cancel a running order (nothing was paid). Kept as a void bill with the reason. */
   const cancelOrder = useCallback(async (reason: string, closedBy?: string) => {

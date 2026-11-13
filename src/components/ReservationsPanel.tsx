@@ -7,7 +7,7 @@ import { seatingChoices } from "@/lib/guest-order-logic";
 import { placeName } from "@/lib/table-logic";
 import { Button } from "./ui/button";
 import { useReservations } from "@/lib/use-reservations";
-import { useStaff } from "@/lib/auth-context";
+import { isAdmin, useStaff } from "@/lib/staff";
 import { can } from "@/lib/permissions";
 import { activeReservations, reservationsForDate, type Reservation } from "@/lib/reservations";
 import { dayBounds, dateLabel } from "@/lib/orders-history";
@@ -48,9 +48,10 @@ export function ReservationsPanel({ date, readOnly = false, upcoming = false, on
   const floor = useLiveQuery(() => getDb().restTables.toArray(), []);
   const seats = useMemo(() => seatingChoices(floor ?? []), [floor]);
   const [allotFor, setAllotFor] = useState<Record<string, string>>({});
+  // Allotting a table is admin-only (owner or manager); the cloud enforces it too.
   const allot = async (r: Reservation) => {
     const table = allotFor[r.id];
-    if (!table) return;
+    if (!table || !isAdmin(user)) return;
     setBusy(r.id);
     try { await bookings.allot(r.id, table); toast.success("Table allotted and booking confirmed"); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't allot the table"); } finally { setBusy(""); }
   };
@@ -99,7 +100,8 @@ export function ReservationsPanel({ date, readOnly = false, upcoming = false, on
           </div>
         </div>
         {!readOnly && can(user, "guestOrders.handle") && ["pending", "confirmed", "arrived"].includes(r.status) ? <div className="flex flex-wrap items-center gap-2 border-t border-border bg-secondary/40 px-4 py-3">
-          {pending && !r.table_id ? <>
+          {pending && !r.table_id && !isAdmin(user) ? <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground"><Clock className="size-4" />Waiting for the admin to allot a table</span> : null}
+          {pending && !r.table_id && isAdmin(user) ? <>
             <select aria-label="Table for this booking" value={allotFor[r.id] ?? ""} onChange={(e) => setAllotFor((m) => ({ ...m, [r.id]: e.target.value }))} className="h-10 min-w-44 flex-1 rounded-lg border border-input bg-card px-3 text-sm">
               <option value="">Choose a table for {r.party_size}…</option>
               {fitting.map((t) => <option key={t.id} value={t.id}>{placeName(t.label)}{t.seats ? ` · ${t.seats} seats` : ""}{t.seats && t.seats < r.party_size ? " (too small)" : ""}{t.busy ? " · in use now" : ""}</option>)}

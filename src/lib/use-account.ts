@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useStaff } from "./auth-context";
+import { useStaff } from "./staff";
 import type { Account, OrderingConfig, Plan } from "./saas-logic";
 
 export interface Outlet {

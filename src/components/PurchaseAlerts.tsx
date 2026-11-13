@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { getDb } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { formatINR } from "@/lib/billing";

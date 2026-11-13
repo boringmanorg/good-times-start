@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { Download, Printer, Search, Wallet } from "lucide-react";
 import { LiveTotals } from "@/components/LiveTotals";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { AppShell, useRestaurantSettings } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
+import { useRestaurantSettings } from "@/lib/use-settings";
 import { gstr1Workbook } from "@/lib/gstr1";
 import { gstr1Pdf } from "@/lib/gstr1-pdf";
 import { rangeLabel, reportsWorkbook } from "@/lib/report-excel";
@@ -13,14 +14,15 @@ import { downloadXlsx } from "@/lib/xlsx";
 import { Receipt } from "@/components/Receipt";
 import { BillPrintButton } from "@/components/BillPrintButton";
 import { allow } from "@/lib/pin-gate";
-import { usePolicy } from "@/components/PinGate";
+import { usePolicy } from "@/lib/use-policy";
 import { SalesSummary } from "@/components/SalesSummary";
 import { ReasonPrompt } from "@/components/PaymentDialogs";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getDb, markDirty } from "@/lib/db";
 import { formatINR } from "@/lib/billing";
-import { isAdmin, useStaff } from "@/lib/auth-context";
+import { isAdmin, useStaff } from "@/lib/staff";
 import { voidSettledBill } from "@/lib/bill-actions";
 import {
   categorySales, dailySales, untaxedSales, dayKey, expectedCash, gstByRate, hourlySales, inRange, itemSales, paymentLabel,

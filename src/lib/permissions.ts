@@ -4,7 +4,7 @@
  * The database enforces the same rules (drizzle/migrations/0008), so a
  * changed screen can't get around them.
  */
-import type { StaffRole } from "./auth-context";
+import type { StaffRole } from "./staff";
 import { DEFAULT_POLICY, modeFor, resolvePolicy, screenAllowed, type PolicyAction, type PolicyScreen, type RolePolicy, type SavedRolePolicy } from "./role-policy";
 import { isAdminCodeKey, type AdminCodeKey } from "./admin-code";
 

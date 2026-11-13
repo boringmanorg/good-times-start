@@ -3,10 +3,10 @@ import { KeyRound, ShieldCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { currentPinRequest, subscribePin } from "@/lib/pin-gate";
-import { currentAdminCodeKey, currentPolicy, setRolePolicy, subscribePolicy } from "@/lib/permissions";
+import { currentAdminCodeKey, setRolePolicy } from "@/lib/permissions";
 import { ADMIN_CODE_STEP_MS, checkAdminCode, currentAdminCode, lastUsedStep, markStepUsed, type AdminCodeKey } from "@/lib/admin-code";
 import { useRestaurantSettings } from "@/lib/use-settings";
-import { useStaff, isAdmin } from "@/lib/auth-context";
+import { useStaff, isAdmin } from "@/lib/staff";
 
 const MAX_TRIES = 5;
 
@@ -16,11 +16,6 @@ export function PolicySync() {
   const settings = useRestaurantSettings();
   useIso(() => { setRolePolicy(settings.rolePolicy, settings.adminCode); }, [settings.rolePolicy, settings.adminCode]);
   return null;
-}
-
-/** Re-render when the admin changes what roles may do. */
-export function usePolicy() {
-  return useSyncExternalStore(subscribePolicy, currentPolicy, currentPolicy);
 }
 
 /** "Admin code needed" prompt, shown when an action is set to On with admin code. Checked on this device, offline. */

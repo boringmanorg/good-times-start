@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { GUEST_ORDER_ORIGIN } from "@/lib/qr-ordering";
 import { cn } from "@/lib/utils";
 import { getDb } from "@/lib/db";
-import { isAdmin, useStaff } from "@/lib/auth-context";
+import { isAdmin, useStaff } from "@/lib/staff";
 import { useAccount } from "@/lib/use-account";
 import { saveOrderingConfig } from "@/lib/guest-order-actions";
 import { RoomServiceSettings } from "./RoomServiceSettings";

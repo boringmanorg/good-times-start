@@ -11,7 +11,8 @@ vi.mock("@/lib/db", async (load) => ({
   getDb: () => ({ meta: { get: async (key: string) => (key === "restaurantId" && state.restaurantId ? { key, value: state.restaurantId } : undefined) } }),
 }));
 vi.mock("@/lib/cloud-sync", () => ({ syncCloudData: state.sync }));
-import { PrintHost, printDocuments } from "./PrintHost";
+import { PrintHost } from "./PrintHost";
+import { printDocuments } from "@/lib/print-jobs";
 
 afterEach(() => {
   act(() => window.dispatchEvent(new Event("afterprint")));

@@ -1,3 +1,4 @@
+import { ORDER_TYPE_LABEL } from "@/lib/order-type-label";
 import { useEffect, useState } from "react";
 import { placeName } from "@/lib/table-logic";
 import QRCode from "qrcode";
@@ -5,14 +6,6 @@ import type { Kot, Order } from "@/lib/types";
 import { formatINR, upiLink } from "@/lib/billing";
 import { exemptionNote, gstModeOf } from "@/lib/billing-config";
 import { useRestaurantSettings } from "@/lib/use-settings";
-
-export const ORDER_TYPE_LABEL: Record<Order["orderType"], string> = {
-  "dine-in": "Dine-in",
-  takeaway: "Takeaway",
-  delivery: "Delivery",
-  swiggy: "Swiggy",
-  zomato: "Zomato",
-};
 
 const PAY_LABEL: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points" };
 

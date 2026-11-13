@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
-import { useStaff } from "@/lib/auth-context";
-import { isFramedPath } from "@/components/AppShell";
+import { useStaff } from "@/lib/staff";
+import { isFramedPath } from "@/lib/framed-paths";
 
 /** Staff screens in the order people usually open them. */
 const SCREENS = ["/tables", "/menu", "/stock", "/customers", "/settings"] as const;

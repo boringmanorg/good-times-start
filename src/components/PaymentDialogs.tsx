@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { Minus, Plus, X } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { DialogTitle } from "@/components/ui/dialog";
 import { computeTotals, formatINR, upiLink, type TaxOptions } from "@/lib/billing";
 import { splitLines } from "@/lib/bill-splitting";

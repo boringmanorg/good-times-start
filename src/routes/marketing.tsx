@@ -1,13 +1,14 @@
 import { useEffect, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AppShell, useRestaurantSettings } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
+import { useRestaurantSettings } from "@/lib/use-settings";
 import { Button } from "@/components/ui/button";
 import { BrandEditor } from "@/components/marketing/BrandEditor";
 import { QrKit } from "@/components/marketing/QrKit";
 import { WhatsAppCenter } from "@/components/marketing/WhatsAppCenter";
 import { MarketingResults } from "@/components/marketing/MarketingResults";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { useMarketingAccess, useMarketingOutbox } from "@/lib/marketing-access";
 import { loadBrandingAndMarketing } from "@/lib/marketing-actions";
 import { cn } from "@/lib/utils";

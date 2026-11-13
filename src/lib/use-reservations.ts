@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { getDb } from "./db";
-import { useStaff } from "./auth-context";
+import { useStaff } from "./staff";
 import type { Reservation } from "./reservations";
 import { applyBookingCancellations, flushBookingCancellations, queueBillBookingCancellation } from "./booking-cancellation";
 

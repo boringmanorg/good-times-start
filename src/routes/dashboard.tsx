@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { AlertTriangle, Ban, BadgePercent, Clock, Gift, HandCoins, IndianRupee, LineChart, Package, Receipt, ShoppingBag, Smartphone, Store, UtensilsCrossed, XCircle } from "lucide-react";
-import { AppShell, useRestaurantSettings } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
+import { useRestaurantSettings } from "@/lib/use-settings";
 import { Dropdown } from "@/components/Dropdown";
 import { getDb } from "@/lib/db";
 import { reportOrders } from "@/lib/report-orders";
@@ -13,7 +14,7 @@ import { kpiForecast, LOOKBACK_DAYS } from "@/lib/forecast";
 import { cn } from "@/lib/utils";
 import { recentPointAwards } from "@/lib/customer-logic";
 import { can } from "@/lib/permissions";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 
 export const Route = createFileRoute("/dashboard")({
   validateSearch: (search: Record<string, unknown>): { tab?: "overview" | "live" } => (search["tab"] === "live" ? { tab: "live" } : {}),
@@ -60,9 +61,12 @@ function Overview() {
   const settings = useRestaurantSettings();
   const [preset, setPreset] = useState<Preset | "custom">("today");
   const [custom, setCustom] = useState<Range>(() => dashboardRange("today"));
-  const range = preset === "custom" ? custom : dashboardRange(preset);
+  const picked = preset === "custom" ? custom : dashboardRange(preset);
+  // Same dates → same object, so the figures below only recount when the dates change.
+  const range = useMemo(() => ({ from: picked.from, to: picked.to }), [picked.from, picked.to]);
   const [chartPreset, setChartPreset] = useState<Preset>("last15");
-  const chartRange = dashboardRange(chartPreset);
+  const chartPicked = dashboardRange(chartPreset);
+  const chartRange = useMemo(() => ({ from: chartPicked.from, to: chartPicked.to }), [chartPicked.from, chartPicked.to]);
   const span = { from: Math.min(range.from, chartRange.from), to: Math.max(range.to, chartRange.to) };
 
   const data = useLiveQuery(async () => {
@@ -76,8 +80,8 @@ function Overview() {
     return { orders, kots, stock, lastSync: typeof lastSync?.value === "number" ? lastSync.value : null };
   }, [span.from, span.to, range.from, range.to]);
 
-  const o = useMemo(() => (data ? businessOverview(data.orders, data.kots, data.stock, range) : null), [data, range.from, range.to]);
-  const days = useMemo(() => (data ? salesByDay(data.orders, chartRange) : []), [data, chartRange.from, chartRange.to]);
+  const o = useMemo(() => (data ? businessOverview(data.orders, data.kots, data.stock, range) : null), [data, range]);
+  const days = useMemo(() => (data ? salesByDay(data.orders, chartRange) : []), [data, chartRange]);
 
   return (
     <div className="space-y-6">

@@ -3,7 +3,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Download, RefreshCw, Send, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Switch } from "@/components/ui/switch";
 import { Dropdown } from "@/components/Dropdown";
 import { Segmented } from "@/components/Segmented";
@@ -41,7 +42,7 @@ export function WhatsAppCenter({ restaurantId, restaurantName, slug, brand, sett
     const [customers, orders] = await Promise.all([d.customers.toArray(), d.orders.where("status").equals("settled").toArray()]);
     return buildAudience(customers, orders);
   }, [], null);
-  const guests = data ?? [];
+  const guests = useMemo(() => data ?? [], [data]);
   const yes = guests.filter((g) => g.optIn).length;
 
   const offers = activeOffers(brand.offers, Date.now());

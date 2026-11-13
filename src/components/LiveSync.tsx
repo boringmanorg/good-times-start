@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { REMOTE_SYNC_EVENT } from "@/lib/terminal-signal";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { startLiveSync } from "@/lib/cloud-sync";
 import { prepareOfflineNumbers } from "@/lib/restaurant-numbering";
 import { PurchaseAlerts } from "@/components/PurchaseAlerts";

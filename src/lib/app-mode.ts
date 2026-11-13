@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { appFromLocation, appsFor, deviceKind, type AppKind, type DeviceKind } from "./staff-login-logic";
-import type { SignedInStaff } from "./auth-context";
+import type { SignedInStaff } from "./staff";
 
 /*
  * Which of the three apps this window is. An installed app opens with ?app=…

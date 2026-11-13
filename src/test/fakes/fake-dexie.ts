@@ -130,10 +130,9 @@ export default class FakeDexie {
   [table: string]: unknown;
   constructor(private readonly dbName: string) {}
   version(_n: number) {
-    const self = this;
     const v = {
-      stores(schema: Record<string, string | null>) {
-        for (const [name, def] of Object.entries(schema)) if (def) self[name] = new FakeTable(self.dbName, name, def);
+      stores: (schema: Record<string, string | null>) => {
+        for (const [name, def] of Object.entries(schema)) if (def) this[name] = new FakeTable(this.dbName, name, def);
         return v;
       },
       upgrade() { return v; },

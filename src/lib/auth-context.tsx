@@ -1,45 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-import { loginForEmail, type LoginId, type LoginRow } from "./staff-login-logic";
-
-export type StaffRole = Database["public"]["Enums"]["restaurant_role"];
-
-export const ROLE_LABELS: Record<StaffRole, string> = {
-  owner: "Owner",
-  manager: "Manager",
-  cashier: "Cashier",
-  captain: "Captain (waiter)",
-  kitchen: "Kitchen",
-};
-
-export interface Membership {
-  restaurantId: string;
-  restaurantName: string;
-  role: StaffRole;
-}
-
-export interface SignedInStaff {
-  id: string;
-  email: string;
-  displayName: string;
-  /** Role in the active restaurant; "unknown" until the user belongs to one. */
-  role: StaffRole | "unknown";
-  restaurantId: string | null;
-  restaurantName: string;
-  memberships: Membership[];
-  /** admin, billdesk or waiter; null for any other account (such as the owner's own). */
-  login: LoginId | null;
-  /** That login's switch, devices and WhatsApp number, as the admin set them. */
-  loginRow: LoginRow | null;
-}
-
-interface AuthState {
-  user: SignedInStaff | null;
-  /** True until the first session check finishes. */
-  loading: boolean;
-  refresh: () => Promise<void>;
-}
+import { loginForEmail, type LoginRow } from "./staff-login-logic";
+import { AuthContext, type Membership, type SignedInStaff } from "./staff";
 
 /*
  * The signed-in person and their role are remembered on this device, so the
@@ -92,12 +54,6 @@ async function resolveStaff(id: string, email: string): Promise<SignedInStaff> {
     memberships,
   };
 }
-
-const AuthContext = createContext<AuthState>({
-  user: null,
-  loading: true,
-  refresh: async () => {},
-});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SignedInStaff | null>(null);
@@ -154,13 +110,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useStaff() {
-  return useContext(AuthContext);
-}
-
-/** Owners and managers can change restaurant details, menu prices and staff. */
-export function isAdmin(user: SignedInStaff | null): boolean {
-  return user?.role === "owner" || user?.role === "manager";
 }

@@ -14,7 +14,7 @@ import { ItemOptions } from "@/components/ItemOptions";
 import { GuestDetailsFields } from "@/components/GuestDetailsFields";
 import { InstallButton } from "@/components/AppInstall";
 import { queueCounterPrint } from "@/lib/counter-print";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { allow } from "@/lib/pin-gate";
 import { useCart } from "@/lib/cart-store";
 import { getDb, markDirty } from "@/lib/db";

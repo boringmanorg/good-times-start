@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { ROLE_LABELS, isAdmin, useStaff } from "@/lib/auth-context";
+import { ROLE_LABELS, isAdmin, useStaff } from "@/lib/staff";
 import { supabase } from "@/integrations/supabase/client";
 import { requeueHeldRecords, clearSyncNotice, getLiveStatus, getSyncSnapshot, onLiveStatus, saveSyncError, syncCloudData } from "@/lib/cloud-sync";
 import { diagnoseCloudSync } from "@/lib/sync-diagnosis.functions";
@@ -15,7 +15,8 @@ import logo from "@/assets/logo.png";
 import { getDb } from "@/lib/db";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { InstallButton } from "@/components/AppInstall";
-import { AdminCodeButton, PinGate, PolicySync, usePolicy } from "@/components/PinGate";
+import { AdminCodeButton, PinGate, PolicySync } from "@/components/PinGate";
+import { usePolicy } from "@/lib/use-policy";
 import { can, screenPermitted } from "@/lib/permissions";
 import { GuestOrdersButton } from "@/components/GuestOrders";
 import { currentDevice, setAppMode, syncAppModeFromUrl, useAppMode } from "@/lib/app-mode";
@@ -26,6 +27,7 @@ import { SyncConflictAlert } from "@/components/SyncConflictAlert";
 import { toast } from "sonner";
 import { applyAppUpdate, checkForAppUpdate, currentBuildId } from "@/lib/app-update";
 import { broadcastSyncAll } from "@/lib/terminal-signal";
+import { isFramedPath } from "@/lib/framed-paths";
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
 
 const NAV = [
@@ -71,7 +73,7 @@ const APP_SCREENS: Record<AppKind, NavPath[]> = {
   waiter: ["/waiter"],
 };
 
-export function screensFor(role: string | undefined, app: AppKind = "manager"): readonly NavPath[] {
+function screensFor(role: string | undefined, app: AppKind = "manager"): readonly NavPath[] {
   // Signed out, or signed in without a restaurant yet: no screens.
   if (!role || role === "unknown") return [];
   const allowed = ROLE_SCREENS[role] ?? [];
@@ -79,9 +81,6 @@ export function screensFor(role: string | undefined, app: AppKind = "manager"): 
   return APP_SCREENS[app].filter((to) => to !== "/kitchen" && allowed.includes(to) && policyAllows(role, to));
 }
 
-
-
-export { useRestaurantSettings } from "@/lib/use-settings";
 
 /** Sync status chip and Sync window. `statusOnly` leaves out the staff name and sign-out (POS Waiter has its own). */
 export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) {
@@ -271,11 +270,6 @@ type Tone = "light" | "dark";
 const FrameContext = createContext<((tone: Tone) => void) | null>(null);
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-/** Staff screens that share the persistent frame (sidebar, header, orders bell). */
-const FRAMED = ["/", "/dashboard", "/marketing", "/tables", "/menu", "/stock", "/customers", "/reports", "/kitchen", "/settings", "/setup"];
-export function isFramedPath(pathname: string): boolean {
-  return FRAMED.some((p) => (p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`)));
-}
 
 /**
  * Mounted once in the root around staff pages, so moving between pages swaps

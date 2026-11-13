@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { useReservations } from "@/lib/use-reservations";
 import { newBookingRequests } from "@/lib/reservations";
 import { playBookingChime, unlockBookingAudio } from "@/lib/booking-alert-audio";

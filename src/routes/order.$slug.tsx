@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { placeName } from "@/lib/table-logic";
 import { isRoomSection, roomOpen } from "@/lib/room-logic";
-import { RoomSelect, guestPlaceName, hasOpenRooms } from "@/components/GuestPlacePicker";
+import { RoomSelect } from "@/components/GuestPlacePicker";
+import { guestPlaceName, hasOpenRooms } from "@/lib/guest-place";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BadgePercent, BedDouble, CalendarDays, Truck, Users, Check, ChefHat, Clock, ExternalLink, MapPin, Minus, Phone, Plus, Search, Send, Share, ShoppingBag, Smartphone, Sparkles, Star, Store, UtensilsCrossed, X } from "lucide-react";

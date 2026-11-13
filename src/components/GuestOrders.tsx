@@ -5,12 +5,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellRing, CalendarClock, Check, ChefHat, Clock, MapPin, Phone, Send, ShoppingBag, Smartphone, Truck, Users, UtensilsCrossed, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VegMark } from "@/components/VegMark";
-import { printKots } from "@/components/PrintHost";
-import { useStaff } from "@/lib/auth-context";
+import { printKots } from "@/lib/print-jobs";
+import { useStaff } from "@/lib/staff";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import { useAccount } from "@/lib/use-account";
@@ -44,7 +45,6 @@ function chime(ctx: AudioContext) {
 
 const minutesAgo = (iso: string) => Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
-export function openQrRequests() { window.dispatchEvent(new Event("pos:qr-requests")); }
 
 const REJECT_REASONS = ["A dish is unavailable", "Kitchen is closing", "Too busy right now"];
 

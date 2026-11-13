@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useStaff } from "@/lib/auth-context";
+import { useStaff } from "@/lib/staff";
 import { can } from "@/lib/permissions";
 import { loadTerminals } from "@/lib/terminal-actions";
 import { AUDIT_KINDS, AUDIT_PAGE, changeLines, kindLabel, loadAuditLog, type AuditEntry } from "@/lib/audit-log";
