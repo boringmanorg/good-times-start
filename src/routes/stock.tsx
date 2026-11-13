@@ -333,8 +333,9 @@ function StockPage() {
     <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
 
     {tab === "items" ? <div className="mt-4"><input aria-label="Find purchase item" placeholder="Find item" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"/>
-      <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr>
-        <th className="p-3">Item</th><th className="p-3">Standard price</th><th className="p-3">Last purchase</th><th className="p-3 text-right">Bought (net)</th><th className="p-3 text-right">Amount</th>{admin ? <th className="p-3"><span className="sr-only">Edit</span></th> : null}</tr></thead>
+      {/* On a phone the two reference columns hide and the table fits the screen; forcing 760px there made mobile Chrome zoom the whole app out. */}
+      <div className="overflow-x-auto"><table className="w-full text-left text-sm sm:min-w-[760px]"><thead className="border-b border-border text-xs text-muted-foreground"><tr>
+        <th className="p-3">Item</th><th className="hidden p-3 sm:table-cell">Standard price</th><th className="p-3">Last purchase</th><th className="hidden p-3 text-right sm:table-cell">Bought (net)</th><th className="p-3 text-right">Amount</th>{admin ? <th className="p-3"><span className="sr-only">Edit</span></th> : null}</tr></thead>
         <tbody className="divide-y divide-border">{shown.map((m) => {
           const lines = itemPurchaseLines(m.id, entries, suppliers);
           const totals = itemTotals(lines);
@@ -343,9 +344,9 @@ function StockPage() {
           return <Fragment key={m.id}><tr className={open ? "bg-secondary/50" : undefined}>
             <td className="p-3"><button type="button" aria-expanded={open} onClick={() => setOpenItem(open ? null : m.id)} className="flex items-center gap-2 text-left font-semibold">
               <ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />{m.name}</button></td>
-            <td className="p-3 tabular-nums">{m.costPerUnit !== undefined ? formatINR(m.costPerUnit) : "—"} / {m.unit}</td>
+            <td className="hidden p-3 tabular-nums sm:table-cell">{m.costPerUnit !== undefined ? formatINR(m.costPerUnit) : "—"} / {m.unit}</td>
             <td className="p-3">{last ? <><span className="tabular-nums">{formatQty(last.qty, m.unit)} at {formatINR(last.unitCost)}</span><span className="block text-xs text-muted-foreground">{last.supplier} · {dateText(last.at)}</span></> : <span className="text-muted-foreground">Not bought yet</span>}</td>
-            <td className="p-3 text-right tabular-nums">{totals.bills ? formatQty(totals.qty, m.unit) : "—"}<span className="block text-xs text-muted-foreground">{totals.bills} {totals.bills === 1 ? "bill" : "bills"}</span></td>
+            <td className="hidden p-3 text-right tabular-nums sm:table-cell">{totals.bills ? formatQty(totals.qty, m.unit) : "—"}<span className="block text-xs text-muted-foreground">{totals.bills} {totals.bills === 1 ? "bill" : "bills"}</span></td>
             <td className="p-3 text-right font-semibold tabular-nums">{totals.bills ? formatINR(totals.amount) : "—"}</td>
             {admin ? <td className="p-3 text-right"><Button size="sm" variant="outline" aria-label={`Edit ${m.name}`} onClick={() => setSheet({ kind: "item", material: m })}><Pencil />Edit</Button></td> : null}
           </tr>

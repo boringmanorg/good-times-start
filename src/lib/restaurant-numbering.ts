@@ -33,7 +33,11 @@ async function cloudNumber(restaurantId: string, series: RestaurantNumberSeries,
     _request_id: requestId,
   });
 
-  if (error) throw new Error(`Couldn't allocate a ${series} number: ${error.message}`);
+  if (error) {
+    // A transport failure reads like a crash ("TypeError: Failed to fetch"); say what it means instead.
+    const cause = /fetch|network|load failed/i.test(error.message) ? "no connection to the cloud right now" : error.message;
+    throw new Error(`Couldn't allocate a ${series} number: ${cause}`);
+  }
   if (typeof data !== "string" || !new RegExp(`^${series}/\\d{4,}$`).test(data)) {
     throw new Error(`The server returned an invalid ${series} number. Nothing was submitted.`);
   }

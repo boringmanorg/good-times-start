@@ -119,7 +119,7 @@ describe("restaurant number allocation", () => {
 
   it("explains that numbers wait for the internet when the cloud can't be reached", async () => {
     mocks.transport.mockResolvedValue({ data: null, error: { message: "TypeError: Failed to fetch" } });
-    await expect(allocateRestaurantNumber("POS", "no-net")).rejects.toThrow("Failed to fetch");
+    await expect(allocateRestaurantNumber("POS", "no-net")).rejects.toThrow("no connection to the cloud right now");
     vi.stubGlobal("navigator", { onLine: false });
     await expect(allocateRestaurantNumber("POS", "no-net")).rejects.toThrow("without internet");
   });

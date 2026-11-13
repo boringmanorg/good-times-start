@@ -22,6 +22,8 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { cn } from "@/lib/utils";
 import { can } from "@/lib/permissions";
 import { useReservations } from "@/lib/use-reservations";
+import { featureOn } from "@/lib/plans";
+import { useEntitlements } from "@/lib/use-entitlements";
 import { withReservations } from "@/lib/reservations";
 import { startReservationOrder } from "@/lib/reservation-actions";
 import { boardTables } from "@/lib/table-board";
@@ -169,6 +171,9 @@ function TableActions({ table, tables, onDone }: { table: RestaurantTable; table
 function TablesPage() {
   const navigate = useNavigate();
   const bookings = useReservations();
+  const plan = useEntitlements();
+  // Basic has no QR ordering: the button would only open an always-empty requests list.
+  const qrOn = featureOn(plan, "qr_ordering");
   const floorTables = useLiveQuery(async () => {
     const db = getDb();
     const [floor, held, closed, drafts] = await Promise.all([
@@ -252,7 +257,7 @@ function TablesPage() {
               {COUNTER_TYPES.map((t) => (
                 <Button key={t.v} variant="outline" asChild><Link to="/" search={{ type: t.v }}><Plus />{t.l}</Link></Button>
               ))}
-              <Button variant="outline" onClick={openQrRequests}><QrCode />QR Scan & Order</Button>
+              {qrOn ? <Button variant="outline" onClick={openQrRequests}><QrCode />QR Scan & Order</Button> : null}
             </div>
             <div className="mt-3 grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {counterBills.filter((o) => o.source !== "qr").map((o) => (

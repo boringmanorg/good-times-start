@@ -20,6 +20,8 @@ import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
 import { DEFAULT_STATIONS, GST_RATES, PRICED_ORDER_TYPES, draftFromItem, itemFromDraft, orderCategories, type MenuDraft } from "@/lib/menu-logic";
 import { foodCostShare, recipeCost } from "@/lib/stock-logic";
+import { featureOn } from "@/lib/plans";
+import { useEntitlements } from "@/lib/use-entitlements";
 import type { GstRate, InventoryItem, Material, MenuItem } from "@/lib/types";
 import { Dropdown } from "@/components/Dropdown";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -204,6 +206,7 @@ function MenuPage() {
   const menu = useLiveQuery(() => getDb().menu.toArray(), [], []);
   const inventory = useLiveQuery(() => getDb().inventory.toArray(), [], []);
   const materials = useLiveQuery(async () => (await getDb().materials.toArray()).filter((m) => !m.archived).sort((a, b) => a.name.localeCompare(b.name)), [], []);
+  const recipesOn = featureOn(useEntitlements(), "recipes");
   const { user } = useStaff();
   const canEdit = can(user, "menu.edit");
   const [q, setQ] = useState("");
@@ -231,7 +234,7 @@ function MenuPage() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">Menu</h1>
-            <p className="text-sm text-muted-foreground">{menu.length} dishes. Changes reach every device within seconds.</p>
+            <p className="text-sm text-muted-foreground">{menu.length} {menu.length === 1 ? "dish" : "dishes"}. Changes reach every device within seconds.</p>
           </div>
           {canEdit ? (
             <div className="flex flex-wrap gap-2">
@@ -286,6 +289,7 @@ function MenuPage() {
                           {m.variants?.length ? `, ${m.variants.map((v) => v.name).join(" / ")}` : ""}
                           {m.addons?.length ? `, ${m.addons.length} add-on${m.addons.length === 1 ? "" : "s"}` : ""}
                           {(() => {
+                            if (!recipesOn) return null; // food costing is part of recipe management (Pro Lite and up)
                             const v = m.variants?.[0];
                             const cost = recipeCost(m, materials, v?.id);
                             if (!cost) return null;

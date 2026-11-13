@@ -155,6 +155,7 @@ const PAY_LABELS: Record<PaymentMode, string> = { cash: "Cash", upi: "UPI", card
 function BillingSettings() {
   const { user } = useStaff();
   const saved = useRestaurantSettings();
+  const loyaltyOn = featureOn(useEntitlements(), "loyalty");
   const canEdit = can(user, "settings.restaurant");
   const [form, setForm] = useState<RestaurantSettings>(saved);
   const [busy, setBusy] = useState(false);
@@ -226,8 +227,8 @@ function BillingSettings() {
             <Field label="Cashier discount limit %" hint="Owners and managers can give any discount.">
               <input inputMode="numeric" disabled={!canEdit} value={form.staffDiscountLimit ?? 10} onChange={(e) => patch({ staffDiscountLimit: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 })} className={inputClass} />
             </Field>
-            <Field label="Loyalty points %" hint="Earned back on bills with a phone number; 1 point = ₹1. 0 turns it off.">
-              <input inputMode="decimal" disabled={!canEdit} value={form.loyaltyPct ?? 0} onChange={(e) => patch({ loyaltyPct: Number(e.target.value.replace(/[^0-9.]/g, "")) || 0 })} className={inputClass} />
+            <Field label="Loyalty points %" hint={loyaltyOn ? "Earned back on bills with a phone number; 1 point = ₹1. 0 turns it off." : "The loyalty programme comes with Pro Lite and above."}>
+              <input inputMode="decimal" disabled={!canEdit || !loyaltyOn} value={loyaltyOn ? form.loyaltyPct ?? 0 : 0} onChange={(e) => patch({ loyaltyPct: Number(e.target.value.replace(/[^0-9.]/g, "")) || 0 })} className={inputClass} />
             </Field>
           </div>
           <Toggle label="Send to kitchen automatically when settling" hint="For quick service: unsent items go to the kitchen when you settle."
@@ -235,7 +236,7 @@ function BillingSettings() {
           <fieldset>
             <legend className="text-sm font-medium">Payment modes you accept</legend>
             <div className="mt-2 flex flex-wrap gap-2">
-              {ALL_PAYMENT_MODES.map((m) => (
+              {ALL_PAYMENT_MODES.filter((m) => m !== "points" || loyaltyOn).map((m) => (
                 <label key={m} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${modes.includes(m) ? "border-primary bg-primary-tint" : "border-border"}`}>
                   <input type="checkbox" disabled={!canEdit} checked={modes.includes(m)} onChange={(e) => patch({ paymentModes: e.target.checked ? [...modes, m] : modes.filter((x) => x !== m) })} />
                   {PAY_LABELS[m]}

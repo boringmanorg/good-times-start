@@ -1,4 +1,6 @@
 import { useLoyaltyPct } from "@/lib/use-loyalty";
+import { featureOn } from "@/lib/plans";
+import { useEntitlements } from "@/lib/use-entitlements";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -82,6 +84,8 @@ function Overview() {
   }, [span.from, span.to, range.from, range.to]);
 
   const o = useMemo(() => (data ? businessOverview(data.orders, data.kots, data.stock, range) : null), [data, range]);
+
+  const purchasesOn = featureOn(useEntitlements(), "purchases");
   const days = useMemo(() => (data ? salesByDay(data.orders, chartRange) : []), [data, chartRange]);
 
   return (
@@ -110,7 +114,8 @@ function Overview() {
             <Kpi label="Total sales" value={o ? money(o.net) : "…"} note={o && o.breakup.guest ? `${money(o.breakup.guest)} from guest orders` : "Billing + guest orders"} icon={IndianRupee} tone="bg-primary-tint text-primary" />
             <Kpi label="Bills" value={o ? o.bills.toLocaleString("en-IN") : "…"} note="Settled bills" icon={Receipt} tone="bg-gold/15 text-warning" />
             <Kpi label="Average bill" value={o ? money(o.average) : "…"} note="Sales ÷ bills" icon={HandCoins} tone="bg-success/10 text-success" />
-            <Kpi label="Purchases" value={o ? money(o.purchases) : "…"} note="Stock bought" icon={Package} tone="bg-secondary text-foreground" />
+            {purchasesOn ? <Kpi label="Purchases" value={o ? money(o.purchases) : "…"} note="Stock bought" icon={Package} tone="bg-secondary text-foreground" />
+              : <Kpi label="GST on sales" value={o ? money(o.taxes.total) : "…"} note="CGST + SGST collected" icon={Package} tone="bg-secondary text-foreground" />}
           </div>
 
           <Card title="Sales by order type">
