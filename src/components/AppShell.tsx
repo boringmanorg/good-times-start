@@ -28,6 +28,8 @@ import { toast } from "sonner";
 import { applyAppUpdate, checkForAppUpdate, currentBuildId } from "@/lib/app-update";
 import { broadcastSyncAll } from "@/lib/terminal-signal";
 import { isFramedPath } from "@/lib/framed-paths";
+import { useEntitlements } from "@/lib/use-entitlements";
+import { SEAT_APPS, featureOn, subscriptionText, whatsappLink } from "@/lib/plans";
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
 
 const NAV = [
@@ -82,7 +84,7 @@ function screensFor(role: string | undefined, app: AppKind = "manager"): readonl
 }
 
 
-/** Sync status chip and Sync window. `statusOnly` leaves out the staff name and sign-out (POS Waiter has its own). */
+/** Sync status chip and Sync window. `statusOnly` leaves out the staff name and sign-out (Waiter Pro has its own). */
 export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) {
   const [online, setOnline] = useState(true);
   const [open, setOpen] = useState(false);
@@ -118,7 +120,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
   const [checking, setChecking] = useState(false);
 
   const retry = async () => {
-    if (!staff) { await navigate({ to: "/auth" }); return; }
+    if (!staff) { await navigate({ to: "/login" }); return; }
     if (!restaurantId) return;
     if (!online) { await saveSyncError(new Error("No internet connection. Orders remain safely stored on this device.")); return; }
     setBusy(true);
@@ -174,7 +176,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: "/auth", replace: true });
+    await navigate({ to: "/login", replace: true });
   };
 
   const [buildId, setBuildId] = useState("");
@@ -196,7 +198,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
       </Button>
       {statusOnly ? null : staff
         ? <Button size="icon" variant="ghost" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut /></Button>
-        : <Button size="sm" variant="ghost" onClick={() => void navigate({ to: "/auth" })}><LogIn />Sign in</Button>}
+        : <Button size="sm" variant="ghost" onClick={() => void navigate({ to: "/login" })}><LogIn />Sign in</Button>}
     </div>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" onCloseAutoFocus={(event) => { event.preventDefault(); statusButton.current?.focus({ preventScroll: true }); }}>
@@ -249,7 +251,7 @@ function AccessBlocked({ problem, own }: { problem: string; own: AppKind | null 
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: "/auth", replace: true });
+    await navigate({ to: "/login", replace: true });
   };
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
@@ -286,6 +288,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   const app = useAppMode(user);
   useEffect(() => { syncAppModeFromUrl(); }, [pathname]);
   const terminal = useTerminalStatus();
+  const plan = useEntitlements();
   // Check in on start, every 5 minutes and when the connection comes back.
   const rid = user?.restaurantId ?? null;
   useEffect(() => {
@@ -300,7 +303,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   }, [rid, app]);
   // Internal system: every staff screen needs a signed-in person.
   useEffect(() => {
-    if (staffApp && !loading && !user) void navigate({ to: "/auth", replace: true });
+    if (staffApp && !loading && !user) void navigate({ to: "/login", replace: true });
   }, [staffApp, loading, user, navigate]);
   if (staffApp && (loading || !user)) {
     return (
@@ -312,6 +315,15 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   // A terminal the admin blocked stops working for staff; the admin can still sign in to fix it.
   if (staffApp && user && terminal === "blocked" && !isAdmin(user)) {
     return <AccessBlocked problem="This terminal is blocked by the admin. Ask the admin to release or unblock it in Settings → Terminals." own={null} />;
+  }
+  // Beyond the plan's device seats for this app: wait for a seat (the owner's own devices never wait).
+  if (staffApp && user && terminal === "over_plan") {
+    const seatApp = pathname.startsWith("/waiter") ? "waiter" : app;
+    return <AccessBlocked problem={`${plan ? `Your ${plan.planName} plan` : "Your plan"} has no free ${SEAT_APPS[seatApp]} device left. Ask the admin to release an old device in Settings → Terminals, or contact XTSY to add more.`} own={null} />;
+  }
+  // Waiter Pro comes with Pro Lite and Pro.
+  if (staffApp && user && pathname.startsWith("/waiter") && !featureOn(plan, "waiter_app")) {
+    return <AccessBlocked problem={`Waiter Pro isn't part of the ${plan?.planName ?? "current"} plan. It comes with Pro Lite and Pro: contact XTSY to upgrade.`} own={appsFor(user.login, user.role).find((a) => a !== "waiter") ?? null} />;
   }
   // Each login keeps to its own app and devices, as the admin set them.
   const problem = staffApp && user && (user.login || user.role !== "unknown")
@@ -347,13 +359,17 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   usePolicy();
   const marketing = useMarketingAccess(user?.role);
   useMarketingOutbox(marketing.denied === null); // queued marketing changes upload even when Marketing isn't open
-  const allowed = screensFor(user?.role, app).filter((to) => to !== "/marketing" || marketing.denied === null || marketing.denied === "loading");
+  const plan = useEntitlements();
+  const allowed = screensFor(user?.role, app).filter((to) => to !== "/marketing" || (featureOn(plan, "marketing") && (marketing.denied === null || marketing.denied === "loading")));
+  // Owners and managers see when the subscription needs attention; billing itself never stops.
+  const planNotice = isAdmin(user) && plan && !plan.complimentary && (!plan.live || plan.status === "past_due" || plan.status === "suspended" || plan.status === "cancelled"
+    || (plan.paidUntil !== null && Date.parse(plan.paidUntil) < Date.now() + 5 * 86_400_000));
   const nav = NAV.filter((n) => allowed.includes(n.to)).sort((a, b) => allowed.indexOf(a.to) - allowed.indexOf(b.to));
   const otherApps = (appsFor(user?.login ?? null, user?.role) as AppKind[]).filter((a) => a !== app && a !== "waiter");
   // A bill ("/") belongs to Tables: it only opens from a table or a counter order there.
   const current = pathname === "/" ? NAV.find((n) => n.to === "/tables") : NAV.find((n) => n.to !== "/" && pathname.startsWith(n.to));
   const blocked = !!current && !allowed.includes(current.to);
-  const home = nav[0]?.to ?? "/";
+  const home = nav[0]?.to ?? "/tables";
   const needsDetails = isAdmin(user) && !settings.updatedAt && pathname !== "/settings" && pathname !== "/setup";
 
   return (
@@ -385,7 +401,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
             {otherApps.map((a) => (
               <a key={a} href={APP_LINKS[a]} title={wide ? undefined : `Open ${APPS[a].name}`}
                 className={`flex items-center rounded-[10px] text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground ${wide ? "gap-3 px-3 py-2 text-xs" : "flex-col gap-1 px-1 py-2 text-[10px]"}`}>
-                <ArrowRightLeft className={wide ? "size-4 shrink-0" : "size-[1.1rem]"} /><span className="truncate">{wide ? `Open ${APPS[a].short}` : APPS[a].short.split(" ")[0]}</span>
+                <ArrowRightLeft className={wide ? "size-4 shrink-0" : "size-[1.1rem]"} /><span className="truncate">{wide ? `Open ${APPS[a].short}` : ({ manager: "Manager", pos: "Billdesk", waiter: "Waiter" } as const)[a]}</span>
               </a>
             ))}
           </div>
@@ -404,6 +420,12 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
         </header>
+        {planNotice && plan ? (
+          <a href={whatsappLink(`Hi XTSY, please renew the ${plan.planName} plan for ${restaurantName || "our restaurant"}.`)} target="_blank" rel="noreferrer"
+            className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-warning lg:px-6">
+            <AlertTriangle className="size-4 shrink-0" />{subscriptionText(plan)}. Tap to renew with XTSY on WhatsApp.
+          </a>
+        ) : null}
         {needsDetails && !needsRestaurant ? (
           <Link to="/setup" className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-warning lg:px-6">
             <AlertTriangle className="size-4 shrink-0" />Finish setting up: add your GSTIN, menu, tables and staff so bills carry your details.
@@ -418,7 +440,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
                 <p className="mt-1 text-sm text-muted-foreground">It's an admin tool that opens only on terminals the admin switches on in Settings → Terminals → Marketing.</p>
               </> : <>
                 <p className="font-semibold">This screen isn't part of {APPS[app].name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{app === "manager" ? "Open tables and printing from Restro POS by XTSY." : "Ask the admin if you need it."}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{app === "manager" ? "Open tables and printing from POS Billdesk." : "Ask the admin if you need it."}</p>
               </>}
               <Link to={home} className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Go to {NAV.find((n) => n.to === home)?.label}</Link>
             </div>

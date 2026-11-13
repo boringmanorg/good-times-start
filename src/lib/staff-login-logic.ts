@@ -1,9 +1,9 @@
 /**
  * The three internal logins and the three apps. Pure rules, tested.
  *
- *   admin@xtsy.pos     Admin       POS Business Manager (and every app)
- *   billdesk@xtsy.pos  Reception   Restro POS by XTSY (counter computer)
- *   waiter@xtsy.pos    Waiter      POS Waiter (Android phone or tablet)
+ *   admin@xtsy.pos     Admin       POS Manager (and every app)
+ *   billdesk@xtsy.pos  Reception   POS Billdesk (counter computer)
+ *   waiter@xtsy.pos    Waiter      Waiter Pro (Android phone or tablet)
  */
 
 export type LoginId = "admin" | "billdesk" | "waiter";
@@ -19,9 +19,9 @@ export const LOGINS: Record<LoginId, { email: string; label: string; app: AppKin
 };
 
 export const APPS: Record<AppKind, { name: string; short: string; home: "/dashboard" | "/tables" | "/waiter"; for: string; login: LoginId }> = {
-  manager: { name: "POS Business Manager", short: "Business Manager", home: "/dashboard", for: "Owner and admin · phone, tablet and computer", login: "admin" },
-  pos: { name: "Restro POS by XTSY", short: "Restro POS", home: "/tables", for: "Reception counter · Windows or Mac computer", login: "billdesk" },
-  waiter: { name: "POS Waiter", short: "POS Waiter", home: "/waiter", for: "Waiters · Android phone or tablet", login: "waiter" },
+  manager: { name: "POS Manager", short: "POS Manager", home: "/dashboard", for: "Owner and admin · phone, tablet and computer", login: "admin" },
+  pos: { name: "POS Billdesk", short: "POS Billdesk", home: "/tables", for: "Reception counter · Windows or Mac computer", login: "billdesk" },
+  waiter: { name: "Waiter Pro", short: "Waiter Pro", home: "/waiter", for: "Waiters · Android phone or tablet", login: "waiter" },
 };
 
 /** Where each app opens; the install links. */

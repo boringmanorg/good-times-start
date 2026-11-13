@@ -11,7 +11,7 @@ import type { AppKind, DeviceKind } from "./staff-login-logic";
 
 export interface Terminal {
   device_id: string; series: string; description: string; app: "" | AppKind; device_kind: "" | DeviceKind;
-  login_email: string; status: "active" | "blocked"; first_seen: string; last_seen: string;
+  login_email: string; status: "active" | "blocked" | "over_plan"; first_seen: string; last_seen: string;
   last_ip?: string | null; last_location?: string | null;
 }
 
@@ -31,8 +31,8 @@ export async function getDeviceId(): Promise<string> {
 
 /* This device's status, remembered so a blocked device stays blocked offline. */
 const STATUS_KEY = "xtsy-terminal-status";
-type Status = "active" | "blocked";
-let status: Status = (() => { try { return window.localStorage.getItem(STATUS_KEY) === "blocked" ? "blocked" : "active"; } catch { return "active"; } })();
+type Status = "active" | "blocked" | "over_plan";
+let status: Status = (() => { try { const s = window.localStorage.getItem(STATUS_KEY); return s === "blocked" || s === "over_plan" ? s : "active"; } catch { return "active"; } })();
 const listeners = new Set<() => void>();
 function setStatus(next: Status) {
   if (next === status) return;
@@ -50,7 +50,7 @@ export async function touchTerminal(restaurantId: string, app: AppKind, kind: De
     const [device, series] = await Promise.all([getDeviceId(), getDeviceCode()]);
     const { data, error } = await db().rpc("touch_terminal", { _restaurant: restaurantId, _device: device, _series: series, _app: app, _kind: kind });
     if (error) return;
-    if (data === "blocked" || data === "active") setStatus(data);
+    if (data === "blocked" || data === "active" || data === "over_plan") setStatus(data);
     void import("./terminal-network.functions")
       .then((m) => m.recordTerminalNetwork({ data: { restaurantId, deviceId: device } }))
       .catch(() => { /* optional */ });

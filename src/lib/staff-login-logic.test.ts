@@ -34,7 +34,7 @@ describe("internal logins", () => {
   it("keeps each login in its app and on its devices", () => {
     expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "pos", device: "desktop" })).toBeNull();
     expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "pos", device: "android" })).toMatch(/Windows or Mac computer only/);
-    expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "manager", device: "desktop" })).toMatch(/uses Restro POS by XTSY, not POS Business Manager/);
+    expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "manager", device: "desktop" })).toMatch(/uses POS Billdesk, not POS Manager/);
     expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "android" })).toBeNull();
     expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "desktop" })).toMatch(/Android phone or tablet only/);
     expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter", { devices: ["android", "ios"] }), app: "waiter", device: "ios" })).toBeNull();

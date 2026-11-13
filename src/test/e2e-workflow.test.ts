@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { CartLine, Kot, Order, RestaurantTable } from "@/lib/types";
 
 /**
- * End-to-end service on three terminals (counter, waiter phone, Business Manager) through the
+ * End-to-end service on three terminals (counter, waiter phone, POS Manager) through the
  * real sync, numbering, bill-numbering and history code, against the in-memory cloud. Each step
  * checks what every terminal shows, the official POS/KOT series, and that no sync error or
  * conflict is left behind. Realtime is simulated by handing each terminal the cloud row its
@@ -136,7 +136,7 @@ async function expectClean() {
 const D2: RestaurantTable = { id: "D2", label: "D2", section: "Dine-in", seats: 4, status: "free", runningTotal: 0 };
 const ROOM: RestaurantTable = { id: "ROOM-3", label: "Room 3", section: "Rooms", seats: 2, status: "free", runningTotal: 0 };
 
-describe("end-to-end service across counter, waiter and Business Manager", () => {
+describe("end-to-end service across counter, waiter and POS Manager", () => {
   it("dine-in, room and takeaway bills stay in step everywhere, with unbroken POS and KOT series", async () => {
     // Floor set up on the counter and shared.
     await on("counter", async () => {
@@ -165,7 +165,7 @@ describe("end-to-end service across counter, waiter and Business Manager", () =>
     // A running bill has no POS number until it is printed or settled.
     expect((await localBill("counter", "bill-d2"))?.billNo).toBe("");
 
-    // 2. Business Manager corrects the guest count; the counter shows it from the notice alone.
+    // 2. POS Manager corrects the guest count; the counter shows it from the notice alone.
     await on("manager", async () => { const b = await localBill("manager", "bill-d2"); await saveBill({ ...b!, guestCount: 3 }); });
     await syncNow("manager");
     await broadcast("order", "bill-d2", "manager");

@@ -5,7 +5,7 @@ import type { SignedInStaff } from "./staff";
 /*
  * Which of the three apps this window is. An installed app opens with ?app=…
  * (or on /manager or /waiter); the choice is kept for the life of the window,
- * so Restro POS and Business Manager can be open side by side on one computer.
+ * so POS Billdesk and POS Manager can be open side by side on one computer.
  */
 
 const KEY = "xtsy-app";

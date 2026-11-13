@@ -243,7 +243,7 @@ test.describe("Hard test · selections", () => {
     await context.close();
   });
 
-  test("Insights is gone from Business Manager", async ({ browser, baseURL }) => {
+  test("Insights is gone from POS Manager", async ({ browser, baseURL }) => {
     for (const name of ["phone-412", "desktop-1440"]) {
       const { context, page } = await device(browser, baseURL, bp(name), "admin");
       await page.goto("/dashboard?app=manager");
@@ -258,7 +258,7 @@ test.describe("Hard test · selections", () => {
 test.describe("Hard test · scrolling", () => {
   const SCREENS = ["/dashboard", "/tables", "/menu", "/stock", "/customers", "/reports", "/marketing", "/settings"];
   for (const name of ["phone-360", "phone-412", "tablet-768", "tablet-1024-landscape", "laptop-1280"]) {
-    test(`every Business Manager screen scrolls to its end with nothing hidden under the tab bar (${name})`, async ({ browser, baseURL }, info) => {
+    test(`every POS Manager screen scrolls to its end with nothing hidden under the tab bar (${name})`, async ({ browser, baseURL }, info) => {
       const { context, page } = await device(browser, baseURL, bp(name), "admin");
       await page.goto("/dashboard?app=manager");
       await synced(page);

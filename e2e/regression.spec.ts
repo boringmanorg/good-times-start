@@ -50,11 +50,11 @@ for (const bp of BREAKPOINTS) {
     test("sign-in page", async ({ page }, info) => {
       await page.addInitScript(quiet);
       const seen = watch(page);
-      await page.goto("/auth");
+      await page.goto("/login");
       await audit(page, info, `${bp.name}-auth-choose-app`, seen, "Choose your screen");
       // The first click can land before the page is interactive on a cold server; retry it.
       await expect(async () => {
-        await page.getByRole("radio", { name: /POS Business Manager/ }).click();
+        await page.getByRole("radio", { name: /POS Manager/ }).click();
         await expect(page.getByLabel("Login")).toHaveValue(LOGINS.admin.email, { timeout: 2_000 });
       }).toPass({ timeout: 30_000 });
       await audit(page, info, `${bp.name}-auth-form`, seen, "Forgot password?");
@@ -79,7 +79,7 @@ for (const bp of BREAKPOINTS) {
       await audit(page, info, `${bp.name}-guest-unknown`, seen, "Restaurant not found");
     });
 
-    test.describe("Business Manager (admin)", () => {
+    test.describe("POS Manager (admin)", () => {
       test.use({ storageState: authFile("admin") });
       for (const [name, path, text] of MANAGER_SCREENS) {
         test(name, async ({ page }, info) => {
@@ -87,7 +87,7 @@ for (const bp of BREAKPOINTS) {
           const seen = watch(page);
           await page.goto(path.includes("?") ? path.replace("?", "?app=manager&") : path.includes("#") ? path.replace("#", "?app=manager#") : `${path}?app=manager`);
           await audit(page, info, `${bp.name}-manager-${name}`, seen, text);
-          expect(page.url(), "stays signed in").not.toContain("/auth");
+          expect(page.url(), "stays signed in").not.toContain("/login");
         });
       }
       test("reports: Sales Summary", async ({ page }, info) => {
@@ -100,7 +100,7 @@ for (const bp of BREAKPOINTS) {
       });
     });
 
-    test.describe("Restro POS (billdesk)", () => {
+    test.describe("POS Billdesk (billdesk)", () => {
       test.use({ storageState: authFile("billdesk") });
       if (bp.device === "desktop") {
         for (const [name, path, text] of POS_SCREENS) {
@@ -124,7 +124,7 @@ for (const bp of BREAKPOINTS) {
           const seen = watch(page);
           await page.goto("/?app=pos");
           if (allowedOn("billdesk", bp.device)) {
-            info.annotations.push({ type: "access", description: `${bp.name}: Reception is allowed on ${bp.device} in Settings → Logins, so Restro POS opens` });
+            info.annotations.push({ type: "access", description: `${bp.name}: Reception is allowed on ${bp.device} in Settings → Logins, so POS Billdesk opens` });
             await audit(page, info, `${bp.name}-pos-allowed`, seen);
             await expect(page.getByText("Not available here")).toHaveCount(0);
           } else {
@@ -134,7 +134,7 @@ for (const bp of BREAKPOINTS) {
       }
     });
 
-    test.describe("POS Waiter (waiter)", () => {
+    test.describe("Waiter Pro (waiter)", () => {
       test.use({ storageState: authFile("waiter") });
       test(bp.device === "android" ? "waiter screen" : "computers follow Settings → Logins", async ({ page }, info) => {
         await page.addInitScript(quiet);

@@ -12,10 +12,10 @@ import { ready, watch } from "./helpers";
 
 const quiet = () => { try { localStorage.setItem("xtsy-regression", "1"); } catch { /* ignore */ } };
 const CASES = [
-  { app: "Business Manager", login: "admin" as const, bp: "desktop-1440", path: "/dashboard?app=manager" },
-  { app: "Business Manager", login: "admin" as const, bp: "phone-412", path: "/dashboard?app=manager" },
-  { app: "Restro POS", login: "billdesk" as const, bp: "desktop-1440", path: "/tables?app=pos" },
-  { app: "Restro POS", login: "billdesk" as const, bp: "laptop-1280", path: "/tables?app=pos" },
+  { app: "POS Manager", login: "admin" as const, bp: "desktop-1440", path: "/dashboard?app=manager" },
+  { app: "POS Manager", login: "admin" as const, bp: "phone-412", path: "/dashboard?app=manager" },
+  { app: "POS Billdesk", login: "billdesk" as const, bp: "desktop-1440", path: "/tables?app=pos" },
+  { app: "POS Billdesk", login: "billdesk" as const, bp: "laptop-1280", path: "/tables?app=pos" },
 ];
 
 async function openSync(page: Page) {

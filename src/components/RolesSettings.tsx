@@ -85,7 +85,7 @@ export function RolesSettings() {
                 ))}
               </ul>
             </div>
-          ) : <p className="rounded-xl bg-secondary p-3 text-sm text-muted-foreground">Waiters use POS Waiter only: tables, menu and KOTs.</p>}
+          ) : <p className="rounded-xl bg-secondary p-3 text-sm text-muted-foreground">Waiters use Waiter Pro only: tables, menu and KOTs.</p>}
 
           {groups.map((group) => (
             <div key={group} className="overflow-hidden rounded-2xl border border-border bg-card">

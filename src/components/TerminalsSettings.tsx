@@ -35,7 +35,8 @@ function Row({ t, here, restaurantId, store, marketing, onChanged }: { t: Termin
     <tr className={cn("align-middle", here && "bg-primary-tint/40")}>
       <td className="px-3 py-3 text-sm">{store}</td>
       <td className="px-3 py-3 font-mono text-sm font-semibold">{t.series || "—"}</td>
-      <td className="px-3 py-3"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", t.status === "blocked" ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success")}>{t.status === "blocked" ? "Blocked" : "Active"}</span></td>
+      <td className="px-3 py-3"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", t.status === "blocked" ? "bg-destructive/10 text-destructive" : t.status === "over_plan" ? "bg-gold/15 text-warning" : "bg-success/10 text-success")}
+        title={t.status === "over_plan" ? "Your plan's seats for this app are full: release a device or ask XTSY to upgrade" : undefined}>{t.status === "blocked" ? "Blocked" : t.status === "over_plan" ? "Waiting for a seat" : "Active"}</span></td>
       <td className="px-3 py-3 text-sm">
         {editing ? (
           <span className="flex items-center gap-1">
@@ -85,7 +86,7 @@ export function TerminalsSettings() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-base font-bold">Terminals</h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every device that uses {store}: the counter computer, waiter phones and tablets, the admin's phone. <strong className="text-foreground">Key</strong> is its bill series. <strong className="text-foreground">Block</strong> stops staff using it at once; <strong className="text-foreground">Release</strong> forgets a replaced or lost device. <strong className="text-foreground">Marketing</strong> opens only on terminals you switch on here; every other terminal, including Restro POS counters, can't open it.</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every device that uses {store}: the counter computer, waiter phones and tablets, the admin's phone. <strong className="text-foreground">Key</strong> is its bill series. <strong className="text-foreground">Block</strong> stops staff using it at once; <strong className="text-foreground">Release</strong> forgets a replaced or lost device. <strong className="text-foreground">Marketing</strong> opens only on terminals you switch on here; every other terminal, including POS Billdesk counters, can't open it.</p>
         </div>
         <Button size="sm" variant="outline" onClick={() => void q.refetch()}><RefreshCw className={q.isFetching ? "animate-spin" : ""} />Refresh</Button>
       </div>

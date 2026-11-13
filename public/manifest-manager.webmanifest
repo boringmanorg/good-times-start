@@ -1,7 +1,7 @@
 {
   "id": "/manager",
-  "name": "POS Business Manager",
-  "short_name": "Business Manager",
+  "name": "POS Manager",
+  "short_name": "POS Manager",
   "description": "TAB Bistro by XTSY: sales, reports, menu, stock, marketing and settings. Phone, tablet and computer.",
   "start_url": "/manager?app=manager",
   "scope": "/",

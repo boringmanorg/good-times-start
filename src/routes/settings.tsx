@@ -23,6 +23,9 @@ import { OrderingSettings } from "@/components/OrderingSettings";
 import { LoginsSettings } from "@/components/LoginsSettings";
 import { RolesSettings } from "@/components/RolesSettings";
 import { TerminalsSettings } from "@/components/TerminalsSettings";
+import { PlanSettings } from "@/components/PlanSettings";
+import { useEntitlements } from "@/lib/use-entitlements";
+import { featureOn } from "@/lib/plans";
 import { AuditLogSettings } from "@/components/AuditLogSettings";
 import { cn } from "@/lib/utils";
 import { Dropdown } from "@/components/Dropdown";
@@ -357,12 +360,13 @@ function ThisDevice() {
   );
 }
 
-type Tab = "restaurant" | "billing" | "ordering" | "printing" | "logins" | "roles" | "terminals" | "audit" | "device";
+type Tab = "plan" | "restaurant" | "billing" | "ordering" | "printing" | "logins" | "roles" | "terminals" | "audit" | "device";
 
 interface SettingCard { v: Tab | null; to?: string; hash?: string; l: string; d: string; group: string; staff?: boolean }
 
 /** Settings grouped like a back office: outlet, staff and access, marketing, this device. */
 const CARDS: SettingCard[] = [
+  { v: "plan", l: "Plan & subscription", d: "Your XTSY POS plan, device seats in use and renewal", group: "Outlet settings" },
   { v: "terminals", l: "Terminals", d: "See, rename, block or release each device and its bill series", group: "Outlet settings" },
   { v: "audit", l: "Audit log", d: "Every change to bills, KOTs, menu, purchases and settings: who, which terminal and when", group: "Outlet settings" },
   { v: null, to: "/tables", l: "Sections & Tables", d: "Manage the seating layout", group: "Outlet settings" },
@@ -381,7 +385,8 @@ function SettingsPage() {
   const { user } = useStaff();
   const app = useAppMode(user);
   const admin = isAdmin(user);
-  const cards = CARDS.filter((c) => (admin || c.staff) && managerSettingAllowed(app, c.v, c.to));
+  const plan = useEntitlements();
+  const cards = CARDS.filter((c) => (admin || c.staff) && managerSettingAllowed(app, c.v, c.to) && (c.v !== "audit" || featureOn(plan, "audit_log")));
   const [tab, setTab] = useState<Tab | null>(() => {
     if (typeof window === "undefined") return null;
     const h = window.location.hash.slice(1) as Tab;
@@ -423,6 +428,7 @@ function SettingsPage() {
             <h1 className="mt-1 text-2xl font-bold lg:mt-0">{current.l}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{current.d}</p>
             <div className="mt-6 max-w-5xl">
+              {visibleTab === "plan" ? <PlanSettings /> : null}
               {visibleTab === "restaurant" ? <RestaurantDetails /> : null}
               {visibleTab === "billing" ? <BillingSettings /> : null}
               {visibleTab === "ordering" ? <OrderingSettings /> : null}

@@ -241,7 +241,7 @@ test.describe("Launch check", () => {
   });
 
   test.describe("Bills open only from Tables", () => {
-    test.describe("Restro POS (Reception, desktop)", () => {
+    test.describe("POS Billdesk (Reception, desktop)", () => {
       test.use({ ...contextFor(desktop), storageState: authFile("billdesk") });
 
       test("no Billing menu item; / goes to Tables; tables and counter orders open bills", async ({ page }, info) => {
@@ -274,7 +274,7 @@ test.describe("Launch check", () => {
       });
     });
 
-    test.describe("Business Manager (admin, phone)", () => {
+    test.describe("POS Manager (admin, phone)", () => {
       test.use({ ...contextFor(phone), storageState: authFile("admin") });
 
       test("/ goes to Tables, and the bottom menu has no Billing", async ({ page }) => {

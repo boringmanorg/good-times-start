@@ -11,18 +11,23 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as KitchenRouteImport } from './routes/kitchen'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as TablesRouteImport } from './routes/tables'
 import { Route as WaiterRouteImport } from './routes/waiter'
+import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
 import { Route as OrderSlugRouteImport } from './routes/order.$slug'
 
@@ -34,6 +39,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsoleRoute = ConsoleRouteImport.update({
+  id: '/console',
+  path: '/console',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomersRoute = CustomersRouteImport.update({
@@ -49,6 +59,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const KitchenRoute = KitchenRouteImport.update({
   id: '/kitchen',
   path: '/kitchen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerRoute = ManagerRouteImport.update({
@@ -71,6 +86,11 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -79,6 +99,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StockRoute = StockRouteImport.update({
@@ -96,6 +121,11 @@ const WaiterRoute = WaiterRouteImport.update({
   path: '/waiter',
   getParentRoute: () => rootRouteImport,
 } as any)
+const XtsyPosRoute = XtsyPosRouteImport.update({
+  id: '/xtsy-pos',
+  path: '/xtsy-pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BookSlugRoute = BookSlugRouteImport.update({
   id: '/book/$slug',
   path: '/book/$slug',
@@ -110,36 +140,46 @@ const OrderSlugRoute = OrderSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/console': typeof ConsoleRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/kitchen': typeof KitchenRoute
+  '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
   '/reports': typeof ReportsRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
+  '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/console': typeof ConsoleRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/kitchen': typeof KitchenRoute
+  '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
   '/reports': typeof ReportsRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
+  '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
 }
@@ -147,18 +187,23 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/console': typeof ConsoleRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/kitchen': typeof KitchenRoute
+  '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
   '/reports': typeof ReportsRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
+  '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
 }
@@ -167,54 +212,69 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/console'
     | '/customers'
     | '/dashboard'
     | '/kitchen'
+    | '/login'
     | '/manager'
     | '/marketing'
     | '/menu'
     | '/reports'
+    | '/robots.txt'
     | '/settings'
     | '/setup'
+    | '/sitemap.xml'
     | '/stock'
     | '/tables'
     | '/waiter'
+    | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/console'
     | '/customers'
     | '/dashboard'
     | '/kitchen'
+    | '/login'
     | '/manager'
     | '/marketing'
     | '/menu'
     | '/reports'
+    | '/robots.txt'
     | '/settings'
     | '/setup'
+    | '/sitemap.xml'
     | '/stock'
     | '/tables'
     | '/waiter'
+    | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
   id:
     | '__root__'
     | '/'
     | '/auth'
+    | '/console'
     | '/customers'
     | '/dashboard'
     | '/kitchen'
+    | '/login'
     | '/manager'
     | '/marketing'
     | '/menu'
     | '/reports'
+    | '/robots.txt'
     | '/settings'
     | '/setup'
+    | '/sitemap.xml'
     | '/stock'
     | '/tables'
     | '/waiter'
+    | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
   fileRoutesById: FileRoutesById
@@ -222,18 +282,23 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  ConsoleRoute: typeof ConsoleRoute
   CustomersRoute: typeof CustomersRoute
   DashboardRoute: typeof DashboardRoute
   KitchenRoute: typeof KitchenRoute
+  LoginRoute: typeof LoginRoute
   ManagerRoute: typeof ManagerRoute
   MarketingRoute: typeof MarketingRoute
   MenuRoute: typeof MenuRoute
   ReportsRoute: typeof ReportsRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   SettingsRoute: typeof SettingsRoute
   SetupRoute: typeof SetupRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StockRoute: typeof StockRoute
   TablesRoute: typeof TablesRoute
   WaiterRoute: typeof WaiterRoute
+  XtsyPosRoute: typeof XtsyPosRoute
   BookSlugRoute: typeof BookSlugRoute
   OrderSlugRoute: typeof OrderSlugRoute
 }
@@ -252,6 +317,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/console': {
+      id: '/console'
+      path: '/console'
+      fullPath: '/console'
+      preLoaderRoute: typeof ConsoleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customers': {
@@ -273,6 +345,13 @@ declare module '@tanstack/react-router' {
       path: '/kitchen'
       fullPath: '/kitchen'
       preLoaderRoute: typeof KitchenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager': {
@@ -303,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -315,6 +401,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stock': {
@@ -338,6 +431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WaiterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/xtsy-pos': {
+      id: '/xtsy-pos'
+      path: '/xtsy-pos'
+      fullPath: '/xtsy-pos'
+      preLoaderRoute: typeof XtsyPosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/book/$slug': {
       id: '/book/$slug'
       path: '/book/$slug'
@@ -358,18 +458,23 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  ConsoleRoute: ConsoleRoute,
   CustomersRoute: CustomersRoute,
   DashboardRoute: DashboardRoute,
   KitchenRoute: KitchenRoute,
+  LoginRoute: LoginRoute,
   ManagerRoute: ManagerRoute,
   MarketingRoute: MarketingRoute,
   MenuRoute: MenuRoute,
   ReportsRoute: ReportsRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   SettingsRoute: SettingsRoute,
   SetupRoute: SetupRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StockRoute: StockRoute,
   TablesRoute: TablesRoute,
   WaiterRoute: WaiterRoute,
+  XtsyPosRoute: XtsyPosRoute,
   BookSlugRoute: BookSlugRoute,
   OrderSlugRoute: OrderSlugRoute,
 }

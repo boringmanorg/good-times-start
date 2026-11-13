@@ -5,19 +5,20 @@ import { Button } from "@/components/ui/button";
 import { syncAppModeFromUrl, useChosenApp } from "@/lib/app-mode";
 import { allowAppWorker, installKind, type InstallKind } from "@/lib/app-install-logic";
 import { useInstallPrompt, watchInstallPrompt } from "@/lib/install-prompt";
+import { SITE_PATH } from "@/lib/site-config";
 
 /**
  * Three installable screens from one cloud codebase:
- *   /manager   POS Business Manager (admin: phone, tablet, computer)
- *   /tables?app=pos  Restro POS by XTSY (reception counter: Windows or Mac)
- *   /waiter    POS Waiter (waiters: Android phone or tablet)
+ *   /manager   POS Manager (admin: phone, tablet, computer)
+ *   /tables?app=pos  POS Billdesk (reception counter: Windows or Mac)
+ *   /waiter    Waiter Pro (waiters: Android phone or tablet)
  * Each has its own manifest, icon and theme, chosen by the window's app.
  */
 
 const APP_META: Record<InstallKind, { title: string; theme: string }> = {
-  manager: { title: "Business Manager", theme: "#000000" },
-  pos: { title: "Restro POS", theme: "#000000" },
-  waiter: { title: "POS Waiter", theme: "#000000" },
+  manager: { title: "POS Manager", theme: "#000000" },
+  pos: { title: "POS Billdesk", theme: "#000000" },
+  waiter: { title: "Waiter Pro", theme: "#000000" },
 };
 
 function shouldRegisterServiceWorker(): boolean {
@@ -43,8 +44,11 @@ export function AppInstall() {
   useEffect(() => { syncAppModeFromUrl(); }, [pathname]);
   const app = installKind(pathname, chosen);
   const meta = APP_META[app];
+  // The marketing website is not an installable staff app.
+  const website = pathname === SITE_PATH || pathname.startsWith(`${SITE_PATH}/`);
 
   useEffect(() => {
+    if (website) return;
     const stopWatching = watchInstallPrompt();
     if (shouldRegisterServiceWorker()) {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => { /* offline support is a bonus, never a blocker */ });
@@ -55,10 +59,10 @@ export function AppInstall() {
       }).map((r) => r.unregister()))).catch(() => {});
     }
     return stopWatching;
-  }, []);
+  }, [website]);
 
   // Guests ordering from a QR code or link are on the restaurant's page, not a staff app.
-  if (pathname.startsWith("/order/")) return null;
+  if (pathname.startsWith("/order/") || website) return null;
 
   // React 19 hoists these into <head> and updates them when the app changes.
   return (

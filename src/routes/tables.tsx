@@ -35,7 +35,7 @@ export const Route = createFileRoute("/tables")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Tables — TAB Bistro by XTSY" },
+      { title: "Tables — XTSY POS" },
       { name: "description", content: "Live floor plan: open bills, move or merge tables, and arrange sections." }, { property: "og:title", content: "Tables — XTSY POS" }, { property: "og:description", content: "Live floor plan: open bills, move or merge tables, and arrange sections." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },],
   }),
   component: TablesPage,

@@ -35,8 +35,8 @@ import { billLabel } from "@/lib/bill-numbering";
 export const Route = createFileRoute("/waiter")({
   head: () => ({
     meta: [
-      { title: "POS Waiter" },
-      { name: "description", content: "Take table orders on a tablet and send them straight to the kitchen." }, { property: "og:title", content: "POS Waiter" }, { property: "og:description", content: "Take table orders on a tablet and send them straight to the kitchen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },],
+      { title: "Waiter Pro" },
+      { name: "description", content: "Take table orders on a tablet and send them straight to the kitchen." }, { property: "og:title", content: "Waiter Pro" }, { property: "og:description", content: "Take table orders on a tablet and send them straight to the kitchen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },],
   }),
   component: WaiterApp,
 });
@@ -91,15 +91,15 @@ function WaiterApp() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: "/auth", replace: true });
+    await navigate({ to: "/login", replace: true });
   };
 
   return (
     <div className="dark flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] shadow-[inset_0_-1px_0_color-mix(in_srgb,var(--color-primary)_28%,transparent)]">
         <div className="min-w-0">
-          <div className="font-brand truncate text-[17px] leading-tight sm:text-[19px]">{settings.name || "POS Waiter"}</div>
-          <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{user ? `POS Waiter · ${user.displayName}` : loading ? "" : "POS Waiter"}</div>
+          <div className="font-brand truncate text-[17px] leading-tight sm:text-[19px]">{settings.name || "Waiter Pro"}</div>
+          <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{user ? `Waiter Pro · ${user.displayName}` : loading ? "" : "Waiter Pro"}</div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {user ? <Button size="sm" variant="outline" aria-label="Reservations" onClick={() => setShowBookings(true)}><Users /><span className="hidden sm:inline">Reservations</span></Button> : null}

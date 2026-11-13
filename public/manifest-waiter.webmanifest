@@ -1,7 +1,7 @@
 {
   "id": "/waiter",
-  "name": "POS Waiter",
-  "short_name": "POS Waiter",
+  "name": "Waiter Pro",
+  "short_name": "Waiter Pro",
   "description": "TAB Bistro waiters: take table orders and send KOTs from an Android phone or tablet.",
   "start_url": "/waiter?app=waiter",
   "scope": "/waiter",

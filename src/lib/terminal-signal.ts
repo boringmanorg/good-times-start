@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * One "sync everything" signal shared by every open terminal of a restaurant (counter, waiter,
- * Business Manager). Sent when someone taps Sync now, and when any terminal is the first to spot a
+ * POS Manager). Sent when someone taps Sync now, and when any terminal is the first to spot a
  * newly published app version. Receivers sync their data at once and check for the new version,
  * so one tap (or one terminal noticing) brings the whole restaurant up to date within seconds.
  * The signal carries no data and no instructions beyond "check now": every terminal still uses its

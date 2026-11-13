@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Restro POS by XTSY",
-  "short_name": "Restro POS",
+  "name": "POS Billdesk",
+  "short_name": "POS Billdesk",
   "description": "TAB Bistro counter: tables and their bills, KOTs and guest orders. Windows and Mac. Works offline.",
   "start_url": "/tables?app=pos",
   "scope": "/",

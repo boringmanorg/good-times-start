@@ -106,7 +106,7 @@ test.describe("Live audit · published site", () => {
     expect(sw, "offline worker is the latest").toContain('VERSION = "xtsy-pos-v13"');
     expect((await request.get(`${SITE}/brand/xtsy-logo.png`)).status()).toBe(200);
     expect((await request.get(`${SITE}/favicon.png`)).status()).toBe(200);
-    for (const path of ["/auth", "/order/tab-bistro", "/tables", "/waiter", "/manager"]) {
+    for (const path of ["/login", "/order/tab-bistro", "/tables", "/waiter", "/manager"]) {
       const r = await request.get(`${SITE}${path}`);
       expect(r.status(), `${path} loads`).toBe(200);
     }

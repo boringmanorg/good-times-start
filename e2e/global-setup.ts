@@ -23,7 +23,7 @@ export default async function globalSetup(config: FullConfig) {
     // Enter the sign-in route directly. App entry routes (e.g. /manager) are
     // client redirects and can remain on their shell if auth hydration stalls.
     // The app query preserves the intended app context after sign-in.
-    await page.goto(`/auth?app=${app}`);
+    await page.goto(`/login?app=${app}`);
     await page.getByRole("heading", { name: "Sign in" }).waitFor({ state: "visible", timeout: 30_000 });
     // App mode is seeded in sessionStorage before app code executes. Wait for the
     // actual username input rather than relying on the label's accessible name.
@@ -45,7 +45,7 @@ export default async function globalSetup(config: FullConfig) {
     await page.getByLabel("Password").fill(login.password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     try {
-      await page.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 45_000 });
+      await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 45_000 });
     } catch {
       const msg = await page.getByRole("status").first().textContent().catch(() => "");
       throw new Error(`Couldn't sign in as ${login.email}: ${msg || "still on the sign-in page"}. If the password was changed, set XTSY_${name.toUpperCase()}_PASSWORD.`);

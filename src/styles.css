@@ -52,7 +52,7 @@
 }
 
 /*
- * XTSY POS — classic black. Every staff screen (Business Manager, Restro POS, POS Waiter, kitchen)
+ * XTSY POS — classic black. Every staff screen (POS Manager, POS Billdesk, Waiter Pro, kitchen)
  * is black with bright, high-contrast text and one brand accent: XTSY champagne gold.
  * Guest pages (/order, /book) keep the light XTSY look via .theme-xtsy below; printed slips stay white paper.
  * Contrast on black: text 21:1, secondary text 11.5:1, gold accent 11:1.

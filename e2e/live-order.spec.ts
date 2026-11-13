@@ -5,9 +5,9 @@ import { BREAKPOINTS, authFile, contextFor } from "./breakpoints";
  * Live end-to-end guest order, run on demand only (LIVE_ORDER=1), because it
  * puts a real order on the restaurant's POS:
  *   1. a guest on a phone scans the QR menu, picks a table, adds a dish and orders;
- *   2. Reception's Restro POS on a computer sees it and accepts it (KOT + bill);
+ *   2. Reception's POS Billdesk on a computer sees it and accepts it (KOT + bill);
  *   3. the guest's page updates to "the kitchen has your order";
- *   4. the admin's Business Manager on a second device sees the same bill.
+ *   4. the admin's POS Manager on a second device sees the same bill.
  * The order is clearly marked as a test; clean it up afterwards.
  */
 
@@ -61,7 +61,7 @@ test("guest QR order reaches the POS, is accepted, and syncs to another device",
   info.annotations.push({ type: "live-order", description: `Guest order ${orderCode}: ${dish} at table ${tableLabel} (${tableId})` });
   await shot(guest, "4-order-sent");
 
-  // 2. Reception's Restro POS on a computer accepts it.
+  // 2. Reception's POS Billdesk on a computer accepts it.
   const posCtx = await open(browser, desktop, "billdesk");
   const pos = await posCtx.newPage();
   await pos.goto("/tables?app=pos");
@@ -80,7 +80,7 @@ test("guest QR order reaches the POS, is accepted, and syncs to another device",
   await expect(guest.getByText("The kitchen has your order.")).toBeVisible({ timeout: 45_000 });
   await shot(guest, "7-guest-preparing");
 
-  // 4. The admin's Business Manager on a tablet finds it as the table's own QR bill, apart from any staff bill.
+  // 4. The admin's POS Manager on a tablet finds it as the table's own QR bill, apart from any staff bill.
   const mgrCtx = await open(browser, tabletBp, "admin");
   const mgr = await mgrCtx.newPage();
   await mgr.goto("/tables?app=manager");
@@ -129,7 +129,7 @@ test("a waiter taking an order holds the table; others see it; emptying it frees
   info.annotations.push({ type: "hold", description: `Waiter holds table ${label} with one dish (not sent)` });
   await shot(waiter, "h1-waiter-holding");
 
-  // Reception opens the same table on Restro POS: sees who holds it and can't add a second order.
+  // Reception opens the same table on POS Billdesk: sees who holds it and can't add a second order.
   const posCtx = await open(browser, desktop, "billdesk");
   const pos = await posCtx.newPage();
   await pos.goto("/tables?app=pos");

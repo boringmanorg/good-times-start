@@ -303,7 +303,7 @@ function Finished({ onBill }: { onBill: () => void }) {
       <p className="text-sm text-muted-foreground">Your counter is ready. A few more things you can switch on when you like:</p>
       <ul className="mt-4 grid gap-3 sm:grid-cols-3">
         <li><Link to="/settings" hash="ordering" className="block rounded-xl border border-border p-4 hover:border-primary"><p className="text-sm font-semibold">Guest ordering</p><p className="mt-1 text-xs text-muted-foreground">QR codes on tables and an online pickup link.</p></Link></li>
-        <li><Link to="/waiter" className="block rounded-xl border border-border p-4 hover:border-primary"><p className="text-sm font-semibold">Waiter tablets</p><p className="mt-1 text-xs text-muted-foreground">Install POS Waiter on Android phones and tablets from Settings → Logins.</p></Link></li>
+        <li><Link to="/waiter" className="block rounded-xl border border-border p-4 hover:border-primary"><p className="text-sm font-semibold">Waiter tablets</p><p className="mt-1 text-xs text-muted-foreground">Install Waiter Pro on Android phones and tablets from Settings → Logins.</p></Link></li>
         <li><Link to="/marketing" className="block rounded-xl border border-border p-4 hover:border-primary"><p className="text-sm font-semibold">Brand and WhatsApp</p><p className="mt-1 text-xs text-muted-foreground">Your look on the QR menu, printable QR cards, WhatsApp offers.</p></Link></li>
       </ul>
       <Button className="mt-6" onClick={onBill}>Go to tables<ChevronRight /></Button>
