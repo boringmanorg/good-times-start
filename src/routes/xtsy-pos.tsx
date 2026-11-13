@@ -49,7 +49,7 @@ export const Route = createFileRoute("/xtsy-pos")({
   component: SitePage,
 });
 
-const NAV = [{ href: "#apps", l: "Apps" }, { href: "#features", l: "Features" }, { href: "#pricing", l: "Pricing" }, { href: "#faq", l: "FAQ" }];
+const NAV = [{ href: "#brand", l: "Own your brand" }, { href: "#features", l: "Features" }, { href: "#marketing", l: "Marketing" }, { href: "#pricing", l: "Pricing" }, { href: "#faq", l: "FAQ" }];
 
 function SitePage() {
   const [plan, setPlan] = useState("");
@@ -80,15 +80,15 @@ function SitePage() {
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_75%_10%,color-mix(in_srgb,var(--color-primary)_22%,transparent),transparent_70%)]" />
           <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:py-20 lg:grid-cols-[1.1fr_1fr]">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Restaurant billing software · India & Asia</p>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Restaurant billing software · Made in Tamil Nadu for India & Asia</p>
               <h1 className="mt-3 text-[2.9rem] leading-[0.98] sm:text-6xl lg:text-7xl">Restaurant billing software, made to be loved.</h1>
-              <p className="mt-5 max-w-xl text-lg text-muted-foreground">Billing, KOTs, QR ordering, guest loyalty and a waiter app, live on every device and still working when the internet isn't. Built in Shillong for restaurants, fine dine, cafés and cloud kitchens.</p>
+              <p className="mt-5 max-w-xl text-lg text-muted-foreground">Billing, KOTs, QR ordering, guest loyalty and a waiter app, live on every device and still working when the internet isn't. Built in Tamil Nadu for India and Asia — restaurants, fine dine, cafés and cloud kitchens.</p>
               <div className="mt-7 flex flex-wrap gap-3">
                 <a href="#pricing" className="rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground hover:bg-primary-hover">See plans from ₹{PRICE_RANGE.low}/month</a>
                 <button type="button" onClick={() => setDemo(true)} className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 font-bold hover:bg-secondary"><Play className="size-4 fill-current text-primary" />Watch the demo</button>
               </div>
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                {["Works offline", "GST billing", "58 & 80 mm printers", "Live sync across devices"].map((t) => <li key={t} className="flex items-center gap-1.5"><Check className="size-4 text-primary" />{t}</li>)}
+                {["0% commission on your own orders", "Works offline", "GST billing", "Live sync across devices"].map((t) => <li key={t} className="flex items-center gap-1.5"><Check className="size-4 text-primary" />{t}</li>)}
               </ul>
             </div>
             <HeroMock />
@@ -154,6 +154,81 @@ function SitePage() {
           <p className="mx-auto mt-5 max-w-2xl text-center text-sm text-muted-foreground">Separate apps for each part of hospitality and tourism, all under one XTSY brand.</p>
         </Section>
 
+        {/* Own your brand, not the aggregator's */}
+        <Section id="brand" eyebrow="Your brand, your guests, your margin" title="Stop renting your customers from Swiggy and Zomato">
+          <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+            <div className="rounded-3xl border border-border bg-card p-6">
+              <p className="text-sm font-semibold text-destructive">What an aggregator order really costs</p>
+              <p className="mt-3 text-muted-foreground">Delivery aggregators take roughly <strong className="text-foreground">18–30% of every order</strong>, plus GST on that commission. The guest is theirs, not yours: you never get the phone number, so you can't bring them back yourself.</p>
+              <div className="mt-5 space-y-2.5">
+                {[["₹5,00,000", "delivery sales in a month"], ["− ₹1,25,000", "gone at 25% commission"], ["₹37,500 back", "if just 30% of it came through your own QR"]].map(([a, b], i) => (
+                  <div key={a} className={cn("flex flex-col gap-0.5 rounded-xl px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3", i === 2 ? "bg-success/15" : "bg-secondary")}>
+                    <span className={cn("whitespace-nowrap text-xl font-extrabold tabular-nums", i === 1 && "text-destructive", i === 2 && "text-success")}>{a}</span>
+                    <span className="text-sm text-muted-foreground sm:text-right">{b}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">Your own numbers will differ — put your delivery sales and your commission rate in and the arithmetic is the same.</p>
+            </div>
+            <div className="rounded-3xl border border-primary/40 bg-primary-tint/40 p-6">
+              <p className="text-sm font-semibold text-primary">What your own ordering gives you</p>
+              <ul className="mt-3 space-y-3">
+                {[
+                  ["0% commission", "Every rupee of a QR order stays with you. One flat monthly fee, whatever you sell."],
+                  ["The guest is yours", "Name, mobile and order history on your own guest list — not locked inside someone else's app."],
+                  ["Your prices, your offers", "No inflated menu to cover commission, no forced discounts to stay visible."],
+                  ["Bring them back", "WhatsApp the guests who already came. Points on their bill bring them in again."],
+                  ["Your name on everything", "Your logo and colours on the ordering page, the QR card and the printed bill."],
+                ].map(([t, d]) => (
+                  <li key={t} className="flex gap-2.5"><Check className="mt-0.5 size-4 shrink-0 text-primary" /><span><strong>{t}.</strong> <span className="text-muted-foreground">{d}</span></span></li>
+                ))}
+              </ul>
+              <p className="mt-5 rounded-xl bg-card p-3 text-sm text-muted-foreground">Keep the aggregators for discovery if they work for you. XTSY POS is how you stop depending on them.</p>
+            </div>
+          </div>
+        </Section>
+
+        {/* QR */}
+        <Section id="qr" eyebrow="Stunning on the table, in the room, on the street" title="One QR. Dine-in, takeaway, delivery and room service.">
+          <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.25fr]">
+            <QrShowcase />
+            <div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  [QrCode, "Printed cards that look the part", "Table tents and counter cards in the XTSY Pines or Classic theme, with your name, logo and table number already on them."],
+                  [Smartphone, "Opens straight on the menu", "No app, no sign-up, no landing page. Photos, veg and non-veg marks, prices and today's availability."],
+                  [ClipboardList, "The guest picks the kind of order", "Dine in at the table, takeaway with an arrival time, or delivery with a Google Maps pin so the rider finds them."],
+                  [ChefHat, "The counter chimes and accepts", "The order lands at POS Billdesk with a sound, the KOT prints, and the bill builds itself."],
+                  [Receipt, "Room service for hotels", "An in-room QR puts the order on the room bill, settled at check-out or whenever the desk asks."],
+                  [Gift, "Points on every QR order", "Guests who order from your QR earn points back and come in again for them."],
+                ].map(([Icon, t, d]) => {
+                  const I = Icon as typeof Store;
+                  return (
+                    <div key={t as string} className="rounded-2xl border border-border bg-card p-4">
+                      <I className="size-5 text-primary" />
+                      <p className="mt-2 font-semibold">{t as string}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{d as string}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Marketing and branding */}
+        <Section id="marketing" eyebrow="Marketing and branding tools" title="Boost your sales with the guests you already have">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Feature icon={MessageCircle} title="WhatsApp campaigns">Send an offer to guests who agreed to hear from you — by how recently they came, how often, or how much they spend.</Feature>
+            <Feature icon={Users} title="Your own guest list">Every bill builds it: name, mobile, visits, favourite dishes and points. It is yours, and it leaves with you.</Feature>
+            <Feature icon={Gift} title="Points that bring them back">Set the percentage; guests earn on every bill and spend it on the next one. No cards, no app.</Feature>
+            <Feature icon={Store} title="Your brand everywhere">Logo, colours and name on the ordering page, printed bills, KOTs and QR cards.</Feature>
+            <Feature icon={CalendarCheck} title="Win back quiet guests">Find the guests who haven't come in a month and message just them, instead of blasting everyone.</Feature>
+            <Feature icon={FileSpreadsheet} title="See what actually worked">Which dishes sell, which hours are busy, which offers brought guests back — in the dashboard, not a spreadsheet.</Feature>
+          </div>
+          <p className="mx-auto mt-5 max-w-2xl text-center text-sm text-muted-foreground">Marketing and branding tools come with Pro and Enterprise / Brand. Guest loyalty and your guest list start at Pro Lite.</p>
+        </Section>
+
         {/* Pricing */}
         <Section id="pricing" eyebrow="Simple monthly plans, per outlet" title="Pricing">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -188,6 +263,7 @@ function SitePage() {
               </article>
             ))}
           </div>
+          <PlanComparison />
           <p className="mt-5 text-center text-sm text-muted-foreground">Prices are per outlet per month. Users are devices signed in to each app: {Object.values(SEAT_NAMES).join(", ")}. No payment is taken on this website; we set you up after your enquiry.</p>
         </Section>
 
@@ -215,6 +291,91 @@ function SitePage() {
           <p className="text-base text-foreground">Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by <a href="https://xtsy.one" target="_blank" rel="noreferrer" className="font-semibold hover:text-primary">XTSY</a></p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/** A QR table card as it is printed, drawn in CSS — no image, so it stays crisp at any size. */
+function QrShowcase() {
+  return (
+    <div className="mx-auto w-full max-w-xs">
+      <div className="rounded-[2rem] border border-primary/30 bg-gradient-to-b from-card to-background p-6 text-center shadow-2xl">
+        <p className="font-brand text-3xl leading-none">TAB BISTRO</p>
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">by XTSY</p>
+        <div className="mx-auto mt-5 grid size-40 place-items-center rounded-2xl bg-white p-3" aria-hidden="true">
+          <svg viewBox="0 0 29 29" className="size-full" role="presentation">
+            {/* a decorative QR-like pattern, not a scannable code */}
+            <rect width="29" height="29" fill="#fff" />
+            {([[0, 0], [22, 0], [0, 22]] as const).map(([x, y]) => (
+              <g key={`${x}-${y}`} fill="#000">
+                <rect x={x} y={y} width="7" height="7" />
+                <rect x={x + 1} y={y + 1} width="5" height="5" fill="#fff" />
+                <rect x={x + 2} y={y + 2} width="3" height="3" />
+              </g>
+            ))}
+            {Array.from({ length: 150 }, (_, i) => {
+              const x = (i * 7) % 29;
+              const y = Math.floor((i * 11) / 29) % 29;
+              const inFinder = (x < 8 && y < 8) || (x > 20 && y < 8) || (x < 8 && y > 20);
+              return inFinder ? null : <rect key={i} x={x} y={y} width="1" height="1" fill="#000" />;
+            })}
+          </svg>
+        </div>
+        <p className="mt-5 text-sm font-bold">Scan to see the menu and order</p>
+        <p className="mt-1 text-xs text-muted-foreground">Dine in · Takeaway · Delivery</p>
+        <div className="mt-4 inline-flex rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground">Table D4</div>
+        <p className="mt-4 border-t border-border pt-3 text-[10px] text-muted-foreground">No app needed · Pay at the counter or on delivery</p>
+      </div>
+    </div>
+  );
+}
+
+/** Every plan beside every feature, so nothing is hidden behind a "contact us". */
+function PlanComparison() {
+  const seats: [SeatApp, string][] = [["pos", SEAT_NAMES.pos], ["manager", SEAT_NAMES.manager], ["waiter", SEAT_NAMES.waiter]];
+  return (
+    <div className="mt-10">
+      <p className="mb-2 text-center text-xs text-muted-foreground md:hidden">Swipe the table sideways to compare all four plans.</p>
+      <div className="overflow-x-auto rounded-2xl border border-border">
+      <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+        <caption className="sr-only">XTSY POS plans compared, feature by feature</caption>
+        <thead>
+          <tr className="bg-card">
+            <th scope="col" className="sticky left-0 bg-card p-3 font-semibold">Compare every plan</th>
+            {PUBLIC_PLANS.map((p) => (
+              <th key={p.id} scope="col" className={cn("p-3 text-center", p.highlight && "bg-primary-tint")}>
+                <span className="font-brand block text-xl leading-none">{p.name}</span>
+                <span className="mt-1 block text-xs font-normal text-muted-foreground">{priceText(p.price)}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {seats.map(([app, label]) => (
+            <tr key={app}>
+              <th scope="row" className="sticky left-0 bg-background p-3 font-medium">{label} users</th>
+              {PUBLIC_PLANS.map((p) => {
+                const n = p.seats[app];
+                return <td key={p.id} className={cn("p-3 text-center tabular-nums", p.highlight && "bg-primary-tint/40", n === 0 && "text-muted-foreground")}>{n === null ? "Unlimited" : n === 0 ? "—" : n}</td>;
+              })}
+            </tr>
+          ))}
+          {PUBLIC_FEATURES.map((f) => (
+            <tr key={f}>
+              <th scope="row" className="sticky left-0 bg-background p-3 font-normal">{FEATURE_NAMES[f]}</th>
+              {PUBLIC_PLANS.map((p) => {
+                const on = p.features.includes(f);
+                return (
+                  <td key={p.id} className={cn("p-3 text-center", p.highlight && "bg-primary-tint/40")}>
+                    {on ? <Check className="mx-auto size-4 text-primary" aria-label="Included" /> : <X className="mx-auto size-4 text-muted-foreground/40" aria-label="Not included" />}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
     </div>
   );
 }
