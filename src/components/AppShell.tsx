@@ -19,9 +19,10 @@ import { AdminCodeButton, PinGate, PolicySync } from "@/components/PinGate";
 import { usePolicy } from "@/lib/use-policy";
 import { can, screenPermitted } from "@/lib/permissions";
 import { GuestOrdersButton } from "@/components/GuestOrders";
+import { AdminAlerts } from "@/components/AdminAlerts";
 import { currentDevice, setAppMode, syncAppModeFromUrl, useAppMode } from "@/lib/app-mode";
 import { touchTerminal, useTerminalStatus } from "@/lib/terminal-actions";
-import { APPS, APP_LINKS, accessProblem, appsFor, type AppKind } from "@/lib/staff-login-logic";
+import { APP_DEVICES, APPS, APP_LINKS, accessProblem, appsFor, type AppKind } from "@/lib/staff-login-logic";
 import { isTestBrowser } from "@/lib/test-browser";
 import { SyncConflictAlert } from "@/components/SyncConflictAlert";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ import { isFramedPath } from "@/lib/framed-paths";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { SEAT_APPS, featureOn, subscriptionText, whatsappLink, type Feature } from "@/lib/plans";
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
+import { NameThisTerminal, TerminalWaiting } from "./TerminalApproval";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -332,8 +334,17 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   const problem = staffApp && user && (user.login || user.role !== "unknown")
     ? accessProblem({ login: user.login, role: user.role === "unknown" ? null : user.role, row: user.loginRow, app: pathname.startsWith("/waiter") ? "waiter" : app, device: currentDevice() })
     : null;
-  if (problem && user) return <AccessBlocked problem={problem} own={appsFor(user.login, user.role)[0] ?? null} />;
-  const gates = staffApp ? <><PolicySync /><PinGate /></> : null;
+  if (problem && user) {
+    // Offer another app this login may use that runs on this kind of device (never the one it can't open here).
+    const here = pathname.startsWith("/waiter") ? "waiter" : app;
+    const other = appsFor(user.login, user.role).find((a) => a !== here && APP_DEVICES[a].includes(currentDevice())) ?? null;
+    return <AccessBlocked problem={problem} own={other} />;
+  }
+  // A device seen for the first time waits for the admin to approve and name it (admin devices are approved at once).
+  if (staffApp && user && rid && terminal === "pending" && !isTestBrowser()) {
+    return <TerminalWaiting restaurantId={rid} app={pathname.startsWith("/waiter") ? "waiter" : app} device={currentDevice()} />;
+  }
+  const gates = staffApp ? <><PolicySync /><PinGate />{rid && isAdmin(user) && !isTestBrowser() ? <NameThisTerminal restaurantId={rid} app={pathname.startsWith("/waiter") ? "waiter" : app} /> : null}</> : null;
   if (!framed) return <>{gates}{children}</>;
   return <FrameContext.Provider value={setTone}>{gates}<Frame tone={tone}>{children}</Frame></FrameContext.Provider>;
 }
@@ -427,7 +438,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
               <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{APPS[app].name}</div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<AdminAlerts /><AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
         </header>
         {planNotice && plan ? (
           <a href={whatsappLink(`Hi XTSY, please renew the ${plan.planName} plan for ${restaurantName || "our restaurant"}.`)} target="_blank" rel="noreferrer"

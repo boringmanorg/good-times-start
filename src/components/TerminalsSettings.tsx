@@ -9,7 +9,7 @@ import { useStaff } from "@/lib/staff";
 import { can } from "@/lib/permissions";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { APPS, DEVICE_LABELS } from "@/lib/staff-login-logic";
-import { getDeviceId, loadTerminals, releaseTerminal, updateTerminal, type Terminal } from "@/lib/terminal-actions";
+import { decideTerminal, getDeviceId, loadTerminals, releaseTerminal, updateTerminal, type Terminal } from "@/lib/terminal-actions";
 import { setMarketingTerminal } from "@/lib/marketing-access";
 import { cn } from "@/lib/utils";
 
@@ -35,8 +35,8 @@ function Row({ t, here, restaurantId, store, marketing, onChanged }: { t: Termin
     <tr className={cn("align-middle", here && "bg-primary-tint/40")}>
       <td className="px-3 py-3 text-sm">{store}</td>
       <td className="px-3 py-3 font-mono text-sm font-semibold">{t.series || "—"}</td>
-      <td className="px-3 py-3"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", t.status === "blocked" ? "bg-destructive/10 text-destructive" : t.status === "over_plan" ? "bg-gold/15 text-warning" : "bg-success/10 text-success")}
-        title={t.status === "over_plan" ? "Your plan's seats for this app are full: release a device or ask XTSY to upgrade" : undefined}>{t.status === "blocked" ? "Blocked" : t.status === "over_plan" ? "Waiting for a seat" : "Active"}</span></td>
+      <td className="px-3 py-3"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", t.status === "blocked" ? "bg-destructive/10 text-destructive" : t.status === "over_plan" || t.status === "pending" ? "bg-gold/15 text-warning" : "bg-success/10 text-success")}
+        title={t.status === "over_plan" ? "Your plan's seats for this app are full: release a device or ask XTSY to upgrade" : undefined}>{t.status === "blocked" ? "Blocked" : t.status === "over_plan" ? "Waiting for a seat" : t.status === "pending" ? "Waiting for approval" : "Active"}</span></td>
       <td className="px-3 py-3 text-sm">
         {editing ? (
           <span className="flex items-center gap-1">
@@ -71,6 +71,42 @@ function Row({ t, here, restaurantId, store, marketing, onChanged }: { t: Termin
   );
 }
 
+/** New devices waiting for the admin: name and approve them, or turn them away. Cards, so it works on the admin's phone. */
+function PendingTerminals({ restaurantId, terminals, onChanged }: { restaurantId: string; terminals: Terminal[]; onChanged: () => void }) {
+  return (
+    <section aria-label="New terminals waiting for approval" className="rounded-2xl border border-gold/50 bg-gold/10 p-4">
+      <h3 className="text-sm font-bold text-warning">New terminals waiting for your approval</h3>
+      <p className="mt-0.5 text-xs text-muted-foreground">Approve only devices you recognise. You can also approve on the device itself with the 60-second admin code.</p>
+      <ul className="mt-3 grid gap-3 md:grid-cols-2">{terminals.map((t) => <PendingCard key={t.device_id} t={t} restaurantId={restaurantId} onChanged={onChanged} />)}</ul>
+    </section>
+  );
+}
+
+function PendingCard({ t, restaurantId, onChanged }: { t: Terminal; restaurantId: string; onChanged: () => void }) {
+  const [name, setName] = useState(t.app === "pos" ? "Counter" : t.app === "waiter" ? "Waiter tablet" : "Manager phone");
+  const [busy, setBusy] = useState(false);
+  const decide = async (approve: boolean) => {
+    setBusy(true);
+    try {
+      const result = await decideTerminal(restaurantId, t.device_id, name, approve);
+      toast.success(!approve ? "Terminal turned away (blocked)" : result === "over_plan" ? `${name.trim()} approved, but the plan has no free place for this app yet` : `${name.trim()} approved`);
+      onChanged();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <li className="rounded-xl border border-border bg-card p-3">
+      <p className="text-sm font-semibold">{t.app ? APPS[t.app].name : "Terminal"} · {t.device_kind ? DEVICE_LABELS[t.device_kind] : "device"}</p>
+      <p className="text-xs text-muted-foreground">{t.login_email || "—"} · first seen {ago(t.first_seen)}{t.last_location ? ` · ${t.last_location}` : ""}{t.last_ip ? ` · ${t.last_ip}` : ""}</p>
+      <label className="mt-2 block text-xs font-medium">Name<input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-md border border-input bg-background px-2.5 py-2 text-sm" /></label>
+      <div className="mt-2 flex gap-2">
+        <Button size="sm" disabled={busy || name.trim().length < 2} onClick={() => void decide(true)}><Check />Approve</Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => void decide(false)}><X />Turn away</Button>
+      </div>
+    </li>
+  );
+}
+
 export function TerminalsSettings() {
   const { user } = useStaff();
   const settings = useRestaurantSettings();
@@ -90,6 +126,7 @@ export function TerminalsSettings() {
         </div>
         <Button size="sm" variant="outline" onClick={() => void q.refetch()}><RefreshCw className={q.isFetching ? "animate-spin" : ""} />Refresh</Button>
       </div>
+      {q.data?.some((t) => t.status === "pending") ? <PendingTerminals restaurantId={restaurantId} terminals={q.data.filter((t) => t.status === "pending")} onChanged={() => void queryClient.invalidateQueries({ queryKey: ["terminals", restaurantId] })} /> : null}
       {q.isError ? <p className="rounded-xl bg-secondary p-4 text-sm">{q.error instanceof Error ? q.error.message : "Couldn't load terminals."}</p> : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full min-w-[62rem] text-left">

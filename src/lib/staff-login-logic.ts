@@ -29,6 +29,9 @@ export const APP_LINKS: Record<AppKind, string> = { manager: "/manager", pos: "/
 
 export const DEVICE_LABELS: Record<DeviceKind, string> = { android: "Android phone or tablet", ios: "iPhone or iPad", desktop: "Windows or Mac computer" };
 
+/** Where each app may run: POS Manager anywhere, POS Billdesk on computers, Waiter Pro on phones and tablets. */
+export const APP_DEVICES: Record<AppKind, DeviceKind[]> = { manager: ["android", "ios", "desktop"], pos: ["desktop"], waiter: ["android", "ios"] };
+
 /** "admin", "Admin", "admin@xtsy.pos" all mean the admin login; any other email passes through. */
 export function emailFromInput(text: string): string {
   const t = text.trim().toLowerCase();
@@ -74,6 +77,11 @@ export function accessProblem(input: { login: LoginId | null; role: string | nul
   if (!apps.includes(app)) {
     const own = apps[0] as AppKind;
     return `${login ? LOGINS[login].label : "This login"} uses ${APPS[own].name}, not ${APPS[app].name}.`;
+  }
+  // Each app runs on its own kind of device: POS Billdesk on computers, Waiter Pro on phones and tablets.
+  const fits = APP_DEVICES[app];
+  if (!fits.includes(device)) {
+    return `${APPS[app].name} runs on ${fits.map((d) => DEVICE_LABELS[d]).join(" or ")} only.${app === "pos" ? " On a phone or tablet, use POS Manager or Waiter Pro." : app === "waiter" ? " On a computer, use POS Billdesk." : ""}`;
   }
   if (login !== "admin" && row && !row.devices.includes(device)) {
     return `The ${LOGINS[row.login].label} login is set up for ${row.devices.map((d) => DEVICE_LABELS[d]).join(" or ")} only. The admin can change this in Settings → Logins.`;

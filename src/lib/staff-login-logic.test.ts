@@ -36,17 +36,27 @@ describe("internal logins", () => {
     expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "pos", device: "android" })).toMatch(/Windows or Mac computer only/);
     expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "manager", device: "desktop" })).toMatch(/uses POS Billdesk, not POS Manager/);
     expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "android" })).toBeNull();
-    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "desktop" })).toMatch(/Android phone or tablet only/);
+    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "desktop" })).toMatch(/Waiter Pro runs on Android phone or tablet or iPhone or iPad only/);
+    // Per-login device choice still applies inside the app's own devices.
+    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "ios" })).toMatch(/set up for Android phone or tablet only/);
     expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter", { devices: ["android", "ios"] }), app: "waiter", device: "ios" })).toBeNull();
     expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter", { active: false }), app: "waiter", device: "android" })).toMatch(/switched off/);
   });
 
-  it("never locks the admin out of a device", () => {
+  it("never locks the admin out of POS Manager, on any device", () => {
     for (const device of ["android", "ios", "desktop"] as const) {
-      for (const app of ["manager", "pos", "waiter"] as const) {
-        expect(accessProblem({ login: "admin", role: "owner", row: row("admin", { devices: ["desktop"] }), app, device })).toBeNull();
-      }
+      expect(accessProblem({ login: "admin", role: "owner", row: row("admin", { devices: ["desktop"] }), app: "manager", device })).toBeNull();
     }
+  });
+
+  it("runs each app only on its own kind of device, for everyone", () => {
+    const admin = (app: "pos" | "waiter", device: "android" | "ios" | "desktop") => accessProblem({ login: "admin", role: "owner", row: row("admin"), app, device });
+    expect(admin("pos", "desktop")).toBeNull();
+    expect(admin("pos", "android")).toMatch(/POS Billdesk runs on Windows or Mac computer only/);
+    expect(admin("pos", "ios")).toMatch(/use POS Manager or Waiter Pro/);
+    expect(admin("waiter", "android")).toBeNull();
+    expect(admin("waiter", "ios")).toBeNull();
+    expect(admin("waiter", "desktop")).toMatch(/On a computer, use POS Billdesk/);
   });
 
   it("knows which app a window is", () => {

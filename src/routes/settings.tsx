@@ -1,5 +1,5 @@
 import { useFirstSyncDone } from "@/lib/use-first-sync";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
@@ -395,6 +395,9 @@ function SettingsPage() {
     const h = window.location.hash.slice(1) as Tab;
     return CARDS.some((c) => c.v === h) ? h : null;
   });
+  // Alerts link to a section (#terminals, #plan); follow it even when Settings is already open.
+  const hash = useRouterState({ select: (st) => st.location.hash });
+  useEffect(() => { const h = hash.replace(/^#/, "") as Tab; if (h && CARDS.some((c) => c.v === h)) setTab(h); }, [hash]);
   const choose = (t: Tab | null) => {
     setTab(t);
     try { window.history.replaceState(null, "", t ? `#${t}` : window.location.pathname); } catch { /* ignore */ }

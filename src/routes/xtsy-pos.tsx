@@ -2,12 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent, type ReactNode } from "react";
 import {
   CalendarCheck, Gift, Check, ChefHat, ClipboardList, FileSpreadsheet, KeyRound, LayoutDashboard, MessageCircle, Printer,
-  QrCode, Receipt, Send, ShieldCheck, ShoppingBasket, Smartphone, Store, Tablet, Users, WifiOff, X,
+  QrCode, Receipt, Send, ShieldCheck, ShoppingBasket, Smartphone, Store, Tablet, Users, WifiOff, X, Play,
 } from "lucide-react";
 import { FEATURE_NAMES, PUBLIC_FEATURES, PUBLIC_PLANS, SEAT_NAMES, priceText, seatText, whatsappLink, type SeatApp } from "@/lib/plans";
 import { FAQ, PRICE_RANGE, SITE_DESCRIPTION, SITE_TITLE, enquiryMessage, enquiryProblem, type Enquiry } from "@/lib/site-content";
 import { siteUrl } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
+import { DemoTour } from "@/components/site/DemoTour";
 import logo from "@/assets/logo.png";
 
 /*
@@ -52,6 +53,7 @@ const NAV = [{ href: "#apps", l: "Apps" }, { href: "#features", l: "Features" },
 
 function SitePage() {
   const [plan, setPlan] = useState("");
+  const [demo, setDemo] = useState(false);
   const pick = (name: string) => { setPlan(name); document.getElementById("enquire")?.scrollIntoView({ behavior: "smooth" }); };
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -64,9 +66,13 @@ function SitePage() {
           <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex" aria-label="Website">
             {NAV.map((n) => <a key={n.href} href={n.href} className="hover:text-foreground">{n.l}</a>)}
           </nav>
-          <a href="#enquire" className="rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover">Get started</a>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setDemo(true)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/60 px-4 py-2 text-sm font-bold text-primary hover:bg-primary-tint"><Play className="size-3.5 fill-current" />Demo</button>
+            <a href="#enquire" className="hidden rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover min-[400px]:inline-block">Get started</a>
+          </div>
         </div>
       </header>
+      {demo ? <DemoTour onClose={() => setDemo(false)} /> : null}
 
       <main id="top">
         {/* Hero */}
@@ -79,7 +85,7 @@ function SitePage() {
               <p className="mt-5 max-w-xl text-lg text-muted-foreground">Billing, KOTs, QR ordering, guest loyalty and a waiter app, live on every device and still working when the internet isn't. Built in Shillong for restaurants, fine dine, cafés and cloud kitchens.</p>
               <div className="mt-7 flex flex-wrap gap-3">
                 <a href="#pricing" className="rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground hover:bg-primary-hover">See plans from ₹{PRICE_RANGE.low}/month</a>
-                <a href="#enquire" className="rounded-full border border-border px-6 py-3 font-bold hover:bg-secondary">Send an enquiry</a>
+                <button type="button" onClick={() => setDemo(true)} className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 font-bold hover:bg-secondary"><Play className="size-4 fill-current text-primary" />Watch the demo</button>
               </div>
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
                 {["Works offline", "GST billing", "58 & 80 mm printers", "Live sync across devices"].map((t) => <li key={t} className="flex items-center gap-1.5"><Check className="size-4 text-primary" />{t}</li>)}
