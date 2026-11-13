@@ -127,3 +127,23 @@
 - Renewal and payment status are the super admin's alone: no self-serve path anywhere in the apps. Console → Restaurants → Renewal and payment records a payment by hand (platform_record_payment: amount, 1-36 months, method, reference), which moves paid_until forward from the later of today / current paid_until and sets status active; platform_payments lists the history (account_events kind 'payment_recorded').
 - Restaurant info (name, QR slug, city, billing phone and email) is edited only in the console (platform_update_restaurant); the slug is validated and unique, and the console warns that changing it breaks printed QR cards.
 - Staff passwords are set and reset only by XTSY: the restaurant-side reset UI is gone from /login and Settings → Logins, and resetLoginPassword / requestResetCode / confirmResetCode now refuse on the server. The console's ConsoleLogins is the only path.
+
+## Plan features after 13 Nov 2026 (docs/roadmap.md)
+
+Five features were added: `recipes` (Pro Lite up), `gift_cards` and `feedback` (Pro up),
+`accounting` (Enterprise / Brand only) and `kds` (no plan carries it — XTSY switches the
+kitchen screen on per restaurant with the console's feature override). `insights` is
+confirmed as part of Basic.
+
+`kds` and `accounting` are in `DEFAULT_OFF` in `src/lib/plans.ts`: unknown means OFF for
+them, unlike every other feature, which fails open so billing is never lost. Add a feature
+to `DEFAULT_OFF` whenever it must not appear by itself on a cloud that hasn't been updated.
+
+`/kitchen` no longer redirects to `/tables`. It is gated by `SCREEN_FEATURE["/kitchen"] =
+"kds"` in `AppShell`, and the off-plan screen has its own wording for it ("isn't switched on
+for this restaurant", not "isn't part of the plan").
+
+`restaurant_entitlements()` names each feature key in an array, so **any new feature must be
+added there too** or the devices never see it. The migration that does this, together with
+the plans-table update, is `docs/migrations/2026-11-13-new-plan-features.sql` — apply it with
+the owner's approval before relying on any of the five.

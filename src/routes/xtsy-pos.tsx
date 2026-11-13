@@ -264,7 +264,7 @@ function SitePage() {
             ))}
           </div>
           <PlanComparison />
-          <p className="mt-5 text-center text-sm text-muted-foreground">Prices are per outlet per month. Users are devices signed in to each app: {Object.values(SEAT_NAMES).join(", ")}. No payment is taken on this website; we set you up after your enquiry.</p>
+          <p className="mt-5 text-center text-sm text-muted-foreground">Prices are per outlet per month. Users are devices signed in to each app: {Object.values(SEAT_NAMES).join(", ")}. No payment is taken on this website; we set you up after your enquiry. Support runs every day of the week, Saturday and Sunday included, except national holidays.</p>
         </Section>
 
         {/* Enquiry */}

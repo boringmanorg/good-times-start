@@ -72,7 +72,8 @@ function policyAllows(role: string, to: NavPath): boolean {
 }
 
 /** Screens that need a plan feature (all others come with every plan). */
-const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app" };
+// The kitchen screen is off until XTSY switches it on for the restaurant, so it fails closed (see DEFAULT_OFF).
+const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app", "/kitchen": "kds" };
 
 /** Screens each app shows, in menu order. */
 const APP_SCREENS: Record<AppKind, NavPath[]> = {
@@ -462,7 +463,10 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
           <SyncConflictAlert />
           {needsRestaurant ? <NotLinked /> : blocked ? (
             <div className="mx-auto max-w-md p-8 text-center">
-              {current && notInPlan(current.to) ? <>
+              {current && notInPlan(current.to) && SCREEN_FEATURE[current.to] === "kds" ? <>
+                <p className="font-semibold">The kitchen screen isn't switched on for this restaurant</p>
+                <p className="mt-1 text-sm text-muted-foreground">{isAdmin(user) ? "It isn't sold with a plan — ask XTSY to switch it on and it appears here." : "Ask the admin to have XTSY switch it on."}</p>
+              </> : current && notInPlan(current.to) ? <>
                 <p className="font-semibold">{current.label} isn't part of the {plan?.planName ?? "current"} plan</p>
                 <p className="mt-1 text-sm text-muted-foreground">{isAdmin(user) ? "See Settings → Plan & subscription, or contact XTSY to upgrade." : "Ask the admin if you need it."}</p>
               </> : current?.to === "/marketing" && marketing.denied === "terminal" ? <>

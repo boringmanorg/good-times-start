@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PUBLIC_PLANS, featureOn, priceText, seatText, subscriptionText, whatsappLink, type Entitlements } from "./plans";
+import { DEFAULT_OFF, PUBLIC_FEATURES, PUBLIC_PLANS, featureOn, priceText, seatText, subscriptionText, whatsappLink, type Entitlements } from "./plans";
 
 const ent = (over: Partial<Entitlements> = {}): Entitlements => ({
   plan: "pro_lite", planName: "Pro Lite", price: 199, quote: false, status: "active", paidUntil: null, trialEndsAt: null, live: true, complimentary: false,
@@ -16,12 +16,16 @@ describe("plans", () => {
   it("splits the features as XTSY sells them", () => {
     const f = (id: string) => PUBLIC_PLANS.find((p) => p.id === id)!.features;
     for (const id of ["basic", "pro_lite", "pro", "enterprise"]) expect(f(id)).toEqual(expect.arrayContaining(["billing", "menu", "gst_reports", "manager_app"]));
-    for (const x of ["qr_ordering", "purchases", "vendors", "loyalty", "bookings", "waiter_app", "admin_approval"]) expect(f("basic")).not.toContain(x);
-    expect(f("pro_lite")).toEqual(expect.arrayContaining(["purchases", "vendors", "loyalty", "bookings", "admin_approval", "insights"]));
-    for (const x of ["qr_ordering", "waiter_app", "marketing"]) expect(f("pro_lite")).not.toContain(x);
-    expect(f("pro")).toEqual(expect.arrayContaining(["waiter_app", "qr_ordering", "online_ordering", "marketing"]));
-    expect(f("pro")).not.toContain("audit_log");
-    expect(f("enterprise")).toContain("audit_log");
+    expect(f("basic")).toContain("insights"); // the sales dashboard is part of Basic
+    for (const x of ["qr_ordering", "purchases", "vendors", "recipes", "loyalty", "bookings", "waiter_app", "admin_approval"]) expect(f("basic")).not.toContain(x);
+    expect(f("pro_lite")).toEqual(expect.arrayContaining(["purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval", "insights"]));
+    for (const x of ["qr_ordering", "waiter_app", "marketing", "gift_cards", "feedback"]) expect(f("pro_lite")).not.toContain(x);
+    expect(f("pro")).toEqual(expect.arrayContaining(["waiter_app", "qr_ordering", "online_ordering", "marketing", "gift_cards", "feedback"]));
+    for (const x of ["audit_log", "accounting"]) expect(f("pro")).not.toContain(x);
+    expect(f("enterprise")).toEqual(expect.arrayContaining(["audit_log", "accounting"]));
+    // The kitchen screen is switched on per restaurant by XTSY, so no plan carries it.
+    for (const id of ["basic", "pro_lite", "pro", "enterprise"]) expect(f(id)).not.toContain("kds");
+    expect(PUBLIC_FEATURES).not.toContain("kds");
   });
 
   it("never locks a restaurant out when the plan is unknown", () => {
@@ -29,6 +33,14 @@ describe("plans", () => {
     expect(featureOn(ent(), "marketing")).toBe(false);
     expect(featureOn(ent(), "waiter_app")).toBe(true);
     expect(featureOn(ent(), "audit_log")).toBe(true); // not listed: on
+  });
+
+  it("never switches on by itself a feature XTSY has to turn on", () => {
+    for (const f of DEFAULT_OFF) {
+      expect(featureOn(null, f)).toBe(false);
+      expect(featureOn(ent(), f)).toBe(false); // not listed: off
+      expect(featureOn(ent({ features: { [f]: true } }), f)).toBe(true);
+    }
   });
 
   it("words prices, seats and renewals", () => {
