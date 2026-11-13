@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ago, loadStaff, type StaffLogin } from "@/lib/console-api";
 import { createPlatformLogin, updatePlatformLogin } from "@/lib/platform-logins.functions";
+import { consoleToken } from "@/lib/console-client";
 import { STAFF_ROLES, emailProblem, restaurantDomain, suggestEmail, type StaffRole } from "@/lib/platform-login-logic";
 import { passwordProblem } from "@/lib/staff-login-logic";
 import { cn } from "@/lib/utils";
@@ -67,7 +68,7 @@ function AddLogin({ restaurantId, domain, taken, onDone, onCancel }: { restauran
   const save = async () => {
     setBusy(true);
     try {
-      const r = await createPlatformLogin({ data: { restaurantId, email, password, role, displayName: name } });
+      const r = await createPlatformLogin({ data: { token: await consoleToken(), restaurantId, email, password, role, displayName: name } });
       toast.success(`Login ${r.email} created. Share the password with the person in person.`);
       onDone();
     } catch (e) { toast.error(message(e)); } finally { setBusy(false); }
@@ -107,7 +108,7 @@ function EditLogin({ restaurantId, login, onDone, onCancel }: { restaurantId: st
   const run = async (change: { email?: string; displayName?: string; role?: string; password?: string; signIn?: boolean; remove?: boolean }, done: string) => {
     setBusy(true);
     try {
-      await updatePlatformLogin({ data: { restaurantId, userId: login.userId, ...change } as never });
+      await updatePlatformLogin({ data: { token: await consoleToken(), restaurantId, userId: login.userId, ...change } as never });
       toast.success(done);
       onDone();
     } catch (e) { toast.error(message(e)); } finally { setBusy(false); }

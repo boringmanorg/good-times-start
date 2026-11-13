@@ -8,13 +8,17 @@ import { passwordProblem } from "@/lib/staff-login-logic";
 import { cleanEmail, emailProblem, isStaffRole, wouldLeaveNoOwner } from "@/lib/platform-login-logic";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Loose = { from: (t: string) => any; rpc: (f: string, a?: Record<string, unknown>) => any; auth: { admin: any } };
+type Loose = { from: (t: string) => any; rpc: (f: string, a?: Record<string, unknown>) => any; auth: { admin: any; getUser: (t: string) => any } };
 const admin = () => supabaseAdmin as unknown as Loose;
 const BANNED_FOREVER = "876000h"; // ~100 years: "sign-in off" until switched back on
 
-export async function assertSuperAdmin(userClient: unknown): Promise<void> {
-  const { data, error } = await (userClient as Loose).rpc("is_platform_admin");
-  if (error || data !== true) throw new Error("Super admin only.");
+/** The super admin behind a console session token; throws for anyone else. */
+export async function superAdminFromToken(token: string): Promise<string> {
+  const { data, error } = await admin().auth.getUser(token);
+  const user = data?.user as { id: string; email?: string; email_confirmed_at?: string | null } | undefined;
+  if (error || !user) throw new Error("Your console session has ended. Sign in again.");
+  if (!user.email_confirmed_at || !(await isPlatformAccount(user.id, user.email ?? ""))) throw new Error("Super admin only.");
+  return user.id;
 }
 
 interface Member { user_id: string; role: string; display_name: string; email: string }

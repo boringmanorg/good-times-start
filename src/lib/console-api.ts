@@ -1,10 +1,10 @@
-import { supabase } from "@/integrations/supabase/client";
+import { consoleClient } from "./console-client";
 import type { Feature, SeatApp } from "./plans";
 
 /* Super admin console: thin wrappers over the platform_* cloud functions (super admin only). */
 
 const rpc = async <T,>(fn: string, args: Record<string, unknown> = {}): Promise<T> => {
-  const { data, error } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: T; error: { message: string } | null }>)(fn, args);
+  const { data, error } = await (consoleClient().rpc.bind(consoleClient()) as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: T; error: { message: string } | null }>)(fn, args);
   if (error) throw new Error(/function .* does not exist|schema cache/i.test(error.message) ? "The cloud update for plans and the console hasn't been applied yet." : error.message);
   return data;
 };
@@ -40,7 +40,7 @@ export const whoami = () => rpc<WhoAmI>("platform_whoami");
 export const loadOverview = () => rpc<Overview>("platform_overview");
 export const loadRestaurants = () => rpc<RestaurantRow[]>("platform_restaurants");
 export async function loadPlans(): Promise<PlanRow[]> {
-  const { data, error } = await (supabase.from as unknown as (t: string) => { select: (s: string) => { order: (c: string) => Promise<{ data: PlanRow[] | null; error: { message: string } | null }> } })("plans").select("*").order("sort");
+  const { data, error } = await (consoleClient().from.bind(consoleClient()) as unknown as (t: string) => { select: (s: string) => { order: (c: string) => Promise<{ data: PlanRow[] | null; error: { message: string } | null }> } })("plans").select("*").order("sort");
   if (error) throw new Error(error.message);
   return data ?? [];
 }
