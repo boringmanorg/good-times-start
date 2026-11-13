@@ -57,7 +57,9 @@ function ConsoleSignIn() {
     e.preventDefault();
     setBusy(true); setMessage("");
     const id = email.trim().toLowerCase();
-    const { error } = await supabase.auth.signInWithPassword({ email: id.includes("@") ? id : `${id}@xtsy.pos`, password });
+    // The super admin signs in with a real email (admin@xtsy.one); restaurant short names never apply here.
+    if (!id.includes("@")) { setMessage("Sign in with the super admin email address."); setBusy(false); return; }
+    const { error } = await supabase.auth.signInWithPassword({ email: id, password });
     setBusy(false);
     if (error) setMessage(/invalid/i.test(error.message) ? "Wrong sign-in or password." : "Couldn't sign in. Check the internet and try again.");
   };
@@ -68,8 +70,8 @@ function ConsoleSignIn() {
           <img src={logo} alt="" width={36} height={36} className="rounded-[10px]" />
           <div><p className="font-brand text-2xl leading-none">XTSY POS</p><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Super admin</p></div>
         </div>
-        <label className="mt-6 block text-sm font-medium">Sign-in
-          <input autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-3 text-base" />
+        <label className="mt-6 block text-sm font-medium">Email
+          <input type="email" inputMode="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-3 text-base" />
         </label>
         <label className="mt-3 block text-sm font-medium">Password
           <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-3 text-base" />

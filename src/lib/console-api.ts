@@ -52,6 +52,12 @@ export const savePlan = (p: { id: string; name: string; monthly: number; billdes
 export const setTerminal = (restaurant: string, device: string, action: "active" | "blocked" | "release") =>
   rpc<string>("platform_set_terminal", { _restaurant: restaurant, _device: device, _action: action });
 
+export interface StaffLogin {
+  userId: string; email: string; role: string; displayName: string; internal: "admin" | "billdesk" | "waiter" | null;
+  lastSignIn: string | null; createdAt: string | null; signInOff: boolean; devices: number;
+}
+export const loadStaff = (restaurant: string) => rpc<StaffLogin[]>("platform_staff", { _restaurant: restaurant });
+
 export const bytes = (n: number) => n >= 1e9 ? `${(n / 1e9).toFixed(2)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${(n / 1e3).toFixed(0)} KB` : `${n} B`;
 export const ago = (iso: string | null, now = Date.now()) => {
   if (!iso) return "never";

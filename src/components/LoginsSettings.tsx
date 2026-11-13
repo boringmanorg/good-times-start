@@ -24,10 +24,13 @@ const db = () => supabase as unknown as { from: (t: string) => any };
 async function loadLogins(): Promise<LoginRow[]> {
   // Creates any missing login and links all three; never changes a password.
   await ensureInternalLogins();
-  const { data, error } = await db().from("staff_logins").select("login, active, devices, whatsapp, display_name");
+  const { data, error } = await db().from("staff_logins").select("login, email, active, devices, whatsapp, display_name");
   if (error) throw new Error("The database needs updating first (migration 0010).");
   return ((data ?? []) as LoginRow[]).sort((a, b) => ORDER.indexOf(a.login) - ORDER.indexOf(b.login));
 }
+
+/** The login's real address: XTSY can rename built-in logins (e.g. admin@xtsy.pos → admin@tabbistro.pos). */
+const emailOf = (row: LoginRow) => (row as LoginRow & { email?: string }).email || LOGINS[row.login].email;
 
 function LoginCard({ row, onSaved }: { row: LoginRow; onSaved: () => void }) {
   const isAdminLogin = row.login === "admin";
@@ -56,7 +59,7 @@ function LoginCard({ row, onSaved }: { row: LoginRow; onSaved: () => void }) {
     try {
       await resetLoginPassword({ data: { login: row.login, password } });
       setPassword("");
-      toast.success(`New password set for ${LOGINS[row.login].email}`);
+      toast.success(`New password set for ${emailOf(row)}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't change the password");
     }
@@ -67,7 +70,7 @@ function LoginCard({ row, onSaved }: { row: LoginRow; onSaved: () => void }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-bold">{LOGINS[row.login].label}</h3>
-          <p className="font-mono text-sm">{LOGINS[row.login].email}</p>
+          <p className="font-mono text-sm">{emailOf(row)}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{APPS[LOGINS[row.login].app].name}{isAdminLogin ? ", and every other screen" : ""}</p>
         </div>
         {isAdminLogin ? <span className="inline-flex items-center gap-1 rounded-full bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary"><ShieldCheck className="size-3.5" />Always on, any device</span> : (

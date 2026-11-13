@@ -40,11 +40,12 @@ UPDATE public.accounts SET plan_id = 'pro', status = 'active', paid_until = '202
   notes = 'First onboarded restaurant cum hotel. Pro plan, ₹399/month.'
 WHERE id = '1b981853-bc72-43e6-93f6-3aaf810761b4' AND plan_id = 'owner';
 
--- Super admin: a separate sign-in (server@xtsy.pos), never a restaurant login. Listed by email so the
--- account can be created later in Cloud → Users; only a confirmed account with that email gets in.
+-- Super admin: admin@xtsy.one, a real XTSY address and never a restaurant login. Listed by email;
+-- only a confirmed account with that email gets in.
 CREATE TABLE IF NOT EXISTS public.platform_admin_emails (email text PRIMARY KEY CHECK (email = lower(email)), added_at timestamptz NOT NULL DEFAULT now());
 ALTER TABLE public.platform_admin_emails ENABLE ROW LEVEL SECURITY; -- no policies: nobody reads it directly
-INSERT INTO public.platform_admin_emails (email) VALUES ('server@xtsy.pos') ON CONFLICT DO NOTHING;
+INSERT INTO public.platform_admin_emails (email) VALUES ('admin@xtsy.one') ON CONFLICT DO NOTHING;
+DELETE FROM public.platform_admin_emails WHERE email <> 'admin@xtsy.one';
 CREATE OR REPLACE FUNCTION public.is_platform_admin() RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $$
   SELECT auth.uid() IS NOT NULL AND (
@@ -282,12 +283,27 @@ BEGIN
   RETURN coalesce(result, 'missing');
 END $$;
 
+-- Every login of one restaurant, with its real sign-in address and state (super admin only).
+CREATE OR REPLACE FUNCTION public.platform_staff(_restaurant uuid) RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NOT is_platform_admin() THEN RAISE EXCEPTION 'Super admin only'; END IF;
+  RETURN coalesce((SELECT jsonb_agg(jsonb_build_object(
+      'userId', m.user_id, 'email', coalesce(u.email, m.email), 'role', m.role, 'displayName', coalesce(nullif(m.display_name, ''), split_part(coalesce(u.email, m.email), '@', 1)),
+      'internal', s.login, 'lastSignIn', u.last_sign_in_at, 'createdAt', u.created_at,
+      'signInOff', coalesce(u.banned_until > now(), false),
+      'devices', (SELECT count(*) FROM terminals t WHERE t.restaurant_id = _restaurant AND t.user_id = m.user_id))
+    ORDER BY array_position(ARRAY['owner','manager','cashier','captain','kitchen']::text[], m.role::text), coalesce(u.email, m.email))
+    FROM restaurant_members m LEFT JOIN auth.users u ON u.id = m.user_id LEFT JOIN staff_logins s ON s.user_id = m.user_id
+    WHERE m.restaurant_id = _restaurant), '[]'::jsonb);
+END $$;
+
 REVOKE ALL ON FUNCTION public.account_of(uuid), public.account_feature(uuid, text), public.plan_seats(uuid, text), public.enforce_terminal_seats() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.restaurant_entitlements(uuid), public.platform_whoami(), public.platform_restaurants(), public.platform_overview(),
   public.platform_update_account(uuid, text, text, timestamptz, boolean, jsonb, jsonb, text),
   public.platform_save_plan(text, text, integer, integer, integer, integer, jsonb, boolean, boolean, text),
-  public.platform_set_terminal(uuid, text, text) FROM PUBLIC, anon;
+  public.platform_set_terminal(uuid, text, text), public.platform_staff(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.restaurant_entitlements(uuid), public.platform_whoami(), public.platform_restaurants(), public.platform_overview(),
   public.platform_update_account(uuid, text, text, timestamptz, boolean, jsonb, jsonb, text),
   public.platform_save_plan(text, text, integer, integer, integer, integer, jsonb, boolean, boolean, text),
-  public.platform_set_terminal(uuid, text, text) TO authenticated;
+  public.platform_set_terminal(uuid, text, text), public.platform_staff(uuid) TO authenticated;

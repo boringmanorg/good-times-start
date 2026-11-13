@@ -7,6 +7,7 @@ import { ago, loadPlans, loadRestaurants, setTerminal, updateAccount, type PlanR
 import { FEATURES, FEATURE_NAMES, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Panel, field } from "./ConsoleBits";
+import { ConsoleLogins } from "./ConsoleLogins";
 
 const STATUSES = [
   { v: "active", l: "Active" }, { v: "trialing", l: "Trial" }, { v: "past_due", l: "Payment due" }, { v: "suspended", l: "Paused" }, { v: "cancelled", l: "Ended" },
@@ -21,7 +22,7 @@ export function ConsoleRestaurants() {
     <div className="space-y-5">
       <div>
         <h1 className="font-brand text-3xl">Restaurants</h1>
-        <p className="text-sm text-muted-foreground">Plans, subscriptions, feature switches and devices. Payments happen outside the software: record renewals here.</p>
+        <p className="text-sm text-muted-foreground">Plans, subscriptions, feature switches, logins and devices. Payments happen outside the software: record renewals here.</p>
       </div>
       {rows.data.map((r) => <RestaurantCard key={r.id} r={r} plans={plans.data ?? []} />)}
     </div>
@@ -132,6 +133,8 @@ function RestaurantCard({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
           <div className="lg:col-span-2"><Button disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save subscription"}</Button></div>
         </div>
       ) : <p className="mt-4 text-sm text-warning">This restaurant has no subscription account yet.</p>}
+
+      <ConsoleLogins restaurantId={r.id} restaurantName={r.name} />
 
       <h3 className="mt-6 text-sm font-semibold">Devices</h3>
       <div className="mt-2 overflow-x-auto">
