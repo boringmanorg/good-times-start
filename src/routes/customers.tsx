@@ -115,7 +115,7 @@ function CustomerDetail({ customer, stats, orders, loyaltyOn, onClose }: { custo
               <li key={o.uid ?? o.billNo} className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm">
                 <div className="min-w-0 flex-1"><div className="flex flex-wrap justify-between gap-x-2"><span>{new Date(o.createdAt).toLocaleDateString("en-IN")} <span className="text-muted-foreground">{o.billNo}</span></span><span className="font-semibold">{formatINR(o.total, 0)}</span></div>
                 <div className="truncate text-xs text-muted-foreground" title={o.lines.map((l) => `${l.qty} ${l.name}`).join(", ")}>{o.lines.map((l) => `${l.qty} ${l.name}`).join(", ")}</div>
-                {o.feedback ? <div className="mt-0.5 text-xs"><span className="font-semibold text-gold-foreground">{o.feedback.rating}/5</span>{o.feedback.comment ? ` "${o.feedback.comment}"` : ""}</div> : null}
+                {o.feedback ? <div className="mt-0.5 text-xs"><span className="font-semibold text-warning">{o.feedback.rating}/5</span>{o.feedback.comment ? ` "${o.feedback.comment}"` : ""}</div> : null}
                 </div><BillPrintButton order={o} className="shrink-0" />
               </li>
             ))}

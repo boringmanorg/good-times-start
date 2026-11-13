@@ -38,16 +38,17 @@ export function GuestDetailsFields({
   const custom = maxGuests > 6 && (customMode || (guestCount ?? 0) > 6);
 
   return (
-    <div className="mt-2 space-y-1">
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7.5rem] gap-1.5">
-        <div className="relative min-w-0">
+    <div className="@container mt-2 w-full space-y-1">
+      {/* Narrow bill panels (phones, tablet split view): the name gets its own row so nothing is cut off. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-1.5 @[24rem]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7.5rem]">
+        <div className="relative col-span-2 min-w-0 @[24rem]:col-span-1">
           <input aria-label="Guest name, required" aria-required="true" required placeholder="Guest name *" maxLength={60}
             role="combobox" aria-expanded={open && matches.length > 0} aria-autocomplete="list" autoComplete="off"
             value={customer.name ?? ""}
             onFocus={() => setOpen(true)}
             onBlur={() => { window.setTimeout(() => setOpen(false), 150); save(customer); }}
             onChange={(e) => { setOpen(true); setCustomer({ ...customer, name: e.target.value }); }}
-            className="h-8 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs" />
+            className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-[13px]" />
           {open && matches.length > 0 ? (
             <ul role="listbox" aria-label="Saved guests" className="absolute left-0 top-9 z-50 max-h-56 w-64 max-w-[80vw] overflow-y-auto rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-lg">
               {matches.map((c) => (
@@ -71,14 +72,14 @@ export function GuestDetailsFields({
             setCustomer({ ...customer, phone, ...(known?.name ? { name: known.name } : {}) });
           }}
           onBlur={() => save(customer)}
-          className="h-8 min-w-0 rounded-md border border-input bg-background px-2 text-xs tabular-nums" />
+          className="h-9 min-w-0 rounded-md border border-input bg-background px-2.5 text-[13px] tabular-nums" />
         <select aria-label="Total number of guests, required" aria-required="true" required
           value={custom ? "custom" : guestCount ? String(guestCount) : ""}
           onChange={(e) => {
             if (e.target.value === "custom") { setCustomMode(true); if ((guestCount ?? 0) <= 6) setGuestCount(undefined); }
             else { setCustomMode(false); setGuestCount(e.target.value ? Number(e.target.value) : undefined); }
           }}
-          className="h-8 min-w-0 rounded-md border border-input bg-background px-1.5 text-xs">
+          className="h-9 min-w-0 rounded-md border border-input bg-background px-2 text-[13px]">
           <option value="">Guests *</option>
           {Array.from({ length: quickMax }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} {n === 1 ? "guest" : "guests"}</option>)}
           {maxGuests > 6 ? <option value="custom">Custom (7–{maxGuests})</option> : null}

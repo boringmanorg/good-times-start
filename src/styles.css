@@ -1,5 +1,8 @@
 @import "tailwindcss" source(none);
 @import "tw-animate-css";
+/* Brand type, self-hosted so counters keep it offline. */
+@import "@fontsource-variable/manrope/wght.css";
+@import "@fontsource/staatliches/latin-400.css";
 @source "../src";
 
 @custom-variant dark (&:is(.dark *));
@@ -44,81 +47,54 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI Variable Text", "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --color-raised: var(--raised);
+  --font-sans: "Manrope Variable", Manrope, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI Variable Text", "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
 }
 
-:root {
-  /* XTSY POS — Apple-style system palette: grouped grey canvas, white surfaces, one blue tint. */
-  --radius: 0.75rem;
-  --background: #f2f2f7; /* grouped background */
-  --foreground: #1d1d1f; /* label */
-  --card: #ffffff;
-  --card-foreground: #1d1d1f;
-  --popover: #ffffff;
-  --popover-foreground: #1d1d1f;
-  --primary: #0071e3; /* tint — confirm, send, settle (4.6:1 with white) */
-  --primary-foreground: #ffffff;
-  --primary-hover: #0062c4;
-  --primary-tint: #e8f1fc;
-  --secondary: #e9e9ee; /* fill */
-  --secondary-foreground: #1d1d1f;
-  --muted: #e9e9ee;
-  --muted-foreground: #6e6e73; /* secondary label */
-  --accent: #e8f1fc;
-  --accent-foreground: #1d1d1f;
-  --gold: #ff9f0a; /* system orange — waiting on someone */
-  --gold-foreground: #3d2400;
-  --destructive: #d70015;
-  --destructive-foreground: #ffffff;
-  --success: #248a3d;
-  --warning: #b25000;
-  --border: #e3e3e8; /* separator */
-  --input: #d2d2d7;
-  --ring: #0071e3;
-  /* Deep slate side menu, as in back-office tools: calm next to the light work area. */
-  --sidebar: #16202c;
-  --sidebar-foreground: #e3e9f0;
-  --sidebar-primary: #4c9aff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #233244;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #263649;
-}
-
-/* Dark appearance: kitchen wall screens, the waiter tablet and late-night service. */
+/*
+ * XTSY POS — classic black. Every staff screen (Business Manager, Restro POS, POS Waiter, kitchen)
+ * is black with bright, high-contrast text and one brand accent: XTSY champagne gold.
+ * Guest pages (/order, /book) keep the light XTSY look via .theme-xtsy below; printed slips stay white paper.
+ * Contrast on black: text 21:1, secondary text 11.5:1, gold accent 11:1.
+ */
+:root,
 .dark {
+  --radius: 0.75rem;
   --background: #000000;
-  --foreground: #f5f5f7;
-  --card: #1c1c1e;
-  --card-foreground: #f5f5f7;
-  --popover: #2c2c2e;
-  --popover-foreground: #f5f5f7;
-  --primary: #0a84ff;
-  --primary-foreground: #ffffff;
-  --primary-hover: #409cff;
-  --primary-tint: #0b2a4a;
-  --secondary: #2c2c2e;
-  --secondary-foreground: #f5f5f7;
-  --muted: #2c2c2e;
-  --muted-foreground: #98989d;
-  --accent: #0b2a4a;
-  --accent-foreground: #f5f5f7;
-  --gold: #ff9f0a;
-  --gold-foreground: #2a1800;
+  --foreground: #ffffff;
+  --card: #111113; /* raised surface */
+  --card-foreground: #ffffff;
+  --popover: #18181b;
+  --popover-foreground: #ffffff;
+  --primary: #e9b949; /* XTSY champagne gold — confirm, send, settle (black text, 11:1) */
+  --primary-foreground: #0b0b0b;
+  --primary-hover: #f4cb6a;
+  --primary-tint: #2a2211;
+  --secondary: #1d1d20; /* fills, tracks, chips */
+  --secondary-foreground: #ffffff;
+  --muted: #1d1d20;
+  --muted-foreground: #c4c4ca; /* secondary text, still bright */
+  --accent: #2a2211;
+  --accent-foreground: #ffffff;
+  --gold: #ff8a00; /* orange — waiting on someone (kept well apart from the gold accent) */
+  --gold-foreground: #1a0f00;
   --destructive: #ff453a;
   --destructive-foreground: #ffffff;
-  --success: #30d158;
-  --warning: #ffb340;
-  --border: #38383a;
-  --input: #48484a;
-  --ring: #0a84ff;
-  --sidebar: #11161e;
-  --sidebar-foreground: #e3e9f0;
-  --sidebar-primary: #4c9aff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1f2a38;
+  --success: #32d74b;
+  --warning: #ffb547;
+  --border: #2c2c31; /* hairlines */
+  --input: #3b3b41;
+  --ring: #e9b949;
+  --raised: #34343a; /* the selected segment of a switcher */
+  --sidebar: #0a0a0b;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #e9b949;
+  --sidebar-primary-foreground: #0b0b0b;
+  --sidebar-accent: #1d1d20;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #222c3a;
+  --sidebar-border: #1f1f23;
+  --font-brand: Staatliches, Impact, "Arial Narrow", sans-serif;
+  color-scheme: dark;
 }
 
 @layer base {
@@ -172,9 +148,9 @@
 
 @utility card-elevated {
   background: var(--color-card);
-  border: 0.5px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* Page changes: a quick cross-fade, never long enough to feel like waiting. */
@@ -192,7 +168,7 @@
 
 /* Frosted bars, as in iOS navigation and tab bars. */
 @utility glass-dark {
-  background: color-mix(in srgb, oklch(0.12 0 0) 82%, transparent);
+  background: color-mix(in srgb, #000000 86%, transparent);
   color: oklch(0.97 0 0);
   backdrop-filter: saturate(180%) blur(20px);
 }
@@ -202,12 +178,30 @@
   backdrop-filter: saturate(180%) blur(20px);
 }
 
+/* Brand headings: XTSY display type for page titles and the wordmark. */
+@utility font-brand {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
 /* Thermal printing is set up per device by PrintHost (src/components/PrintHost.tsx). */
 
 /* ---------------- Guest QR ordering: XTSY look (matches xtsy.one) ----------------
    Applied to <html> only while a guest ordering page is open, so dialogs (rendered in portals)
    share it. Staff screens are untouched. Palette and type taken from the live xtsy.one site. */
 .theme-xtsy {
+  /* base light palette (the staff theme is black) */
+  --destructive: #d70015;
+  --destructive-foreground: #ffffff;
+  --warning: #b25000;
+  --primary-tint: #f6e4e8;
+  --raised: #ffffff;
+  --sidebar-primary: #a12444;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2b2f40;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2b2f40;
   --background: #faf7f2;      /* page */
   --foreground: #1f2230;      /* ink */
   --card: #ffffff;
@@ -254,3 +248,19 @@
 /* xtsy.one buttons are heavy pills; tall tiles keep their rounded-square shape. */
 .theme-xtsy button[data-slot="button"]:not(.rounded-2xl):not(.rounded-xl),
 .theme-xtsy a[data-slot="button"] { border-radius: 9999px; font-weight: 800; }
+
+/* ---------------- Staff screens: XTSY brand touches on classic black ---------------- */
+/* Page titles in the XTSY display face. */
+html:not(.theme-xtsy) main h1 {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  letter-spacing: 0.035em;
+  line-height: 1.05;
+}
+/* Thin gold rule under the top bar, as on xtsy.one's night header. */
+html:not(.theme-xtsy) header.glass-dark {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+/* Native date/time pickers and scrollbars follow the black theme. */
+html:not(.theme-xtsy) ::-webkit-scrollbar-thumb { background: #3b3b41; border-radius: 9999px; }
+html:not(.theme-xtsy) ::-webkit-scrollbar-track { background: transparent; }

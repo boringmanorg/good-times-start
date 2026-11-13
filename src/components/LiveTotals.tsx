@@ -56,7 +56,7 @@ export function LiveTotals() {
           </div>
         </div>
         <div className="bg-gold/10 px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gold-foreground">Running bills</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-warning">Running bills</div>
           <div className="mt-1 text-2xl font-bold tabular-nums">{formatINR(t.running, 0)}</div>
           <div className="text-xs text-muted-foreground">{t.runningCount} open · not paid yet</div>
         </div>

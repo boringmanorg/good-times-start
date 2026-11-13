@@ -24,7 +24,7 @@ export function Segmented<V extends string | number>({ value, onChange, options,
             className={cn("shrink-0 whitespace-nowrap rounded-[8px] font-semibold transition-[background,box-shadow,color] duration-150",
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-[13px]",
               stretch && "flex-1",
-              on ? "bg-card text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.12),0_0_0_0.5px_rgba(0,0,0,0.04)]" : "text-muted-foreground hover:text-foreground")}>
+              on ? "bg-raised text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.5)] ring-1 ring-white/10" : "text-muted-foreground hover:text-foreground")}>
             {o.label}{o.badge ? <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{o.badge}</span> : null}
           </button>
         );

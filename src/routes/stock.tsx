@@ -88,7 +88,7 @@ function ApprovalChip({ entry }: { entry: StockEntry }) {
   const a = entry.approval;
   if (!a) return null;
   const when = (t?: number) => (t ? new Date(t).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "");
-  if (a.status === "pending") return <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-gold-foreground">Waiting for approval · sent by {a.requestedBy}</span>;
+  if (a.status === "pending") return <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-warning">Waiting for approval · sent by {a.requestedBy}</span>;
   if (a.status === "approved") return <span title={`Approved by ${a.decidedBy ?? "admin"} ${when(a.decidedAt)}${a.billChecked ? ", supplier bill checked" : ""}`} className="ml-2 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-bold text-success">Approved{a.billChecked ? " · bill checked" : ""}</span>;
   return <span title={a.note} className="ml-2 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-bold text-destructive">Rejected{a.note ? `: ${a.note}` : ""}</span>;
 }

@@ -280,7 +280,7 @@ function MenuPage() {
                       {selecting ? <Checkbox aria-label={`Select ${m.name}`} checked={picked.has(m.id)} onCheckedChange={(v) => pickToggle([m.id], v === true)} /> : null}
                       <VegMark veg={m.veg} />
                       <div className="min-w-0 flex-1">
-                        <div className={`truncate text-sm font-semibold ${m.available ? "" : "text-muted-foreground line-through"}`}>{m.name}</div>
+                        <div className={`line-clamp-2 break-words text-sm font-semibold ${m.available ? "" : "text-muted-foreground line-through"}`}>{m.name}</div>
                         <div className="truncate text-xs text-muted-foreground">
                           {m.station}, GST {m.gstRate}%
                           {m.variants?.length ? `, ${m.variants.map((v) => v.name).join(" / ")}` : ""}
@@ -290,12 +290,12 @@ function MenuPage() {
                             const cost = recipeCost(m, materials, v?.id);
                             if (!cost) return null;
                             const share = foodCostShare(cost, v?.price ?? m.price);
-                            return <span className={share > 0.35 ? "font-semibold text-gold-foreground" : ""}>, food cost {Math.round(share * 100)}%</span>;
+                            return <span className={share > 0.35 ? "font-semibold text-warning" : ""}>, food cost {Math.round(share * 100)}%</span>;
                           })()}
                         </div>
                       </div>
                       {stock?.tracked ? (
-                        <span className={`hidden rounded-md px-2 py-0.5 text-xs font-semibold sm:inline ${low ? "bg-gold/25 text-gold-foreground" : "bg-secondary text-muted-foreground"}`}>
+                        <span className={`hidden rounded-md px-2 py-0.5 text-xs font-semibold sm:inline ${low ? "bg-gold/25 text-warning" : "bg-secondary text-muted-foreground"}`}>
                           {stock.quantity === 0 ? "Sold out" : `${stock.quantity} left`}
                         </span>
                       ) : null}

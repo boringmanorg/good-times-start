@@ -179,7 +179,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
 
   const [buildId, setBuildId] = useState("");
   useEffect(() => { if (open) setBuildId(currentBuildId()); }, [open]);
-  const tone = !online || snapshot.error ? "border-gold/60 bg-gold/15 text-gold-foreground" : "border-border bg-card text-foreground";
+  const tone = !online || snapshot.error ? "border-gold/60 bg-gold/15 text-warning" : "border-border bg-card text-foreground";
   const label = !online ? "Offline" : snapshot.error ? "Sync needs attention" : pending ? `${pending} to sync` : !staff ? "This device only" : live === "reconnecting" ? "Reconnecting…" : live === "live" ? "Live" : "Synced";
 
   return <>
@@ -361,7 +361,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
       <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar py-3 text-sidebar-foreground transition-[width] duration-200 lg:flex ${wide ? "w-60" : "w-[4.75rem]"}`}>
         <div className={`flex items-center gap-2.5 px-3 ${wide ? "" : "flex-col"}`}>
           <img src={logo} alt="XTSY POS" width={36} height={36} className="rounded-[10px]" />
-          {wide ? <span className="flex-1 truncate text-[15px] font-semibold tracking-tight">{APPS[app].short}</span> : null}
+          {wide ? <span className="font-brand flex-1 truncate text-[17px] text-sidebar-foreground">{APPS[app].short}</span> : null}
           <button type="button" onClick={toggleWide} aria-label={wide ? "Collapse menu" : "Expand menu"} aria-expanded={wide}
             className="grid size-8 place-items-center rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground">
             {wide ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
@@ -396,16 +396,16 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="dark glass-dark sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border/70 text-foreground px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] lg:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
-            <img src={logo} alt="" width={28} height={28} className="rounded-[8px] lg:hidden" />
+            <img src={logo} alt="" width={28} height={28} className="hidden rounded-[8px] min-[400px]:block lg:hidden" />
             <div className="min-w-0">
-              <div className="truncate text-[15px] font-semibold tracking-tight">{restaurantName || "XTSY POS"}</div>
-              <div className="text-[11px] text-muted-foreground">{APPS[app].name}</div>
+              <div className="font-brand truncate text-[16px] leading-tight text-foreground min-[400px]:text-[17px] sm:text-[19px]">{restaurantName || "XTSY POS"}</div>
+              <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{APPS[app].name}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
         </header>
         {needsDetails && !needsRestaurant ? (
-          <Link to="/setup" className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-gold-foreground lg:px-6">
+          <Link to="/setup" className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-warning lg:px-6">
             <AlertTriangle className="size-4 shrink-0" />Finish setting up: add your GSTIN, menu, tables and staff so bills carry your details.
           </Link>
         ) : null}
@@ -431,9 +431,10 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
           const active = to === "/tables" ? pathname === "/" || pathname.startsWith(to) : pathname.startsWith(to);
           return (
             <Link key={to} to={to} aria-current={active ? "page" : undefined}
-              className={`flex min-h-14 min-w-[4.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium ${active ? "text-primary" : "text-muted-foreground"}`}>
+              className={`relative flex min-h-14 min-w-[3.1rem] flex-1 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold ${active ? "text-primary" : "text-muted-foreground"}`}>
+              {active ? <span className="absolute inset-x-4 top-0 h-[2px] rounded-b bg-primary" aria-hidden="true" /> : null}
               <Icon className="size-5" />
-              {label}
+              <span className="max-w-full truncate px-0.5">{label}</span>
             </Link>
           );
         })}

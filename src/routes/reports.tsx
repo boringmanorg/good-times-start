@@ -290,7 +290,7 @@ function DayCloseTab() {
     <div className="grid gap-4 lg:grid-cols-2">
       <form className="card-elevated space-y-3 p-4" onSubmit={(event) => void submit(event)}>
         <h2 className="text-sm font-semibold">Close today's cash drawer</h2>
-        {running && !canClose ? <p className="rounded-lg bg-gold/20 p-2 text-sm text-gold-foreground">{running} running bills remain open.</p> : null}
+        {running && !canClose ? <p className="rounded-lg bg-gold/20 p-2 text-sm text-warning">{running} running bills remain open.</p> : null}
         <div className="text-sm"><span className="font-medium">Counter {chosen}</span><span className="ml-2 text-muted-foreground">{deviceId.slice(0, 8).toUpperCase()}</span></div>
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm font-medium">Opening float<input inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value)} placeholder="₹0" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" /></label>
@@ -481,7 +481,7 @@ function BillsList({ orders }: { orders: Order[] }) {
               <button type="button" onClick={() => setOpen(o)} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left text-sm hover:bg-secondary/60">
                 <span className="w-16 shrink-0 text-muted-foreground">{new Date(summaryAt(o)).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
                 <span className="min-w-0 flex-1 truncate font-medium">{o.billNo}<span className="ml-2 font-normal text-muted-foreground">{o.tableLabel ?? o.tableId ?? o.orderType}</span></span>
-                <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${o.status === "void" ? "bg-destructive/10 text-destructive" : o.status === "held" ? "bg-gold/25 text-gold-foreground" : "bg-secondary text-muted-foreground"}`}>{STATUS_LABEL[o.status]}</span>
+                <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${o.status === "void" ? "bg-destructive/10 text-destructive" : o.status === "held" ? "bg-gold/25 text-warning" : "bg-secondary text-muted-foreground"}`}>{STATUS_LABEL[o.status]}</span>
                 <span className={`w-20 text-right font-semibold ${o.status === "void" ? "text-muted-foreground line-through" : ""}`}>{formatINR(o.total, 0)}</span>
               </button><BillPrintButton order={o} action="bill.reprintOld" className="shrink-0" />
             </li>

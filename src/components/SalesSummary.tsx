@@ -120,7 +120,7 @@ export function SalesSummary({ orders, range, restaurant, canExport }: { orders:
                     <td className={td}>{o.customer?.name ?? "—"}</td>
                     <td className={td}>{o.customer?.phone ?? "—"}</td>
                     <td className={td}>{o.tableLabel ?? "—"}</td>
-                    <td className={td}><span className={cn("rounded px-1.5 py-0.5 text-xs font-semibold", o.status === "void" ? "bg-destructive/10 text-destructive" : o.status === "held" ? "bg-gold/25 text-gold-foreground" : "bg-success/10 text-success")}>{STATUS_LABELS[o.status]}</span></td>
+                    <td className={td}><span className={cn("rounded px-1.5 py-0.5 text-xs font-semibold", o.status === "void" ? "bg-destructive/10 text-destructive" : o.status === "held" ? "bg-gold/25 text-warning" : "bg-success/10 text-success")}>{STATUS_LABELS[o.status]}</span></td>
                     <td className={td}>{paymentOf(o)}</td>
                     <td className={td}>{money(o.subtotal)}</td>
                     <td className={td}>{money(o.serviceCharge ?? 0)}</td>

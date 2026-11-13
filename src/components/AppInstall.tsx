@@ -16,7 +16,7 @@ import { useInstallPrompt, watchInstallPrompt } from "@/lib/install-prompt";
 
 const APP_META: Record<InstallKind, { title: string; theme: string }> = {
   manager: { title: "Business Manager", theme: "#000000" },
-  pos: { title: "Restro POS", theme: "#F2F2F7" },
+  pos: { title: "Restro POS", theme: "#000000" },
   waiter: { title: "POS Waiter", theme: "#000000" },
 };
 

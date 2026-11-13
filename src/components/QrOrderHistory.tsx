@@ -14,7 +14,7 @@ import type { Order } from "@/lib/types";
 import { Segmented } from "./Segmented";
 import { Button } from "./ui/button";
 
-const TONE = { pending: "text-gold-foreground", running: "text-primary", settled: "text-success", closed: "text-muted-foreground" } as const;
+const TONE = { pending: "text-warning", running: "text-primary", settled: "text-success", closed: "text-muted-foreground" } as const;
 
 /** Guest QR and pickup orders by day: QR/0001 series until settled, then the bill's POS number. */
 export function QrOrderHistory({ onOpenBill }: { onOpenBill: () => void }) {

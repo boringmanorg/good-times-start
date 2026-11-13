@@ -237,13 +237,14 @@ function Card({ title, icon, action, children }: { title: string; icon?: ReactNo
 
 function Kpi({ label, value, note, icon: Icon, tone }: { label: string; value: string; note: string; icon: typeof Store; tone: string }) {
   return (
-    <div className="rounded-2xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-border/70">
+    <div className="rounded-2xl bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-border/70 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-1 truncate text-[26px] font-bold leading-tight tracking-tight tabular-nums">{value}</p>
+          {/* Amounts never get cut off: no icon beside them on phones, and they wrap rather than hide. */}
+          <p className="mt-1 text-[22px] font-bold leading-tight tracking-tight tabular-nums [overflow-wrap:anywhere] sm:text-[26px]">{value}</p>
         </div>
-        <span className={cn("grid size-11 shrink-0 place-items-center rounded-full", tone)}><Icon className="size-5" /></span>
+        <span className={cn("hidden size-11 shrink-0 place-items-center rounded-full sm:grid", tone)}><Icon className="size-5" /></span>
       </div>
       <p className="mt-3 truncate text-xs text-muted-foreground">{note}</p>
     </div>

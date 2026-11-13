@@ -96,13 +96,13 @@ function WaiterApp() {
 
   return (
     <div className="dark flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+      <header className="flex items-center justify-between gap-3 border-b border-border px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] shadow-[inset_0_-1px_0_color-mix(in_srgb,var(--color-primary)_28%,transparent)]">
         <div className="min-w-0">
-          <div className="truncate text-base font-extrabold">{settings.name || "POS Waiter"}</div>
-          <div className="text-xs text-muted-foreground">{user ? `POS Waiter · ${user.displayName}` : loading ? "" : "POS Waiter"}</div>
+          <div className="font-brand truncate text-[17px] leading-tight sm:text-[19px]">{settings.name || "POS Waiter"}</div>
+          <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{user ? `POS Waiter · ${user.displayName}` : loading ? "" : "POS Waiter"}</div>
         </div>
-        <div className="flex items-center gap-2">
-          {user ? <Button size="sm" variant="outline" onClick={() => setShowBookings(true)}><Users />Reservations</Button> : null}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          {user ? <Button size="sm" variant="outline" aria-label="Reservations" onClick={() => setShowBookings(true)}><Users /><span className="hidden sm:inline">Reservations</span></Button> : null}
           <InstallButton />
           {user ? <SyncChip statusOnly /> : null}
           {user ? <AppUpdateWatcher /> : null}

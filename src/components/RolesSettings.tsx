@@ -107,7 +107,7 @@ export function RolesSettings() {
             <p className="mt-2 text-xs text-muted-foreground">These are protected by the database too, so no device setting can open them.</p>
           </div>
 
-          {usesPin && !settings.adminCode ? <p role="alert" className="rounded-xl bg-gold/15 p-3 text-sm font-medium text-gold-foreground">Some actions are On with admin code, but the admin code isn't set up yet. Set it up below, or those actions stay blocked.</p> : null}
+          {usesPin && !settings.adminCode ? <p role="alert" className="rounded-xl bg-gold/15 p-3 text-sm font-medium text-warning">Some actions are On with admin code, but the admin code isn't set up yet. Set it up below, or those actions stay blocked.</p> : null}
           <div className="sticky bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] -mx-4 flex items-center gap-3 lg:bottom-0 border-t border-border bg-card/95 px-4 py-3 backdrop-blur lg:-mx-8 lg:px-8">
             <Button disabled={!dirty || busy} onClick={() => void save()}>{busy ? "Saving…" : "Save roles"}</Button>
             {dirty ? <Button variant="ghost" onClick={() => setPolicy(saved)}>Undo changes</Button> : <span className="text-sm text-muted-foreground">All changes saved</span>}

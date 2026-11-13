@@ -228,7 +228,7 @@ function Sender({ running, restaurantId, settings, messageFor, onClose }: {
             <div className="mt-3 whitespace-pre-wrap rounded-xl bg-secondary p-3 text-sm">{messageFor(current)}</div>
             <div className="mt-4 flex flex-wrap gap-2">
               <a href={waLink(current.wa, messageFor(current))} target="_blank" rel="noreferrer" onClick={() => void mark(current, "sent")}
-                className={cn(buttonVariants({ size: "lg" }), "flex-1 bg-success text-white hover:bg-success/90")}><Send />Open WhatsApp & send</a>
+                className={cn(buttonVariants({ size: "lg" }), "flex-1 bg-success text-black hover:bg-success/90")}><Send />Open WhatsApp & send</a>
               <Button size="lg" variant="outline" onClick={() => void mark(current, "skipped")}>Skip</Button>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">WhatsApp opens with the message ready. Tap send there, come back, and the next guest is waiting.</p>

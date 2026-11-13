@@ -88,3 +88,10 @@
 
 ## Lint layout (react-refresh)
 - Component files export components only. Hooks/helpers live in lib: `@/lib/staff` (useStaff, isAdmin, ROLE_LABELS, AuthContext, staff types; auth-context.tsx keeps only AuthProvider), `@/lib/print-jobs` (printBill, printKots, markKotsSeen, printDocuments), `@/lib/printer-setup`, `@/lib/install-prompt`, `@/lib/use-policy`, `@/lib/framed-paths`, `@/lib/guest-place`, `@/lib/press-shortcut`, `@/lib/order-type-label`, `@/lib/qr-requests`, `@/components/ui/button-variants`, `@/components/ui/toggle-variants`. Import `useRestaurantSettings` from `@/lib/use-settings`, not AppShell.
+
+## Classic black brand theme (13 Nov 2026)
+- Staff screens (Business Manager, Restro POS, POS Waiter, kitchen) use one black palette in styles.css (`:root, .dark`): black background, white text, bright secondary text (#c4c4ca), XTSY champagne-gold accent (`--primary` #e9b949, black text), orange `--gold` (#ff8a00) for "waiting", `--raised` for the selected segment. Keep the UI token-driven: no hard-coded light colours.
+- On tinted gold surfaces (`bg-gold/NN`) and plain cards use `text-warning`; `text-gold-foreground` (dark) only on solid `bg-gold`.
+- Guest pages keep the light XTSY look: RootShell puts `theme-xtsy` on <html> for /order and /book during SSR (no black flash), and `.theme-xtsy` restates the full light palette. Printed slips and on-screen receipts stay white paper.
+- Brand type is self-hosted (@fontsource Manrope body, Staatliches for `main h1`, header names and `.font-brand`) so counters keep it offline.
+- Layout audit harness (local only, no cloud): render each terminal at 360/412/768/1024/1280 with a fake offline session and sample data; no screen may scroll sideways. Amounts must never truncate (dashboard KPIs wrap; icons hide on phones). GuestDetailsFields is a container query: the name takes its own row in narrow bill panels.

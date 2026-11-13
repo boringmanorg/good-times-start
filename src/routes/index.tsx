@@ -260,7 +260,7 @@ function PosPage() {
       {canDiscount || canNc || cart.discountPct > 0 ? (
         <span className="flex items-center gap-1.5 rounded-lg bg-card px-2 py-1 text-xs font-semibold ring-1 ring-border/70">
           <BadgePercent className="size-3.5 text-muted-foreground" />Discount
-          <Dropdown<number> ariaLabel="Discount" size="sm" className="h-7 w-[4.75rem]" value={cart.discountPct} onChange={(v) => void chooseDiscount(v)}
+          <Dropdown<number> ariaLabel="Discount" size="sm" className="h-7 w-[5.75rem]" value={cart.discountPct} onChange={(v) => void chooseDiscount(v)}
             options={discountChoices.map((d) => ({ value: d, label: d === 100 ? "NC" : d ? `${d}%` : "None" }))} />
         </span>
       ) : null}
@@ -277,7 +277,7 @@ function PosPage() {
   const billPanel = (
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between gap-3 border-b border-border bg-card px-4 py-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-xl font-bold tracking-tight">
             {qrBillOpen ? `QR bill · ${cart.activeOrder?.tableLabel ?? cart.activeOrder?.tableId ?? ""}` : cart.orderType === "dine-in" ? (currentTable ? `${currentTable.section} · ${currentTable.label}` : "Choose a table") : cart.customer.name && cart.activeOrder?.guestCodes ? `${cart.activeOrder.guestCodes[0]} ${cart.customer.name}` : ORDER_TYPES.find((o) => o.v === cart.orderType)?.l}
           </div>
@@ -479,7 +479,7 @@ function PosPage() {
                   <span className="line-clamp-2 pr-5 text-[13px] font-semibold leading-snug">{i.name}</span>
                   <span className="mt-1.5 flex items-end justify-between gap-1.5 text-[11px]">
                     <span className="font-medium uppercase tracking-wide text-muted-foreground">{soldOut ? <span className="font-semibold normal-case text-destructive">Sold out</span>
-                      : low ? <span className="rounded bg-gold/25 px-1 font-semibold normal-case text-gold-foreground">{remaining} left</span>
+                      : low ? <span className="rounded bg-gold/25 px-1 font-semibold normal-case text-warning">{remaining} left</span>
                       : offHours && i.hours ? <span className="normal-case">{i.hours.from}–{i.hours.to}</span>
                       : shortCode(i.name)}</span>
                     <span className="text-[12px] font-semibold tabular-nums text-foreground/80">{i.variants?.length ? `${formatINR(Math.min(...i.variants.map((v) => v.price)), 0)}+` : formatINR(priceFor(i, cart.orderType), 0)}</span>

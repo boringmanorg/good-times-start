@@ -311,7 +311,7 @@ function TablesPage() {
                   {t.closedWithoutPaymentAt !== undefined ? <span className="mt-1 text-xs font-semibold leading-relaxed text-muted-foreground">Last bill closed without payment</span> : null}
                   {(t.status === "occupied" || t.status === "billed") && (t.runningTotal > 0 || !t.qrTotal) ? (
                     <span className="mt-1 text-xs font-bold">{formatINR(t.runningTotal, 0)}<span className="block font-normal text-muted-foreground">{t.awaitingBill ? "Bill not synced yet" : minutesSince(t.since)}</span></span>
-                  ) : t.status === "reserved" ? <span className="mt-1 text-xs font-semibold text-gold-foreground">Booked</span> : null}
+                  ) : t.status === "reserved" ? <span className="mt-1 text-xs font-semibold text-warning">Booked</span> : null}
                   {t.booking ? <><span className="mt-1 max-w-full break-words text-sm font-bold text-primary">{t.booking.guest_name}</span><span className="text-xs font-semibold text-success">Table allotted</span><span className="text-xs text-muted-foreground">{new Date(t.booking.arrival_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span></> : null}
                   {t.qrTotal ? <span className="mt-0.5 rounded bg-primary/15 px-1.5 text-[10px] font-bold text-primary">QR {formatINR(t.qrTotal, 0)}</span> : null}
                   {holdLabel(t, Date.now()) ? <span className="mt-0.5 max-w-full truncate text-[10px] font-semibold text-primary">{holdLabel(t, Date.now())}</span> : null}
