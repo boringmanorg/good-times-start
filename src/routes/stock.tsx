@@ -1,3 +1,5 @@
+import { featureOn } from "@/lib/plans";
+import { useEntitlements } from "@/lib/use-entitlements";
 import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -269,6 +271,8 @@ const timeText = (at: number) => new Date(at).toLocaleTimeString("en-IN", { hour
 
 function StockPage() {
   const { user } = useStaff();
+  const plan = useEntitlements();
+  const vendorsOn = featureOn(plan, "vendors");
   const admin = can(user, "stock.purchase");
   // The bill desk records purchases and returns; each waits for the admin's approval.
   const requester = !admin && can(user, "stock.request");
@@ -326,7 +330,7 @@ function StockPage() {
         <ul className="divide-y divide-border px-4">{pending.map(billCard)}</ul>
       </section>
     ) : null}
-    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, { value: "suppliers", label: "Vendors" }, { value: "history", label: "History" }]}/>
+    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
 
     {tab === "items" ? <div className="mt-4"><input aria-label="Find purchase item" placeholder="Find item" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"/>
       <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr>
@@ -357,7 +361,7 @@ function StockPage() {
     {tab === "spend" && admin ? <PurchaseSpendDashboard entries={entries} suppliers={suppliers} /> : null}
     {tab === "purchases" || tab === "history" ? <ul className="mt-4 divide-y divide-border">{(tab === "purchases" ? purchases : history).map(billCard)}{!(tab === "purchases" ? purchases : history).length ? <li className="py-8 text-center text-muted-foreground">No purchase history yet</li> : null}</ul> : null}
 
-    {tab === "suppliers" ? <div className="mt-4 space-y-3">
+    {tab === "suppliers" && vendorsOn ? <div className="mt-4 space-y-3">
       {admin ? <Button variant="outline" onClick={() => setSheet({ kind: "supplier", supplier: null })}><Plus/>Add vendor</Button> : null}
       {[...vendors, ...suppliers.filter((s) => !vendors.some((v) => v.key === s.id)).map((s) => ({ key: s.id, name: s.name, amount: 0, bills: 0, returns: 0, lastAt: 0, days: [] }))].map((v) => {
         const supplier = suppliers.find((s) => s.id === v.key);

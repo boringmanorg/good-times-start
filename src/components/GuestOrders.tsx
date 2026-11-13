@@ -1,3 +1,5 @@
+import { useEntitlements } from "@/lib/use-entitlements";
+import { featureOn } from "@/lib/plans";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { placeName } from "@/lib/table-logic";
 import { useNavigate } from "@tanstack/react-router";
@@ -89,6 +91,7 @@ function useGuestOrders(restaurantId: string | null, enabled: boolean) {
 
 export function GuestOrdersButton() {
   const { user } = useStaff();
+  const plan = useEntitlements();
   const account = useAccount().data;
   const ordering = account?.outlet.ordering ?? {};
   const enabled = !!user?.restaurantId && user.role !== "kitchen" && (!!ordering.table || !!ordering.online);
@@ -134,17 +137,22 @@ export function GuestOrdersButton() {
   }, [waiting]);
 
   if (!user?.restaurantId || user.role === "kitchen") return null;
+  // Plan: QR orders come with Pro and up, table reservations with Pro Lite and up. Anything already
+  // waiting still shows, so nothing gets stuck when a plan changes.
+  const showQr = featureOn(plan, "qr_ordering") || requestCount > 0;
+  const showTables = featureOn(plan, "bookings") || bookingRequests.length > 0;
+  const view = !showQr ? "tables" : !showTables ? "qr" : bookingView;
   return (
     <>
-      <Button size="sm" variant={requestCount || bookingRequests.length ? "default" : "outline"} aria-label="Bookings" title="QR orders, guest requests and table bookings"
+      {showQr || showTables ? <Button size="sm" variant={requestCount || bookingRequests.length ? "default" : "outline"} aria-label="Bookings" title="QR orders, guest requests and table bookings"
         onClick={() => { setBookingView(!requestCount && bookingRequests.length ? "tables" : "qr"); setBookingOpen(true); }}
         className={requestCount ? "animate-pulse bg-gold text-gold-foreground hover:bg-gold/90" : bookingRequests.length ? "border-gold bg-gold text-gold-foreground hover:bg-gold/90" : ""}>
         <CalendarClock className="size-4" /><span className="hidden sm:inline">Bookings</span>{requestCount + bookingRequests.length ? <span className="rounded-full bg-gold-foreground px-1.5 text-[11px] font-bold tabular-nums text-gold">{requestCount + bookingRequests.length}</span> : null}
-      </Button>
+      </Button> : null}
       <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto"><DialogTitle>Bookings</DialogTitle>
-          <Segmented ariaLabel="Bookings view" stretch value={bookingView} onChange={setBookingView} options={[{ value: "qr", label: "QR orders", badge: requestCount }, { value: "tables", label: "Table bookings", badge: bookingRequests.length }]} />
-          {bookingView === "qr" ? <GuestOrdersPanel orders={orders} closed={finished} onDone={() => setBookingOpen(false)} /> : <ReservationsPanel upcoming onOpenOrder={() => setBookingOpen(false)} />}
+          {showQr && showTables ? <Segmented ariaLabel="Bookings view" stretch value={view} onChange={setBookingView} options={[{ value: "qr", label: "QR orders", badge: requestCount }, { value: "tables", label: "Table bookings", badge: bookingRequests.length }]} /> : null}
+          {view === "qr" ? <GuestOrdersPanel orders={orders} closed={finished} onDone={() => setBookingOpen(false)} /> : <ReservationsPanel upcoming onOpenOrder={() => setBookingOpen(false)} />}
         </DialogContent>
       </Dialog>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)} aria-label="Orders">

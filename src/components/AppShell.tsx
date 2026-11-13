@@ -29,7 +29,7 @@ import { applyAppUpdate, checkForAppUpdate, currentBuildId } from "@/lib/app-upd
 import { broadcastSyncAll } from "@/lib/terminal-signal";
 import { isFramedPath } from "@/lib/framed-paths";
 import { useEntitlements } from "@/lib/use-entitlements";
-import { SEAT_APPS, featureOn, subscriptionText, whatsappLink } from "@/lib/plans";
+import { SEAT_APPS, featureOn, subscriptionText, whatsappLink, type Feature } from "@/lib/plans";
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
 
 const NAV = [
@@ -66,6 +66,9 @@ function policyAllows(role: string, to: NavPath): boolean {
   if (to === "/menu" || to === "/stock" || to === "/customers" || to === "/reports") return screenPermitted(role, to);
   return true;
 }
+
+/** Screens that need a plan feature (all others come with every plan). */
+const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app" };
 
 /** Screens each app shows, in menu order. */
 const APP_SCREENS: Record<AppKind, NavPath[]> = {
@@ -321,9 +324,9 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
     const seatApp = pathname.startsWith("/waiter") ? "waiter" : app;
     return <AccessBlocked problem={`${plan ? `Your ${plan.planName} plan` : "Your plan"} has no free ${SEAT_APPS[seatApp]} device left. Ask the admin to release an old device in Settings → Terminals, or contact XTSY to add more.`} own={null} />;
   }
-  // Waiter Pro comes with Pro Lite and Pro.
+  // Waiter Pro comes with Pro and Enterprise / Brand.
   if (staffApp && user && pathname.startsWith("/waiter") && !featureOn(plan, "waiter_app")) {
-    return <AccessBlocked problem={`Waiter Pro isn't part of the ${plan?.planName ?? "current"} plan. It comes with Pro Lite and Pro: contact XTSY to upgrade.`} own={appsFor(user.login, user.role).find((a) => a !== "waiter") ?? null} />;
+    return <AccessBlocked problem={`Waiter Pro isn't part of the ${plan?.planName ?? "current"} plan. It comes with Pro and Enterprise / Brand: contact XTSY to upgrade.`} own={appsFor(user.login, user.role).find((a) => a !== "waiter") ?? null} />;
   }
   // Each login keeps to its own app and devices, as the admin set them.
   const problem = staffApp && user && (user.login || user.role !== "unknown")
@@ -360,7 +363,8 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   const marketing = useMarketingAccess(user?.role);
   useMarketingOutbox(marketing.denied === null); // queued marketing changes upload even when Marketing isn't open
   const plan = useEntitlements();
-  const allowed = screensFor(user?.role, app).filter((to) => to !== "/marketing" || (featureOn(plan, "marketing") && (marketing.denied === null || marketing.denied === "loading")));
+  const notInPlan = (to: string) => { const f = SCREEN_FEATURE[to]; return f !== undefined && !featureOn(plan, f); };
+  const allowed = screensFor(user?.role, app).filter((to) => !notInPlan(to) && (to !== "/marketing" || marketing.denied === null || marketing.denied === "loading"));
   // Owners and managers see when the subscription needs attention; billing itself never stops.
   const planNotice = isAdmin(user) && plan && !plan.complimentary && (!plan.live || plan.status === "past_due" || plan.status === "suspended" || plan.status === "cancelled"
     || (plan.paidUntil !== null && Date.parse(plan.paidUntil) < Date.now() + 5 * 86_400_000));
@@ -370,6 +374,11 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   const current = pathname === "/" ? NAV.find((n) => n.to === "/tables") : NAV.find((n) => n.to !== "/" && pathname.startsWith(n.to));
   const blocked = !!current && !allowed.includes(current.to);
   const home = nav[0]?.to ?? "/tables";
+  // POS Manager opens on the dashboard; on a plan without it, start on the first screen it has.
+  const navigateTo = useNavigate();
+  useEffect(() => {
+    if (plan && current?.to === "/dashboard" && notInPlan("/dashboard") && home !== "/dashboard") void navigateTo({ to: home, replace: true });
+  }, [plan, current?.to, home]); // eslint-disable-line react-hooks/exhaustive-deps -- notInPlan/navigateTo are stable for this check
   const needsDetails = isAdmin(user) && !settings.updatedAt && pathname !== "/settings" && pathname !== "/setup";
 
   return (
@@ -435,7 +444,10 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
           <SyncConflictAlert />
           {needsRestaurant ? <NotLinked /> : blocked ? (
             <div className="mx-auto max-w-md p-8 text-center">
-              {current?.to === "/marketing" && marketing.denied === "terminal" ? <>
+              {current && notInPlan(current.to) ? <>
+                <p className="font-semibold">{current.label} isn't part of the {plan?.planName ?? "current"} plan</p>
+                <p className="mt-1 text-sm text-muted-foreground">{isAdmin(user) ? "See Settings → Plan & subscription, or contact XTSY to upgrade." : "Ask the admin if you need it."}</p>
+              </> : current?.to === "/marketing" && marketing.denied === "terminal" ? <>
                 <p className="font-semibold">Marketing isn't enabled on this terminal</p>
                 <p className="mt-1 text-sm text-muted-foreground">It's an admin tool that opens only on terminals the admin switches on in Settings → Terminals → Marketing.</p>
               </> : <>

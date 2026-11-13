@@ -1,3 +1,4 @@
+import { useLoyaltyPct } from "@/lib/use-loyalty";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -345,7 +346,7 @@ function LiveStatus() {
     return { held, kots, recent, guestOrders, customers };
   }, [], { held: [], kots: [], recent: [], guestOrders: [], customers: [] });
   const live = useMemo(() => liveStatus(data.held, data.kots), [data]);
-  const loyaltyPct = useRestaurantSettings().loyaltyPct ?? 1;
+  const loyaltyPct = useLoyaltyPct(1);
   const awards = useMemo(() => recentPointAwards(data.recent, data.guestOrders, data.customers, loyaltyPct), [data, loyaltyPct]);
   return (
     <div>

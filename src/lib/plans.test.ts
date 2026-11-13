@@ -7,12 +7,21 @@ const ent = (over: Partial<Entitlements> = {}): Entitlements => ({
 });
 
 describe("plans", () => {
-  it("publishes the four plans with their seats and prices", () => {
+  it("publishes the four plans with their per-outlet prices and users", () => {
     expect(PUBLIC_PLANS.map((p) => [p.id, p.price, p.seats.pos, p.seats.waiter, p.seats.manager])).toEqual([
-      ["basic", 99, 2, 0, 1], ["pro_lite", 199, 5, 2, 2], ["pro", 399, 10, 5, 5], ["enterprise", null, null, null, null],
+      ["basic", 149, 1, 0, 1], ["pro_lite", 299, 4, 0, 1], ["pro", 499, 6, 3, 2], ["enterprise", 999, null, null, 5],
     ]);
-    expect(PUBLIC_PLANS.find((p) => p.id === "basic")?.features).not.toContain("waiter_app");
-    expect(PUBLIC_PLANS.find((p) => p.id === "pro")?.features).toContain("waiter_app");
+  });
+
+  it("splits the features as XTSY sells them", () => {
+    const f = (id: string) => PUBLIC_PLANS.find((p) => p.id === id)!.features;
+    for (const id of ["basic", "pro_lite", "pro", "enterprise"]) expect(f(id)).toEqual(expect.arrayContaining(["billing", "menu", "gst_reports", "manager_app"]));
+    for (const x of ["qr_ordering", "purchases", "vendors", "loyalty", "bookings", "waiter_app", "admin_approval"]) expect(f("basic")).not.toContain(x);
+    expect(f("pro_lite")).toEqual(expect.arrayContaining(["purchases", "vendors", "loyalty", "bookings", "admin_approval", "insights"]));
+    for (const x of ["qr_ordering", "waiter_app", "marketing"]) expect(f("pro_lite")).not.toContain(x);
+    expect(f("pro")).toEqual(expect.arrayContaining(["waiter_app", "qr_ordering", "online_ordering", "marketing"]));
+    expect(f("pro")).not.toContain("audit_log");
+    expect(f("enterprise")).toContain("audit_log");
   });
 
   it("never locks a restaurant out when the plan is unknown", () => {
@@ -27,6 +36,7 @@ describe("plans", () => {
     expect(priceText(null)).toBe("Call for quote");
     expect(seatText("pos", 1)).toBe("1 Billdesk user");
     expect(seatText("waiter", 0)).toBe("No Waiter users");
+    expect(seatText("pos", null)).toBe("Unlimited Billdesk users");
     expect(subscriptionText(ent({ complimentary: true }))).toBe("Pro Lite · complimentary");
     expect(subscriptionText(ent({ paidUntil: "2026-12-01T00:00:00Z" }), Date.parse("2026-11-13"))).toMatch(/renews 1 Dec 2026/);
     expect(subscriptionText(ent({ paidUntil: "2026-11-01T00:00:00Z" }), Date.parse("2026-11-13"))).toMatch(/renewal due since/);

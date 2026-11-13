@@ -1,29 +1,49 @@
 /**
  * XTSY POS plans: what each subscription includes. Pure data and rules, tested.
  *
- * The cloud keeps the live catalogue (plans table) and each restaurant's subscription
+ * Prices are per outlet per month. The cloud keeps the live catalogue (plans table) and each restaurant's subscription
  * (accounts). This file is the shared vocabulary, the public price list shown on the
  * website (which never reads the database), and the offline-safe feature checks.
  * No payments happen in the software: XTSY records plans and renewals by hand.
  */
 
 export type PlanId = "basic" | "pro_lite" | "pro" | "enterprise";
-export type Feature = "billing" | "insights" | "qr_ordering" | "online_ordering" | "bookings" | "waiter_app" | "marketing" | "audit_log" | "multi_outlet";
+export type Feature =
+  | "billing" | "menu" | "gst_reports" | "manager_app"
+  | "insights" | "purchases" | "vendors" | "loyalty" | "bookings" | "admin_approval"
+  | "waiter_app" | "qr_ordering" | "online_ordering" | "marketing"
+  | "audit_log" | "multi_outlet";
 export type SeatApp = "manager" | "pos" | "waiter";
 
-export const FEATURES: Feature[] = ["billing", "insights", "qr_ordering", "online_ordering", "bookings", "waiter_app", "marketing", "audit_log", "multi_outlet"];
+/** Every feature switch, in the order plans list them. Prices are per outlet. */
+export const FEATURES: Feature[] = [
+  "billing", "menu", "gst_reports", "manager_app",
+  "insights", "purchases", "vendors", "loyalty", "bookings", "admin_approval",
+  "waiter_app", "qr_ordering", "online_ordering", "marketing",
+  "audit_log", "multi_outlet",
+];
 
 export const FEATURE_NAMES: Record<Feature, string> = {
   billing: "Billing, KOTs and tables",
-  insights: "Sales summary and dashboard",
-  qr_ordering: "Guest QR ordering",
-  online_ordering: "Takeaway and delivery orders",
-  bookings: "Table bookings",
+  menu: "Menu management",
+  gst_reports: "GST bills and sales reports",
+  manager_app: "Dedicated POS Manager mobile app",
+  insights: "Sales dashboard and analysis",
+  purchases: "Purchases and spend analysis",
+  vendors: "Vendor management",
+  loyalty: "Guest loyalty programme",
+  bookings: "Table reservations",
+  admin_approval: "Admin / manager approval codes",
   waiter_app: "Waiter Pro app",
-  marketing: "WhatsApp marketing",
-  audit_log: "Audit log",
-  multi_outlet: "Several outlets",
+  qr_ordering: "Guest QR ordering",
+  online_ordering: "QR takeaway and delivery orders",
+  marketing: "Marketing and branding tools",
+  audit_log: "Audit logs and full reports",
+  multi_outlet: "Several outlets under one brand",
 };
+
+/** Features listed on the website (internal switches like multi_outlet stay off the price cards). */
+export const PUBLIC_FEATURES: Feature[] = FEATURES.filter((f) => f !== "multi_outlet" && f !== "online_ordering");
 
 export const SEAT_NAMES: Record<SeatApp, string> = { manager: "Admin / Manager", pos: "Billdesk", waiter: "Waiter" };
 export const SEAT_APPS: Record<SeatApp, string> = { manager: "POS Manager", pos: "POS Billdesk", waiter: "Waiter Pro" };
@@ -31,7 +51,7 @@ export const SEAT_APPS: Record<SeatApp, string> = { manager: "POS Manager", pos:
 export interface PublicPlan {
   id: PlanId;
   name: string;
-  /** Rupees per month; null = call for a quote. */
+  /** Rupees per month for one outlet; null = call for a quote. */
   price: number | null;
   tagline: string;
   seats: Record<SeatApp, number | null>;
@@ -39,16 +59,20 @@ export interface PublicPlan {
   highlight?: boolean;
 }
 
-/** The published price list (website and defaults). Keep in step with the plans table. */
+const BASIC: Feature[] = ["billing", "menu", "gst_reports", "manager_app"];
+const PRO_LITE: Feature[] = [...BASIC, "insights", "purchases", "vendors", "loyalty", "bookings", "admin_approval"];
+const PRO: Feature[] = [...PRO_LITE, "waiter_app", "qr_ordering", "online_ordering", "marketing"];
+
+/** The published price list, per outlet (website and defaults). Keep in step with the plans table. */
 export const PUBLIC_PLANS: PublicPlan[] = [
-  { id: "basic", name: "Basic", price: 99, tagline: "Billing, KOTs and reports for a single counter",
-    seats: { pos: 2, waiter: 0, manager: 1 }, features: ["billing", "insights"] },
-  { id: "pro_lite", name: "Pro Lite", price: 199, tagline: "Adds Waiter Pro, QR ordering and table bookings",
-    seats: { pos: 5, waiter: 2, manager: 2 }, features: ["billing", "insights", "qr_ordering", "online_ordering", "bookings", "waiter_app"] },
-  { id: "pro", name: "Pro", price: 399, tagline: "Everything, for busy restaurants and hotels", highlight: true,
-    seats: { pos: 10, waiter: 5, manager: 5 }, features: ["billing", "insights", "qr_ordering", "online_ordering", "bookings", "waiter_app", "marketing", "audit_log"] },
-  { id: "enterprise", name: "Enterprise / Brand", price: null, tagline: "Chains and brands: your requirements, fulfilled",
-    seats: { pos: null, waiter: null, manager: null }, features: [...FEATURES] },
+  { id: "basic", name: "Basic", price: 149, tagline: "Billing, menu and GST reports for one counter",
+    seats: { pos: 1, waiter: 0, manager: 1 }, features: BASIC },
+  { id: "pro_lite", name: "Pro Lite", price: 299, tagline: "Adds purchases, vendors, loyalty and table reservations",
+    seats: { pos: 4, waiter: 0, manager: 1 }, features: PRO_LITE },
+  { id: "pro", name: "Pro", price: 499, tagline: "Adds Waiter Pro, QR ordering and marketing tools", highlight: true,
+    seats: { pos: 6, waiter: 3, manager: 2 }, features: PRO },
+  { id: "enterprise", name: "Enterprise / Brand", price: 999, tagline: "Everything in Pro, unlimited counters and waiters, audit logs",
+    seats: { pos: null, waiter: null, manager: 5 }, features: [...PRO, "audit_log", "multi_outlet"] },
 ];
 
 /** "₹199 / month", or "Call for quote". */
@@ -56,10 +80,10 @@ export function priceText(price: number | null): string {
   return price === null ? "Call for quote" : `₹${price.toLocaleString("en-IN")} / month`;
 }
 
-/** "10 Billdesk users", "No Waiter users", "Unlimited Admin / Manager users". */
+/** "6 Billdesk users", "No Waiter users", "Unlimited Billdesk users". */
 export function seatText(app: SeatApp, n: number | null): string {
   const who = SEAT_NAMES[app];
-  if (n === null) return `${who} users as you need`;
+  if (n === null) return `Unlimited ${who} users`;
   if (n === 0) return `No ${who} users`;
   return `${n} ${who} user${n === 1 ? "" : "s"}`;
 }

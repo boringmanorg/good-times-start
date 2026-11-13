@@ -1,3 +1,5 @@
+import { featureOn } from "@/lib/plans";
+import { useEntitlements } from "@/lib/use-entitlements";
 import { useEffect, useMemo, useState } from "react";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +25,7 @@ const MODE_OPTIONS: { value: Mode; label: string }[] = [{ value: "off", label: "
 
 export function RolesSettings() {
   const { user } = useStaff();
+  const plan = useEntitlements();
   const settings = useRestaurantSettings();
   const saved = useMemo(() => resolvePolicy(settings.rolePolicy), [settings.rolePolicy]);
   const [policy, setPolicy] = useState<RolePolicy>(saved);
@@ -32,6 +35,8 @@ export function RolesSettings() {
 
   if (!can(user, "roles.manage")) return <p className="py-8 text-sm text-muted-foreground">Only the admin can change roles.</p>;
 
+  // "On with admin code" (admin / manager approval) comes with Pro Lite and up.
+  const codeOn = featureOn(plan, "admin_approval");
   const dirty = JSON.stringify(policy) !== JSON.stringify(saved);
   const usesPin = (["cashier", "captain"] as PolicyRole[]).some((r) => Object.values(policy[r].actions).includes("pin"));
   const setAction = (id: keyof RolePolicy["cashier"]["actions"], mode: Mode) => setPolicy((p) => ({ ...p, [role]: { ...p[role], actions: { ...p[role].actions, [id]: mode } } }));
@@ -94,7 +99,7 @@ export function RolesSettings() {
                 {actions.filter((a) => a.group === group).map((a) => (
                   <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                     <span className="min-w-0"><span className="block text-sm font-medium">{a.label}</span><span className="block text-xs text-muted-foreground">{a.hint}</span></span>
-                    <Segmented ariaLabel={a.label} size="sm" value={policy[role].actions[a.id]} onChange={(m) => setAction(a.id, m)} options={MODE_OPTIONS} />
+                    <Segmented ariaLabel={a.label} size="sm" value={policy[role].actions[a.id]} onChange={(m) => setAction(a.id, m)} options={codeOn || policy[role].actions[a.id] === "pin" ? MODE_OPTIONS : MODE_OPTIONS.filter((o) => o.value !== "pin")} />
                   </li>
                 ))}
               </ul>

@@ -386,7 +386,10 @@ function SettingsPage() {
   const app = useAppMode(user);
   const admin = isAdmin(user);
   const plan = useEntitlements();
-  const cards = CARDS.filter((c) => (admin || c.staff) && managerSettingAllowed(app, c.v, c.to) && (c.v !== "audit" || featureOn(plan, "audit_log")));
+  // Plan: audit log (Enterprise), QR ordering (Pro+), marketing & branding (Pro+).
+  const inPlan = (c: SettingCard) => c.v === "audit" ? featureOn(plan, "audit_log") : c.v === "ordering" ? featureOn(plan, "qr_ordering") || featureOn(plan, "bookings")
+    : c.to === "/marketing" ? featureOn(plan, "marketing") : true;
+  const cards = CARDS.filter((c) => (admin || c.staff) && managerSettingAllowed(app, c.v, c.to) && inPlan(c));
   const [tab, setTab] = useState<Tab | null>(() => {
     if (typeof window === "undefined") return null;
     const h = window.location.hash.slice(1) as Tab;

@@ -1,7 +1,7 @@
 import { Check, MessageCircle, X } from "lucide-react";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { useRestaurantSettings } from "@/lib/use-settings";
-import { FEATURES, FEATURE_NAMES, PUBLIC_PLANS, SEAT_APPS, priceText, seatUseText, subscriptionText, whatsappLink, type SeatApp } from "@/lib/plans";
+import { PUBLIC_FEATURES as FEATURES, FEATURE_NAMES, PUBLIC_PLANS, SEAT_APPS, priceText, seatUseText, subscriptionText, whatsappLink, type SeatApp } from "@/lib/plans";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 

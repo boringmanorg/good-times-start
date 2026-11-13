@@ -1,3 +1,4 @@
+import { useLoyaltyPct } from "@/lib/use-loyalty";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { placeName } from "@/lib/table-logic";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -147,6 +148,7 @@ function PosPage() {
 
   const { user } = useStaff();
   const settings = useRestaurantSettings();
+  const loyaltyPct = useLoyaltyPct(0);
   const closedBy = user?.displayName;
   const printConfig = usePrintConfig();
   const [payOpen, setPayOpen] = useState(false);
@@ -177,8 +179,8 @@ function PosPage() {
     const known = await getDb().customers.get(guestId);
     if (!known) return null;
     const visits = await getDb().orders.where("customerId").equals(guestId).toArray();
-    return { customer: known, stats: customerStats(known, visits, settings.loyaltyPct ?? 0) };
-  }, [guestId, settings.loyaltyPct], null);
+    return { customer: known, stats: customerStats(known, visits, loyaltyPct) };
+  }, [guestId, loyaltyPct], null);
   const guestName = guest?.customer.name;
   useEffect(() => {
     if (guestName && !cart.customer.name) cart.setCustomer({ ...cart.customer, name: guestName });
@@ -299,7 +301,7 @@ function PosPage() {
       {guest ? (
         <p className="border-b border-border bg-primary-tint/50 px-4 py-1.5 text-[11px] text-foreground">
           {guest.customer.name ?? "Guest"}: {guest.stats.visits} visit{guest.stats.visits === 1 ? "" : "s"}
-          {(settings.loyaltyPct ?? 0) > 0 ? `, ${guest.stats.points} points` : ""}
+          {loyaltyPct > 0 ? `, ${guest.stats.points} points` : ""}
           {guest.stats.due > 0 ? <span className="font-semibold text-destructive">, {formatINR(guest.stats.due, 0)} due</span> : null}
         </p>
       ) : null}
@@ -536,7 +538,7 @@ function PosPage() {
           {payOpen ? <PaymentPanel lines={cart.lines} discountPct={cart.discountPct} serviceChargePct={cart.serviceChargePct}
             canSplitBill={!!cart.activeOrder && cart.lines.reduce((s, l) => s + l.qty, 0) > 1} tax={cart.tax}
             {...(settings.paymentModes ? { allowedModes: settings.paymentModes } : {})}
-            pointsAvailable={(settings.loyaltyPct ?? 0) > 0 ? guest?.stats.points ?? 0 : 0} hasCustomer={!!guestId}
+            pointsAvailable={loyaltyPct > 0 ? guest?.stats.points ?? 0 : 0} hasCustomer={!!guestId}
             onSettle={(p) => void payWith(p)} onSettlePart={(q, p) => void payPart(q, p)} /> : null}
         </DialogContent>
       </Dialog>
@@ -571,7 +573,7 @@ function PosPage() {
                 className={`mt-1 w-full rounded-lg border bg-card px-3 py-2.5 text-sm uppercase ${cart.customer.gstin && gstinError(cart.customer.gstin) ? "border-destructive" : "border-input"}`} />
               {cart.customer.gstin && gstinError(cart.customer.gstin) ? <span className="mt-1 block text-xs text-destructive">{gstinError(cart.customer.gstin)}</span> : null}
             </label>
-            {guest ? <p className="text-xs text-muted-foreground">Returning guest: {guest.stats.visits} visits{(settings.loyaltyPct ?? 0) > 0 ? `, ${guest.stats.points} points` : ""}{guest.stats.due > 0 ? `, ${formatINR(guest.stats.due, 0)} due` : ""}</p> : null}
+            {guest ? <p className="text-xs text-muted-foreground">Returning guest: {guest.stats.visits} visits{loyaltyPct > 0 ? `, ${guest.stats.points} points` : ""}{guest.stats.due > 0 ? `, ${formatINR(guest.stats.due, 0)} due` : ""}</p> : null}
             <Button className="w-full" onClick={() => setCustomerOpen(false)}>Done</Button>
           </div>
         </DialogContent>

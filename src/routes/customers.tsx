@@ -1,3 +1,4 @@
+import { useLoyaltyPct } from "@/lib/use-loyalty";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -151,7 +152,7 @@ function WhatsappConsent({ customer }: { customer: Customer }) {
 
 function CustomersPage() {
   const settings = useRestaurantSettings();
-  const loyaltyPct = settings.loyaltyPct ?? 1;
+  const loyaltyPct = useLoyaltyPct(1);
   const customers = useLiveQuery(() => getDb().customers.toArray(), [], []);
   // Only bills with a guest attached, straight from the guest index; not the whole year's bills.
   const orders = useLiveQuery(async () => (await getDb().orders.where("customerId").above("").toArray()).filter((o) => o.status === "settled"), [], []);

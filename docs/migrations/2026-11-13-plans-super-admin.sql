@@ -3,7 +3,7 @@
 -- Builds on the existing accounts / plans / platform_admins tables. Safe to run more than once.
 -- No payments are taken anywhere: the super admin records plan, status and paid-until by hand.
 
--- 1. Plans: seats per app and a "call for quote" flag -----------------------------------------
+-- 1. Plans (prices per outlet per month): seats per app and a "call for quote" flag -----------------------------------------
 ALTER TABLE public.plans ADD COLUMN IF NOT EXISTS billdesk_seats integer;  -- POS Billdesk devices (NULL = as agreed)
 ALTER TABLE public.plans ADD COLUMN IF NOT EXISTS waiter_seats integer;    -- Waiter Pro devices
 ALTER TABLE public.plans ADD COLUMN IF NOT EXISTS admin_seats integer;     -- POS Manager devices (owner/manager)
@@ -16,18 +16,18 @@ ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS seat_overrides jsonb NOT NU
 ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS feature_overrides jsonb NOT NULL DEFAULT '{}'::jsonb; -- {"marketing":true}
 
 INSERT INTO public.plans (id, name, monthly_price, yearly_price, max_outlets, max_staff, features, sort, active, billdesk_seats, waiter_seats, admin_seats, quote, tagline) VALUES
- ('basic', 'Basic', 99, 0, 1, 3,
-  '{"billing":true,"insights":true,"qr_ordering":false,"online_ordering":false,"bookings":false,"waiter_app":false,"marketing":false,"audit_log":false,"multi_outlet":false}',
-  10, true, 2, 0, 1, false, 'Billing, KOTs and reports for a single counter'),
- ('pro_lite', 'Pro Lite', 199, 0, 1, 9,
-  '{"billing":true,"insights":true,"qr_ordering":true,"online_ordering":true,"bookings":true,"waiter_app":true,"marketing":false,"audit_log":false,"multi_outlet":false}',
-  20, true, 5, 2, 2, false, 'Adds Waiter Pro, QR ordering and table bookings'),
- ('pro', 'Pro', 399, 0, 1, 20,
-  '{"billing":true,"insights":true,"qr_ordering":true,"online_ordering":true,"bookings":true,"waiter_app":true,"marketing":true,"audit_log":true,"multi_outlet":false}',
-  30, true, 10, 5, 5, false, 'Everything, for busy restaurants and hotels'),
- ('enterprise', 'Enterprise / Brand', 0, 0, 50, 500,
-  '{"billing":true,"insights":true,"qr_ordering":true,"online_ordering":true,"bookings":true,"waiter_app":true,"marketing":true,"audit_log":true,"multi_outlet":true}',
-  40, true, NULL, NULL, NULL, true, 'Chains and brands: your requirements, fulfilled')
+ ('basic', 'Basic', 149, 0, 1, 2,
+  '{"billing":true,"menu":true,"gst_reports":true,"manager_app":true,"insights":false,"purchases":false,"vendors":false,"loyalty":false,"bookings":false,"admin_approval":false,"waiter_app":false,"qr_ordering":false,"online_ordering":false,"marketing":false,"audit_log":false,"multi_outlet":false}',
+  10, true, 1, 0, 1, false, 'Billing, menu and GST reports for one counter'),
+ ('pro_lite', 'Pro Lite', 299, 0, 1, 5,
+  '{"billing":true,"menu":true,"gst_reports":true,"manager_app":true,"insights":true,"purchases":true,"vendors":true,"loyalty":true,"bookings":true,"admin_approval":true,"waiter_app":false,"qr_ordering":false,"online_ordering":false,"marketing":false,"audit_log":false,"multi_outlet":false}',
+  20, true, 4, 0, 1, false, 'Adds purchases, vendors, loyalty and table reservations'),
+ ('pro', 'Pro', 499, 0, 1, 11,
+  '{"billing":true,"menu":true,"gst_reports":true,"manager_app":true,"insights":true,"purchases":true,"vendors":true,"loyalty":true,"bookings":true,"admin_approval":true,"waiter_app":true,"qr_ordering":true,"online_ordering":true,"marketing":true,"audit_log":false,"multi_outlet":false}',
+  30, true, 6, 3, 2, false, 'Adds Waiter Pro, QR ordering and marketing tools'),
+ ('enterprise', 'Enterprise / Brand', 999, 0, 50, 500,
+  '{"billing":true,"menu":true,"gst_reports":true,"manager_app":true,"insights":true,"purchases":true,"vendors":true,"loyalty":true,"bookings":true,"admin_approval":true,"waiter_app":true,"qr_ordering":true,"online_ordering":true,"marketing":true,"audit_log":true,"multi_outlet":true}',
+  40, true, NULL, NULL, 5, false, 'Everything in Pro, unlimited counters and waiters, audit logs')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, monthly_price = EXCLUDED.monthly_price, max_outlets = EXCLUDED.max_outlets,
   max_staff = EXCLUDED.max_staff, features = EXCLUDED.features, sort = EXCLUDED.sort, active = EXCLUDED.active,
   billdesk_seats = EXCLUDED.billdesk_seats, waiter_seats = EXCLUDED.waiter_seats, admin_seats = EXCLUDED.admin_seats,
@@ -35,9 +35,9 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, monthly_price = EXCLUDED.mo
 -- The old catalogue stays for history but is no longer offered.
 UPDATE public.plans SET active = false WHERE id IN ('trial', 'starter', 'growth', 'chain', 'owner');
 
--- TAB Bistro by XTSY: the first onboarded restaurant cum hotel, on Pro at ₹399/month, paid until 13 Dec 2026.
+-- TAB Bistro by XTSY: the first onboarded restaurant cum hotel, on Pro (₹499/month per outlet), paid until 13 Dec 2026.
 UPDATE public.accounts SET plan_id = 'pro', status = 'active', paid_until = '2026-12-13 23:59:59+05:30', trial_ends_at = NULL, complimentary = false,
-  notes = 'First onboarded restaurant cum hotel. Pro plan, ₹399/month.'
+  notes = 'First onboarded restaurant cum hotel. Pro plan, ₹499/month.'
 WHERE id = '1b981853-bc72-43e6-93f6-3aaf810761b4' AND plan_id = 'owner';
 
 -- Super admin: admin@xtsy.one, a real XTSY address and never a restaurant login. Listed by email;
@@ -143,7 +143,7 @@ BEGIN
   IF NOT FOUND THEN RETURN NULL; END IF;
   SELECT * INTO p FROM plans WHERE id = a.plan_id;
   SELECT jsonb_object_agg(k, account_feature(a.id, k)) INTO feats
-    FROM unnest(ARRAY['billing','insights','qr_ordering','online_ordering','bookings','waiter_app','marketing','audit_log','multi_outlet']) k;
+    FROM unnest(ARRAY['billing','menu','gst_reports','manager_app','insights','purchases','vendors','loyalty','bookings','admin_approval','waiter_app','qr_ordering','online_ordering','marketing','audit_log','multi_outlet']) k;
   RETURN jsonb_build_object(
     'plan', p.id, 'planName', p.name, 'price', p.monthly_price, 'quote', p.quote,
     'status', a.status, 'paidUntil', a.paid_until, 'trialEndsAt', a.trial_ends_at, 'live', account_is_live(a.id), 'complimentary', a.complimentary,
@@ -297,6 +297,18 @@ BEGIN
     FROM restaurant_members m LEFT JOIN auth.users u ON u.id = m.user_id LEFT JOIN staff_logins s ON s.user_id = m.user_id
     WHERE m.restaurant_id = _restaurant), '[]'::jsonb);
 END $$;
+
+-- Guest table bookings come with Pro Lite and up (account_feature also checks the plan is live).
+DO $bk$
+DECLARE f text; def text;
+BEGIN
+  FOREACH f IN ARRAY ARRAY['public.request_guest_booking(text,uuid,text,text,integer,timestamptz,integer,text)', 'public.public_booking_availability(text,timestamptz,integer)'] LOOP
+    def := pg_get_functiondef(f::regprocedure);
+    IF position('public.account_feature(r.account_id, ''bookings'')' IN def) > 0 THEN CONTINUE; END IF;
+    IF position('public.account_is_live(r.account_id) AND (' IN def) = 0 THEN RAISE EXCEPTION 'booking check not found in %', f; END IF;
+    EXECUTE replace(def, 'public.account_is_live(r.account_id) AND (', 'public.account_feature(r.account_id, ''bookings'') AND (');
+  END LOOP;
+END $bk$;
 
 REVOKE ALL ON FUNCTION public.account_of(uuid), public.account_feature(uuid, text), public.plan_seats(uuid, text), public.enforce_terminal_seats() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.restaurant_entitlements(uuid), public.platform_whoami(), public.platform_restaurants(), public.platform_overview(),
