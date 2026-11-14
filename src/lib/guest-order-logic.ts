@@ -52,6 +52,11 @@ export interface GuestOrder {
   order_type?: PublicOrderType | null;
   delivery_address?: string | null;
   delivery_landmark?: string | null;
+  /** Prepaid QR orders: where the payment stands. See guest-payment-logic.ts. */
+  pay_state?: string | null;
+  pay_proof?: string | null;
+  paid_at?: string | null;
+  confirmed_at?: string | null;
 }
 
 /** What a guest can order from the public QR. */

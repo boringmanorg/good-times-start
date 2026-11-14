@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { placeName } from "@/lib/table-logic";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, CalendarClock, Check, ChefHat, Clock, MapPin, Phone, Send, ShoppingBag, Smartphone, Truck, Users, UtensilsCrossed, X } from "lucide-react";
+import { BellRing, CalendarClock, Check, ChefHat, Clock, IndianRupee, MapPin, Phone, Send, ShoppingBag, Smartphone, Truck, Users, UtensilsCrossed, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,9 @@ import { sortGuestOrders, splitMapPin, type GuestOrder, guestOrderClosing, needs
 import { Segmented } from "@/components/Segmented";
 import { fillTemplate, waLink } from "@/lib/marketing-logic";
 import { useRestaurantSettings } from "@/lib/use-settings";
+import { cn } from "@/lib/utils";
+import { guestPaymentProofLink } from "@/lib/guest-payment.functions";
+import { acceptBlockedReason, canConfirmForPayment, isPayState, payLabel, type PayState } from "@/lib/guest-payment-logic";
 import { sendOrderReadyMessage } from "@/lib/whatsapp.functions";
 import { can } from "@/lib/permissions";
 import { OrdersOverview } from "./OrdersOverview";
@@ -254,6 +257,18 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
   const [seatAt, setSeatAt] = useState("");
   const delivery = order.channel === "online" && order.order_type === "delivery";
   const publicDineIn = order.channel === "online" && order.order_type === "dine-in";
+  // Prepaid orders: the guest pays only after we confirm, and the kitchen waits for the money.
+  const pay: PayState = isPayState(order.pay_state) ? order.pay_state : "none";
+  const payBlocked = acceptBlockedReason(pay);
+  const confirmForPayment = () => run(async () => {
+    const { error } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)("confirm_guest_order_payment", { _id: order.id });
+    if (error) throw new Error(error.message);
+    toast.success(`${order.code}: the guest can pay now`);
+  });
+  const openProof = () => run(async () => {
+    const { url } = await guestPaymentProofLink({ data: { orderId: order.id } });
+    window.open(url, "_blank", "noopener,noreferrer");
+  });
   const accept = () => run(async () => {
     const result = await acceptGuestOrder(order, staff, seatAt || undefined);
     if (!result) { toast.error(`Order ${order.code} was already handled on another device`); return; }
@@ -322,7 +337,12 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
           </select>
         </label>
       ) : null}
-      {order.payment === "upi" ? <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary"><Smartphone className="size-3.5" />Paying by UPI{order.upi_ref ? `, ref ${order.upi_ref}` : ""}. Check it before settling.</p> : null}
+      {order.payment === "upi" ? (
+        <p className={cn("mt-2 inline-flex flex-wrap items-center gap-1 text-xs font-semibold", pay === "paid" ? "text-success" : pay === "none" ? "text-primary" : "text-warning")}>
+          <Smartphone className="size-3.5" />{payLabel(pay, order.payment)}{order.upi_ref ? ` · ref ${order.upi_ref}` : ""}
+          {pay === "paid" ? <button type="button" onClick={() => void openProof()} disabled={busy} className="underline underline-offset-2">View screenshot</button> : null}
+        </p>
+      ) : null}
       {order.reason && !isActiveGuestOrder(order) ? <p className="mt-2 text-xs text-muted-foreground">{order.reason}</p> : null}
 
       {rejecting ? (
@@ -334,8 +354,11 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {order.status === "new" && can(user, "guestOrders.handle") ? <>
-            <ConfirmButton id={`accept-${order.id}`} disabled={busy || (seatNeeded && !seatAt)} onConfirm={accept} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={<><ChefHat />Tap again to accept</>}><ChefHat />{busy ? "Accepting…" : "Accept & send KOT"}</ConfirmButton>
+            {canConfirmForPayment(order.status, pay)
+              ? <Button disabled={busy} onClick={() => void confirmForPayment()}><IndianRupee />{busy ? "Confirming…" : "Confirm — ask for payment"}</Button>
+              : <ConfirmButton id={`accept-${order.id}`} disabled={busy || !!payBlocked || (seatNeeded && !seatAt)} onConfirm={accept} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={<><ChefHat />Tap again to accept</>}><ChefHat />{busy ? "Accepting…" : "Accept & send KOT"}</ConfirmButton>}
             <Button variant="ghost" className="text-destructive" disabled={busy} onClick={() => setRejecting(true)}><X />Reject</Button>
+            {payBlocked && !canConfirmForPayment(order.status, pay) ? <p className="w-full text-xs text-muted-foreground">{payBlocked}</p> : null}
           </> : null}
           {order.status === "accepted" && order.channel === "online" && !publicDineIn ? <ConfirmButton id={`ready-${order.id}`} disabled={busy} onConfirm={markReady} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={delivery ? "Tap again: tell guest it's on the way" : "Tap again: tell guest it's ready"}>{delivery ? <Truck /> : <Check />}{delivery ? "Out for delivery" : "Ready for pickup"}</ConfirmButton> : null}
           {order.status === "ready" && order.customer_phone ? <Button variant="outline" asChild><a href={waLink(order.customer_phone, readyText)} target="_blank" rel="noreferrer"><Send />WhatsApp guest</a></Button> : null}

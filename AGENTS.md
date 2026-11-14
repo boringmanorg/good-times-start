@@ -179,3 +179,31 @@ Every screen was driven as a Basic and a Pro Lite restaurant on desktop and phon
   (the Purchase items table now drops two reference columns below `sm:` instead).
 - Cloud errors must read as English: a failed number allocation says "no connection to the
   cloud right now", never "TypeError: Failed to fetch".
+
+## Prepaid QR orders: pay by screenshot (14 Nov 2026)
+
+There is still no payment gateway. A guest who chooses "Pay now by UPI" pays into the
+restaurant's own UPI and sends a screenshot; staff check it and accept.
+
+Payment runs on a **separate column** from the order's `status`, so a pay-at-counter order
+behaves exactly as it always has:
+
+| step | `status` | `pay_state` | who acts |
+|---|---|---|---|
+| order placed | `new` | `awaiting_confirm` | guest waits, told not to pay yet |
+| restaurant confirms it can make it | `new` | `awaiting_payment` | staff: "Confirm — ask for payment" |
+| guest pays, uploads the screenshot | `new` | `paid` | guest: "I've paid — send it" |
+| staff accept → bill + KOT | `accepted` | `paid` | staff: "Accept & send KOT" |
+
+- **Accept is disabled while money is owed** (`acceptBlockedReason` in
+  `src/lib/guest-payment-logic.ts`, pure and tested). Pay-at-counter orders (`pay_state`
+  `none`) are accepted straight away, as before.
+- Screenshots live in the **private** `guest-payments` bucket, one folder per order, with
+  **no anon policy**. The guest uploads through `sendGuestPaymentProof` (server function,
+  service role, proves itself with the order token); staff open it through
+  `guestPaymentProofLink`, which checks membership and returns a 10-minute signed URL. So a
+  screenshot is never reachable by guessing a URL — these images show people's bank apps.
+- A `BEFORE INSERT` trigger sets new `payment = 'upi'` rows to `awaiting_confirm`. Rows that
+  existed before keep `none`, so nothing already in flight waits for a step that didn't
+  exist when it was placed.
+- Migration: `docs/migrations/2026-11-14-qr-pay-by-screenshot.sql`.

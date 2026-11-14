@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ItemOptions } from "@/components/ItemOptions";
 import { VegMark } from "@/components/VegMark";
 import { computeTotals, formatINR, upiLink } from "@/lib/billing";
+import { GuestPayment } from "@/components/guest/GuestPayment";
 import { needsOptions, orderCategories, outsideHours } from "@/lib/menu-logic";
 import {
   GUEST_STATUS_LABEL, PUBLIC_ORDER_TYPES, guestMenuItems, addToGuestCart, guestEntry, guestRequired, cleanMapLink, mapPinUrl, pinCoords, publicTypeFrom, withMapPin, orderTypeFor, type PublicOrderType, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, pickupChoices, setGuestQty,
@@ -626,6 +627,7 @@ interface StatusView {
   id: string; code: string; channel: GuestChannel; status: GuestStatus; reason: string; tableLabel: string | null;
   lines: GuestLine[]; subtotal: number; payment: "counter" | "upi"; billNo: string | null; createdAt: string; pickupAt: string | null;
   orderType?: PublicOrderType | null;
+  payState?: string | null; upiRef?: string | null; paidAt?: string | null;
 }
 
 const STEPS: { status: GuestStatus; label: string; icon: typeof Check }[] = [
@@ -636,8 +638,6 @@ const STEPS: { status: GuestStatus; label: string; icon: typeof Check }[] = [
 
 function OrderStatus({ store, id, token, table, back }: { store: Storefront; id: string; token: string; table?: string | undefined; back: Record<string, string> }) {
   const navigate = Route.useNavigate();
-  const [upiRef, setUpiRef] = useState("");
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const status = useQuery({
     queryKey: ["guest-order", id, token],
@@ -668,10 +668,6 @@ function OrderStatus({ store, id, token, table, back }: { store: Storefront; id:
     setError("");
     const { error: failure } = await supabase.rpc("guest_order_update", { _id: id, _token: token, _cancel: true });
     if (failure) setError(failure.message); else void status.refetch();
-  };
-  const sendRef = async () => {
-    const { error: failure } = await supabase.rpc("guest_order_update", { _id: id, _token: token, _upi_ref: upiRef });
-    if (failure) setError(failure.message); else setSent(true);
   };
 
   return (
@@ -718,19 +714,8 @@ function OrderStatus({ store, id, token, table, back }: { store: Storefront; id:
         <div className="mt-3 flex justify-between border-t border-border pt-3 font-bold"><span>Estimated total</span><span>{formatINR(totals.total, 0)}</span></div>
       </div>
 
-      {o.payment === "upi" && store.upiVpa && !ended ? (
-        <div className="mt-3 rounded-2xl border border-border bg-card p-5">
-          <p className="font-semibold">Pay by UPI</p>
-          <p className="mt-1 text-sm text-muted-foreground">Pays {store.name} directly. Show the payment to the staff when you {o.channel === "table" || o.orderType === "dine-in" ? "leave" : o.orderType === "delivery" ? "receive your order" : "pick up"}.</p>
-          <a href={upiLink({ vpa: store.upiVpa, name: store.name, amount: totals.total, billNo: o.code })}
-            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground"><Smartphone className="size-4" />Pay {formatINR(totals.total, 0)} in a UPI app</a>
-          {sent ? <p className="mt-3 text-sm font-semibold text-success">Thanks, the restaurant can see your payment reference.</p> : (
-            <div className="mt-3 flex gap-2">
-              <input value={upiRef} onChange={(e) => setUpiRef(e.target.value)} maxLength={40} placeholder="UPI reference number (optional)" className="min-w-0 flex-1 rounded-lg border border-input bg-card px-3 py-2 text-sm" />
-              <Button variant="outline" disabled={upiRef.trim().length < 6} onClick={() => void sendRef()}>Send</Button>
-            </div>
-          )}
-        </div>
+      {o.payment === "upi" && !ended ? (
+        <GuestPayment store={store} order={o} total={totals.total} token={token} onPaid={() => void status.refetch()} />
       ) : null}
 
       {error ? <p role="alert" className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
