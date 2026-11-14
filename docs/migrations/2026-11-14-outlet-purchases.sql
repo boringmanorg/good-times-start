@@ -1,3 +1,4 @@
+-- APPLIED 14 Nov 2026.
 -- Brand P&L: purchase cost per outlet per day, to sit beside outlet_sales.
 --
 -- Counts the same entries the apps count (purchase-logic.ts `counts`): an entry with no

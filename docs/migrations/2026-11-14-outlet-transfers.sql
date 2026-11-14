@@ -1,3 +1,4 @@
+-- APPLIED 14 Nov 2026.
 -- Central kitchen / inter-outlet stock transfers.
 --
 -- Sending stock between outlets is two stock entries, one each side, written together so a

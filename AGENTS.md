@@ -307,8 +307,11 @@ what the brand paid, and `outlet_purchases` ignores both transfer types: moving 
 outlets is not a new purchase and must not inflate brand spend. Only an owner/manager of
 **both** ends may do it, and both must be the same account.
 
-Migrations, NOT yet applied: `docs/migrations/2026-11-14-outlet-purchases.sql` and
-`2026-11-14-outlet-transfers.sql`.
+Migrations **applied 14 Nov 2026**: `docs/migrations/2026-11-14-outlet-purchases.sql` and
+`2026-11-14-outlet-transfers.sql`. Verified on apply: the spend arithmetic (purchases less
+linked returns, entries with no approval block counted as approved, pending entries excluded,
+a line with no unitCost worth zero) and that `transfer_stock` refuses and writes nothing when
+its guards fail.
 
 ## The public address is the custom domain (14 Nov 2026)
 
