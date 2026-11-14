@@ -9,9 +9,9 @@ describe("two QR codes", () => {
     expect(guestEntry({ for: "other" })).toBe("public");
   });
   it("builds both shareable links on the live site", () => {
-    const u = entryQrUrls("https://good-times-start.lovable.app", "tab-bistro-qr");
-    expect(u.inhouse).toBe("https://good-times-start.lovable.app/order/tab-bistro-qr?s=stay&for=stay");
-    expect(u.public).toBe("https://good-times-start.lovable.app/order/tab-bistro-qr?s=public");
+    const u = entryQrUrls("https://www.posbyxtsy.club", "tab-bistro-qr");
+    expect(u.inhouse).toBe("https://www.posbyxtsy.club/order/tab-bistro-qr?s=stay&for=stay");
+    expect(u.public).toBe("https://www.posbyxtsy.club/order/tab-bistro-qr?s=public");
   });
 });
 

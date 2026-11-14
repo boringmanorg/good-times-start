@@ -309,3 +309,25 @@ outlets is not a new purchase and must not inflate brand spend. Only an owner/ma
 
 Migrations, NOT yet applied: `docs/migrations/2026-11-14-outlet-purchases.sql` and
 `2026-11-14-outlet-transfers.sql`.
+
+## The public address is the custom domain (14 Nov 2026)
+
+`GUEST_ORDER_ORIGIN` (qr-ordering.ts) and `APP_ORIGIN` (site-config.ts) are both
+**https://www.posbyxtsy.club**. They drive every QR code, printed card, booking link, shared
+link and install link, so printed material carries the brand's own domain rather than the
+lovable.app deployment address. `siteUrl()` follows from `APP_ORIGIN`.
+
+Cards printed before this change carry `good-times-start.lovable.app`, which still redirects
+here — **leave that redirect in place** or those cards stop working.
+
+**Do not add posbyxtsy.club to `MARKETING_HOSTS`.** It looks like the obvious home for the
+domain and it would break everything: a marketing host serves ONLY the website, because
+`marketingPath()` rewrites every other path to the website's home page — so `/order/…` and
+`/book/…` would stop resolving and every printed QR would fail. That domain serves the whole
+app (staff apps, console, guest pages) plus the website at `/`. `MARKETING_HOSTS` is only for a
+host that should show the website and nothing else.
+
+`src/lib/public-origin.test.ts` guards all of this: it pins both constants, asserts the domain
+is not treated as a website-only host, and fails if any source file reintroduces the old
+address (preview-host, previewAuthStorage and app-install-logic are exempt — they name lovable
+hosts on purpose, to detect the editor).

@@ -38,7 +38,7 @@ describe("guest reservations", () => {
     expect(newBookingRequests([row], new Set(["new"]))).toEqual([]);
     expect(newBookingRequests([{ ...row, status: "confirmed" }], new Set())).toEqual([]);
   });
-  it("uses the canonical public QR origin", () => expect(bookingUrl("tab-bistro")).toBe("https://good-times-start.lovable.app/book/tab-bistro"));
+  it("uses the canonical public QR origin", () => expect(bookingUrl("tab-bistro")).toBe("https://www.posbyxtsy.club/book/tab-bistro"));
   it("requires a future arrival", () => expect(bookingInputError(100, 2, 2, 4, 100)).toBe("Choose a future arrival time."));
   it("does not accept parties above capacity", () => expect(bookingInputError(200, 2, 5, 4, 100)).toBe("Choose between 1 and 4 guests."));
   it("permits adjacent slots but detects overlapping ones", () => {

@@ -1,7 +1,14 @@
 import type { MenuItem } from "./types";
 
-/** The live site. Every QR code, printed card, shared link and install link uses it, never an editor or localhost origin. */
-export const GUEST_ORDER_ORIGIN = "https://good-times-start.lovable.app";
+/**
+ * The live site. Every QR code, printed card, shared link and install link uses it, never an
+ * editor or localhost origin.
+ *
+ * Printed cards outlive deployments, so this is the custom domain rather than the lovable.app
+ * address. Cards printed before 14 Nov 2026 carry the old address, which still redirects here —
+ * leave that redirect in place or those cards stop working.
+ */
+export const GUEST_ORDER_ORIGIN = "https://www.posbyxtsy.club";
 
 export type GuestDiet = "all" | "veg" | "nonveg";
 

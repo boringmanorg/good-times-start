@@ -15,7 +15,7 @@ describe("QR ordering", () => {
     expect(guestChannel(false, true, "t1")).toBeNull();
   });
   it("prints public table links rather than preview links", () => {
-    expect(orderPageUrl(GUEST_ORDER_ORIGIN, "tab-bistro", "t1")).toBe("https://good-times-start.lovable.app/order/tab-bistro?table=t1");
+    expect(orderPageUrl(GUEST_ORDER_ORIGIN, "tab-bistro", "t1")).toBe("https://www.posbyxtsy.club/order/tab-bistro?table=t1");
   });
   it("combines vegetarian filtering with category search", () => {
     expect(filterGuestMenu(menu, "drinks", "veg").map((item) => item.id)).toEqual(["tea"]);

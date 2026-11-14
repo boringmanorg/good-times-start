@@ -5,6 +5,13 @@
  *
  * To go live: connect the domain to this Lovable project, then add it (with and without www) here.
  */
+/*
+ * CAREFUL: a host listed here serves ONLY the website — marketingPath() rewrites every other
+ * path to the website's home page. www.posbyxtsy.club is deliberately NOT here: it is the app's
+ * primary domain and serves the staff apps, the console and every guest QR page as well as the
+ * website at "/". Listing it would rewrite /order/… and /book/… to the home page and break every
+ * printed QR card. Only add a host here that should show the website and nothing else.
+ */
 export const MARKETING_HOSTS: string[] = ["xtsypos.test"];
 
 /** Where the website lives inside the app. It is also what the bare main address ("/") shows. */
@@ -22,7 +29,7 @@ export function homeToWebsite(pathname: string, search: string): string | null {
 }
 
 /** The app's own public address (staff apps, guest QR pages, the console). */
-export const APP_ORIGIN = "https://good-times-start.lovable.app";
+export const APP_ORIGIN = "https://www.posbyxtsy.club";
 
 export function isMarketingHost(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/\.$/, "");
