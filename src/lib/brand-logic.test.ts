@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { OutletDay } from "./outlet-actions";
 import {
+  brandPnl, pnlByOutlet, transferLines, transferProblem,
   brandTotals, newOutletProblem, outletCountText, pushMenuProblem, ranked,
   shareOfBrand, totalsByOutlet, type Outlet,
 } from "./brand-logic";
@@ -77,5 +78,46 @@ describe("wording", () => {
   it("counts outlets in words", () => {
     expect(outletCountText(1)).toBe("1 outlet");
     expect(outletCountText(4)).toBe("4 outlets");
+  });
+});
+
+describe("brand trading margin", () => {
+  const days = [day("a", "2026-11-14", 10, 10000), day("b", "2026-11-14", 5, 4000)];
+  const spend = [
+    { restaurant_id: "a", day: "2026-11-14", entries: 2, spend: 3000 },
+    { restaurant_id: "b", day: "2026-11-14", entries: 1, spend: 5000 }, // bought more than it sold
+  ];
+
+  it("takes purchase cost off each outlet's sales", () => {
+    const rows = pnlByOutlet(outlets, days, spend);
+    expect(rows[0]).toEqual({ id: "a", sales: 10000, spend: 3000, gross: 7000, margin: 0.7 });
+    expect(rows[1]).toEqual({ id: "b", sales: 4000, spend: 5000, gross: -1000, margin: -0.25 });
+    expect(rows[2]).toEqual({ id: "c", sales: 0, spend: 0, gross: 0, margin: 0 });
+  });
+
+  it("adds the brand up, and never divides by zero sales", () => {
+    expect(brandPnl(pnlByOutlet(outlets, days, spend))).toEqual({ sales: 14000, spend: 8000, gross: 6000, margin: 6000 / 14000 });
+    expect(brandPnl(pnlByOutlet(outlets, [], []))).toEqual({ sales: 0, spend: 0, gross: 0, margin: 0 });
+  });
+});
+
+describe("sending stock to another outlet", () => {
+  const line = (materialId: string, qty: number) => ({ materialId, qty });
+
+  it("needs a destination and something to send", () => {
+    expect(transferProblem("b", [line("rice", 5)])).toBeNull();
+    expect(transferProblem(null, [line("rice", 5)])).toMatch(/outlet to send to/);
+    expect(transferProblem("b", [])).toMatch(/at least one item/);
+    expect(transferProblem("b", [line("rice", 0)])).toMatch(/at least one item/);
+    expect(transferProblem("b", [line("", 5)])).toMatch(/at least one item/);
+  });
+
+  it("refuses the same item twice, so a quantity can't be silently halved", () => {
+    expect(transferProblem("b", [line("rice", 5), line("rice", 2)])).toMatch(/listed twice/);
+  });
+
+  it("keeps only the lines worth sending", () => {
+    expect(transferLines([line("rice", 5), line("", 2), line("dal", 0), line("oil", 1)]))
+      .toEqual([line("rice", 5), line("oil", 1)]);
   });
 });

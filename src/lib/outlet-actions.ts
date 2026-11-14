@@ -11,7 +11,7 @@ export async function prepareOutletSwitch(targetId: string): Promise<string | nu
   const bound = (await db.meta.get("restaurantId"))?.value;
   if (!bound || bound === targetId) return null;
   const [pending, running] = await Promise.all([db.outbox.count(), db.orders.where("status").equals("held").count()]);
-  if (pending > 0) return `${pending} change${pending === 1 ? "" : "s"} on this device haven't reached the cloud yet. Sync first, then switch.`;
+  if (pending > 0) return `${pending} change${pending === 1 ? " hasn't" : "s haven't"} reached the cloud yet. Sync first, then switch.`;
   if (running > 0) return `Settle or cancel the ${running} running bill${running === 1 ? "" : "s"} on this device first.`;
   await resetDevice();
   return null;
@@ -38,4 +38,27 @@ export async function outletSales(outletIds: string[], from: Date, to: Date): Pr
   const { data, error } = await supabase.rpc("outlet_sales", { _outlets: outletIds, _from: from.toISOString(), _to: to.toISOString() });
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as OutletDay[]).map((r) => ({ ...r, bills: Number(r.bills), net: Number(r.net), tax: Number(r.tax), dine_in: Number(r.dine_in), takeaway: Number(r.takeaway), delivery: Number(r.delivery), aggregator: Number(r.aggregator), guest_ordered: Number(r.guest_ordered) }));
+}
+
+export interface OutletSpend { restaurant_id: string; day: string; entries: number; spend: number }
+
+/** Approved purchase spend per outlet per day, less linked supplier returns. Pairs with outletSales. */
+export async function outletPurchases(outletIds: string[], from: Date, to: Date): Promise<OutletSpend[]> {
+  const { data, error } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(
+    "outlet_purchases", { _outlets: outletIds, _from: from.toISOString(), _to: to.toISOString() });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as OutletSpend[]).map((r) => ({ ...r, entries: Number(r.entries), spend: Number(r.spend) }));
+}
+
+export interface TransferLine { materialId: string; qty: number; unitCost?: number | undefined; name?: string | undefined; unit?: string | undefined }
+
+/**
+ * Move stock from the outlet this device is in to another outlet of the same brand. The cloud
+ * writes both sides together, so a transfer can never exist on only one end.
+ */
+export async function transferStock(fromId: string, toId: string, items: TransferLine[], note: string): Promise<string> {
+  const { data, error } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(
+    "transfer_stock", { _from: fromId, _to: toId, _items: items, _note: note });
+  if (error) throw new Error(error.message);
+  return String(data ?? "");
 }

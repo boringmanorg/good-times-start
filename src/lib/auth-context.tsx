@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { loginForEmail, type LoginRow } from "./staff-login-logic";
 import { AuthContext, type Membership, type SignedInStaff } from "./staff";
+import { chosenOutlet, pickActive } from "./active-outlet";
 
 /*
  * The signed-in person and their role are remembered on this device, so the
@@ -39,8 +40,8 @@ async function resolveStaff(id: string, email: string): Promise<SignedInStaff> {
     restaurantName: row.restaurants?.name ?? "Restaurant",
     role: row.role,
   }));
-  // One outlet: the restaurant this person belongs to.
-  const active = memberships[0];
+  // The outlet this device last chose, when the person still belongs to it; else the first.
+  const active = pickActive(memberships, chosenOutlet());
   const loginRow = ((loginQuery as { data: LoginRow | null }).data ?? null);
   return {
     id,

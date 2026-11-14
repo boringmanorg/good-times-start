@@ -278,3 +278,34 @@ because it is advertised but not built — put it back the day it ships.
 Still missing for a full brand offering: central kitchen and inter-outlet stock transfers, a
 consolidated P&L, and an outlet switcher in the header (`prepareOutletSwitch` in
 outlet-actions.ts has the safe-switch guards already written, but no UI calls it).
+
+## Brand: outlet switcher, P&L and stock transfers (14 Nov 2026)
+
+The three gaps left by the first Brand pass are closed.
+
+**Outlet switcher** (`OutletSwitcher`, header, every app). A device holds one outlet's data,
+so switching clears the device and reloads onto the other outlet. `prepareOutletSwitch` already
+had the guards: it refuses while anything is unsynced or a bill is running, and says which, so
+nothing is ever wiped. The choice is kept in localStorage (`xtsy-outlet`) and `pickActive` in
+`active-outlet.ts` applies it at sign-in — a remembered outlet the person no longer belongs to
+is ignored, or they would be stuck on a screen that cannot load. The chip only appears for
+someone with two or more memberships on a `multi_outlet` plan.
+
+**Sales less purchases** on `/brand`. `outlet_purchases` (new RPC) sums approved purchase
+entries less linked supplier returns, per outlet per day, using the same "approved" rule as
+`purchase-logic.ts` `counts`. It is STABLE, not SECURITY DEFINER, so RLS keeps a caller to
+their own outlets — same as `outlet_sales`. The screen calls it a **trading margin, never
+profit**: rent and wages are not in the POS. A cloud without the RPC shows "no approved
+purchases" rather than taking the sales table down.
+
+**Stock transfers** between outlets (`transfer_stock`). One call writes BOTH sides together —
+`transfer_out` (negative quantities) at the sender and `transfer_in` (positive) at the
+receiver, sharing a `transferId` — so a transfer can never exist on one end only. They are
+ordinary `stock_entry` records, so they sync and affect stock levels through the existing path
+with no new table. Lines carry the sender's `unitCost`, so the receiving outlet is valued at
+what the brand paid, and `outlet_purchases` ignores both transfer types: moving stock between
+outlets is not a new purchase and must not inflate brand spend. Only an owner/manager of
+**both** ends may do it, and both must be the same account.
+
+Migrations, NOT yet applied: `docs/migrations/2026-11-14-outlet-purchases.sql` and
+`2026-11-14-outlet-transfers.sql`.

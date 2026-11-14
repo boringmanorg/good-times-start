@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Check, CopyPlus, IndianRupee, Plus, Store } from "lucide-react";
+import { Building2, Check, CopyPlus, IndianRupee, Package, Plus, Store, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/billing";
+import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
-import { createOutlet, outletSales, pushMenu } from "@/lib/outlet-actions";
-import { brandTotals, newOutletProblem, outletCountText, pushMenuProblem, ranked, shareOfBrand, totalsByOutlet, type Outlet } from "@/lib/brand-logic";
+import { getDb } from "@/lib/db";
+import { createOutlet, outletPurchases, outletSales, pushMenu, transferStock } from "@/lib/outlet-actions";
+import { brandPnl, brandTotals, newOutletProblem, outletCountText, pnlByOutlet, pushMenuProblem, ranked, shareOfBrand, totalsByOutlet, transferLines, transferProblem, type Outlet } from "@/lib/brand-logic";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { useStaff } from "@/lib/staff";
 import { cn } from "@/lib/utils";
@@ -63,8 +65,20 @@ function BrandPage() {
     queryFn: () => outletSales(ids, range.from, range.to),
   });
 
+  // Purchase cost sits beside sales. An older cloud has no outlet_purchases yet, so a failure
+  // here must not take the sales table down with it: treat it as "no cost figures".
+  const spend = useQuery({
+    queryKey: ["brand-spend", ids, days],
+    enabled: ids.length > 0,
+    retry: false,
+    queryFn: () => outletPurchases(ids, range.from, range.to),
+  });
+
   const rows = totalsByOutlet(outlets, sales.data ?? []);
   const total = brandTotals(rows);
+  const pnl = pnlByOutlet(outlets, sales.data ?? [], spend.data ?? []);
+  const brandLine = brandPnl(pnl);
+  const costKnown = !spend.error && (spend.data?.length ?? 0) > 0;
   const byName = (id: string) => outlets.find((o) => o.id === id);
 
   return (
@@ -132,8 +146,51 @@ function BrandPage() {
           </div>
         </section>
 
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="font-semibold">Sales less purchases</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            What the brand sold, less what it spent on approved purchases (supplier returns taken off).
+            Rent, wages and the rest aren't in the POS, so this is a trading margin, not profit.
+          </p>
+          {!costKnown ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {spend.isLoading ? "Loading purchase cost…" : "No approved purchases recorded in these days."}
+            </p>
+          ) : (
+            <>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <Stat label="Sales" value={formatINR(brandLine.sales)} icon={IndianRupee} />
+                <Stat label="Purchases" value={formatINR(brandLine.spend)} icon={Package} />
+                <Stat label={brandLine.gross < 0 ? "Short by" : "Left over"} value={formatINR(Math.abs(brandLine.gross))} icon={IndianRupee} />
+              </div>
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead><tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="p-2">Outlet</th><th className="p-2 text-right">Sales</th>
+                    <th className="p-2 text-right">Purchases</th><th className="p-2 text-right">Left</th>
+                    <th className="hidden p-2 text-right sm:table-cell">Margin</th>
+                  </tr></thead>
+                  <tbody>
+                    {pnl.map((r) => (
+                      <tr key={r.id} className="border-b border-border/60">
+                        <td className="p-2 font-medium">{byName(r.id)?.name ?? "Outlet"}</td>
+                        <td className="p-2 text-right tabular-nums">{formatINR(r.sales)}</td>
+                        <td className="p-2 text-right tabular-nums">{formatINR(r.spend)}</td>
+                        <td className={cn("p-2 text-right font-semibold tabular-nums", r.gross < 0 && "text-destructive")}>{formatINR(r.gross)}</td>
+                        <td className="hidden p-2 text-right tabular-nums sm:table-cell">{r.sales ? `${Math.round(r.margin * 100)}%` : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
+
         <AddOutlet accountId={brand.data?.accountId ?? null} outlets={outlets} maxOutlets={brand.data?.maxOutlets ?? null}
           onAdded={() => void queryClient.invalidateQueries({ queryKey: ["brand"] })} />
+
+        <SendStock outlets={outlets} mine={user?.restaurantId ?? null} />
 
         <PushMenu outlets={outlets} mine={user?.restaurantId ?? null} />
 
@@ -255,6 +312,83 @@ function PushMenu({ outlets, mine }: { outlets: Outlet[]; mine: string | null })
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button disabled={!!problem || push.isPending} onClick={() => push.mutate()}>
           {push.isPending ? "Copying…" : "Copy the menu across"}
+        </Button>
+        {problem ? <span className="text-xs text-muted-foreground">{problem}</span> : null}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Send stock from the outlet this device is in to another outlet of the same brand.
+ *
+ * The sender is always the current outlet: a device holds one outlet's items, so those are the
+ * only ones it can weigh out and send. The cloud writes both sides of the transfer together.
+ */
+function SendStock({ outlets, mine }: { outlets: Outlet[]; mine: string | null }) {
+  const materials = useLiveQuery(async () => (await getDb().materials.toArray()).filter((m) => !m.archived).sort((a, b) => a.name.localeCompare(b.name)), [], []);
+  const [to, setTo] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [lines, setLines] = useState<{ materialId: string; qty: number }[]>([{ materialId: "", qty: 0 }]);
+  const here = outlets.find((o) => o.id === mine);
+  const problem = transferProblem(to, lines);
+
+  const send = useMutation({
+    mutationFn: () => transferStock(mine!, to!, transferLines(lines).map((l) => {
+      const m = materials.find((x) => x.id === l.materialId);
+      return { materialId: l.materialId, qty: l.qty, unitCost: m?.costPerUnit, name: m?.name, unit: m?.unit };
+    }), note.trim()),
+    onSuccess: () => {
+      toast.success(`Sent to ${outlets.find((o) => o.id === to)?.name ?? "the outlet"}`);
+      setLines([{ materialId: "", qty: 0 }]); setNote(""); setTo(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (outlets.length < 2 || !mine) return null;
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <h2 className="flex items-center gap-2 font-semibold"><Truck className="size-4 text-primary" />Send stock to another outlet</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Moves items out of {here?.name ?? "this outlet"} and into the one you choose, at the price this outlet paid.
+        Both outlets see the transfer in their purchase history. It isn't a new purchase, so it doesn't change brand spend.
+      </p>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="text-sm font-medium">Send to
+          <select value={to ?? ""} onChange={(e) => setTo(e.target.value || null)} className={field}>
+            <option value="">Choose an outlet</option>
+            {outlets.filter((o) => o.id !== mine).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium">Note
+          <input value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} placeholder="Van at 6am" className={field} />
+        </label>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {lines.map((l, i) => (
+          <div key={i} className="flex flex-wrap items-end gap-2">
+            <label className="min-w-0 flex-1 text-xs font-medium">Item
+              <select value={l.materialId} onChange={(e) => setLines((v) => v.map((x, j) => (j === i ? { ...x, materialId: e.target.value } : x)))} className={field}>
+                <option value="">Choose an item</option>
+                {materials.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
+              </select>
+            </label>
+            <label className="w-28 text-xs font-medium">Quantity
+              <input inputMode="decimal" value={l.qty || ""} onChange={(e) => setLines((v) => v.map((x, j) => (j === i ? { ...x, qty: Number(e.target.value.replace(/[^0-9.]/g, "")) || 0 } : x)))} className={field} />
+            </label>
+            {lines.length > 1 ? (
+              <Button variant="ghost" className="text-destructive" onClick={() => setLines((v) => v.filter((_, j) => j !== i))}>Remove</Button>
+            ) : null}
+          </div>
+        ))}
+        <Button variant="outline" onClick={() => setLines((v) => [...v, { materialId: "", qty: 0 }])}><Plus />Add another item</Button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button disabled={!!problem || send.isPending} onClick={() => send.mutate()}>
+          {send.isPending ? "Sending…" : "Send the stock"}
         </Button>
         {problem ? <span className="text-xs text-muted-foreground">{problem}</span> : null}
       </div>

@@ -262,7 +262,8 @@ export interface Supplier {
  */
 export interface StockEntry {
   id: string;
-  type: "purchase" | "sale" | "wastage" | "count" | "return";
+  /** transfer_out / transfer_in are the two sides of a brand stock transfer (transfer_stock). */
+  type: "purchase" | "sale" | "wastage" | "count" | "return" | "transfer_out" | "transfer_in";
   at: number;
   /** name and unit are copied when the entry is recorded, so history still reads correctly after an item is renamed or deleted. */
   items: { materialId: string; qty: number; unitCost?: number; name?: string; unit?: StockUnit }[];
@@ -273,6 +274,11 @@ export interface StockEntry {
   by?: string;
   /** Original supplier purchase; only linked returns use this field. */
   purchaseId?: string;
+  /** Both sides of a brand stock transfer share this id. */
+  transferId?: string;
+  /** The outlet at the other end of a transfer. */
+  otherOutlet?: string;
+  otherOutletName?: string;
   supplierName?: string;
   /** Purchases and returns recorded by the bill desk wait for an admin's approval; none = recorded by an admin (approved). */
   approval?: PurchaseApproval;

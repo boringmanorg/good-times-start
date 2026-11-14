@@ -4,7 +4,7 @@
  * The cloud already carries this (create_outlet, push_menu, outlet_sales in outlet-actions.ts);
  * these are the rules the Brand screen reads from, kept pure so they can be tested.
  */
-import type { OutletDay } from "./outlet-actions";
+import type { OutletDay, OutletSpend } from "./outlet-actions";
 
 export interface Outlet { id: string; name: string; city: string; slug: string | null }
 
@@ -63,3 +63,43 @@ export function pushMenuProblem(fromId: string | null, toIds: string[]): string 
 export function outletCountText(n: number): string {
   return n === 1 ? "1 outlet" : `${n} outlets`;
 }
+
+/** Sales, cost and what is left, for one outlet or for the brand. */
+export interface OutletPnl { id: string; sales: number; spend: number; gross: number; margin: number }
+
+/**
+ * Sales minus purchase cost. This is a trading margin, not a full profit: rent, wages and the
+ * rest are not in the POS, so the screen must never call it profit.
+ */
+export function pnlByOutlet(outlets: Outlet[], days: OutletDay[], spend: OutletSpend[]): OutletPnl[] {
+  return outlets.map((o) => {
+    const sales = days.filter((d) => d.restaurant_id === o.id).reduce((n, d) => n + d.net, 0);
+    const cost = spend.filter((d) => d.restaurant_id === o.id).reduce((n, d) => n + d.spend, 0);
+    return { id: o.id, sales, spend: cost, gross: sales - cost, margin: sales > 0 ? (sales - cost) / sales : 0 };
+  });
+}
+
+/** The brand's own trading line. */
+export function brandPnl(rows: OutletPnl[]): Omit<OutletPnl, "id"> {
+  const sales = rows.reduce((n, r) => n + r.sales, 0);
+  const spend = rows.reduce((n, r) => n + r.spend, 0);
+  return { sales, spend, gross: sales - spend, margin: sales > 0 ? (sales - spend) / sales : 0 };
+}
+
+/** Why this stock transfer can't be sent, or null. */
+export function transferProblem(toId: string | null, lines: { materialId: string; qty: number }[]): string | null {
+  if (!toId) return "Choose the outlet to send to.";
+  const real = lines.filter((l) => l.materialId && l.qty > 0);
+  if (!real.length) return "Add at least one item with a quantity.";
+  if (real.length > 200) return "Send at most 200 items at a time.";
+  const seen = new Set<string>();
+  for (const l of real) {
+    if (seen.has(l.materialId)) return "The same item is listed twice. Put the whole quantity on one line.";
+    seen.add(l.materialId);
+  }
+  return null;
+}
+
+/** Only the lines worth sending: an item chosen with a real quantity. */
+export const transferLines = <T extends { materialId: string; qty: number }>(lines: T[]): T[] =>
+  lines.filter((l) => l.materialId && l.qty > 0);

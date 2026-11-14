@@ -20,6 +20,7 @@ import { usePolicy } from "@/lib/use-policy";
 import { can, screenPermitted } from "@/lib/permissions";
 import { GuestOrdersButton } from "@/components/GuestOrders";
 import { AdminAlerts } from "@/components/AdminAlerts";
+import { OutletSwitcher } from "@/components/OutletSwitcher";
 import { currentDevice, setAppMode, syncAppModeFromUrl, useAppMode } from "@/lib/app-mode";
 import { touchTerminal, useTerminalStatus } from "@/lib/terminal-actions";
 import { isLovablePreview } from "@/lib/preview-host";
@@ -447,7 +448,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
               <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{APPS[app].name}</div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{app !== "manager" ? <GuestOrdersButton /> : null}<AdminAlerts /><AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2"><OutletSwitcher />{app !== "manager" ? <GuestOrdersButton /> : null}<AdminAlerts /><AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
         </header>
         {planNotice && plan ? (
           <a href={whatsappLink(`Hi XTSY, please renew the ${plan.planName} plan for ${restaurantName || "our restaurant"}.`)} target="_blank" rel="noreferrer"
