@@ -110,7 +110,7 @@ test.describe("Hard test · billing and reports, offline", () => {
       await expect(valueUnder(page, "Bills")).toHaveText(String(before.bills + 1));
       await page.getByRole("radio", { name: "GST" }).click();
       const csv = await download(page, () => page.getByRole("button", { name: "All bills CSV" }).click());
-      const rows = readCsv(csv.data.toString("utf8").replace(/^﻿/, ""));
+      const rows = readCsv(csv.data.toString("utf8").replace(/^\uFEFF/, ""));
       const header = rows[0] ?? [];
       const totalCol = header.findIndex((h) => /^total/i.test(h));
       expect(totalCol, `bills CSV has a total column: ${header.join(", ")}`).toBeGreaterThanOrEqual(0);

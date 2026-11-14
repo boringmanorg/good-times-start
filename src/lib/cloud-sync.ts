@@ -695,8 +695,12 @@ let queued = false;
  * Lock keeps two open tabs from pushing and pulling over each other.
  */
 function withDeviceLock<T>(restaurantId: string, work: () => Promise<T>): Promise<T> {
-  const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: { request: (name: string, cb: () => Promise<T>) => Promise<T> } }).locks : undefined;
-  return locks ? locks.request(`xtsy-sync-${restaurantId}`, work) : work();
+  // The real Web Locks signature resolves to the callback's own result; typing it as Promise<T>
+  // made the return Promise<Promise<T>>. Await it so the awaited type is T either way.
+  const locks = typeof navigator !== "undefined"
+    ? (navigator as Navigator & { locks?: { request: (name: string, cb: () => Promise<T>) => Promise<Awaited<T>> } }).locks
+    : undefined;
+  return locks ? locks.request(`xtsy-sync-${restaurantId}`, work) as Promise<T> : work();
 }
 
 /** Push local changes and pull the latest restaurant data. Concurrent calls share one run. */
