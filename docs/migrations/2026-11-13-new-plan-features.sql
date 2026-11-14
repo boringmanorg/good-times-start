@@ -1,3 +1,4 @@
+-- APPLIED 14 Nov 2026.
 -- New plan features (owner's decisions, 13 Nov 2026 — see docs/roadmap.md):
 --   recipes     recipe management and food costing — Pro Lite and above
 --   gift_cards  gift cards issued by the super admin or the restaurant admin — Pro and above

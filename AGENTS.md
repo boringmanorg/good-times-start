@@ -107,7 +107,7 @@
 - Plan gating in the apps (hide, never block billing): AppShell SCREEN_FEATURE (/dashboard insights, /stock purchases, /marketing marketing, /waiter waiter_app; POS Manager starts on the first screen its plan has), Purchase → Vendors tab (vendors), Bookings button/tabs (qr_ordering, bookings; anything already waiting still shows), Roles "On with admin code" (admin_approval), loyalty via useLoyaltyPct (0 without loyalty), Settings cards (audit_log, QR & guest ordering, Brand/WhatsApp). Cloud: QR/online orders check account_feature; guest table bookings check account_feature(…, 'bookings').
 - Website models: live — restaurants, fine dine, cafés, cloud kitchens; coming soon — POS by XTSY for Hotels & Resorts, POS by XTSY for Tourism (separate apps, one XTSY brand).
 - Features fail open on the device (featureOn: unknown plan = on) and billing is never switched off: a lapsed plan (7 days past paid-until) turns off extras and shows the admin a renewal notice. Guest QR/online ordering check account_feature in the cloud.
-- TAB Bistro by XTSY: Pro (₹499/month), paid until 13 Dec 2026.
+- TAB Bistro by XTSY: Enterprise / Brand, complimentary, paid until 13 Dec 2026 (was Pro; changed in the console).
 - Super admin console at /console (noindex, never linked): only confirmed accounts listed in platform_admin_emails (admin@xtsy.one, a real address; sign in with the full email) or platform_admins. The console has its own session (console-client.ts, storageKey xtsy-console-auth), never the staff apps' session; server actions get the console token in their input and check it (superAdminFromToken). Forgot password? emails a reset link back to /console (recovery → set new password). Tabs: Overview, Restaurants (plan, status, paid-until, seat/feature overrides, devices), Plans, Infra & backend, SEO insights (audits the live website).
 - Website (src/routes/xtsy-pos.tsx) is the bare home page "/" via the router rewrite (homeToWebsite); "/?table=…" etc. stay the bill screen. No sign-in links or forms on it (SEO audit checks). Staff sign-in is /login (/auth redirects there). robots.txt allows only "/$" and assets.
 - Super admin controls every restaurant's logins (Restaurants → Logins; ConsoleLogins, platform-logins.functions.ts → platform/logins.server.ts, service role after is_platform_admin): create logins on any made-up domain (confirmed, no email sent), rename the email, change role/name, reset password, sign-in off/on (auth ban), remove. Guards: a restaurant always keeps an owner who can sign in; super admin accounts can't be edited from the console. Identity is by user id (staff_logins.user_id), so renamed built-in logins keep their role; only the short names "admin"/"billdesk"/"waiter" on /login stop working for a renamed login. Changes are logged in account_events (login_changed).
@@ -145,8 +145,8 @@ for this restaurant", not "isn't part of the plan").
 
 `restaurant_entitlements()` names each feature key in an array, so **any new feature must be
 added there too** or the devices never see it. The migration that does this, together with
-the plans-table update, is `docs/migrations/2026-11-13-new-plan-features.sql` — apply it with
-the owner's approval before relying on any of the five.
+the plans-table update, is `docs/migrations/2026-11-13-new-plan-features.sql` — **applied
+14 Nov 2026**.
 
 ## Super admin onboarding (14 Nov 2026)
 
