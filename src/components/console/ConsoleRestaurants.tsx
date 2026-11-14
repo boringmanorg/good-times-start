@@ -7,6 +7,10 @@ import { ago, loadPayments, loadPlans, loadRestaurants, recordPayment, saveResta
 import { FEATURES, FEATURE_NAMES, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Panel, field } from "./ConsoleBits";
+import { ConsoleOnboard } from "./ConsoleOnboard";
+import { consoleToken } from "@/lib/console-client";
+import { platformRestaurantModels } from "@/lib/platform-restaurants.functions";
+import { modelLabel } from "@/lib/platform-restaurant-logic";
 import { ConsoleLogins } from "./ConsoleLogins";
 
 const STATUSES = [
@@ -16,6 +20,7 @@ const STATUSES = [
 export function ConsoleRestaurants() {
   const rows = useQuery({ queryKey: ["console", "restaurants"], queryFn: loadRestaurants, refetchInterval: 60_000 });
   const plans = useQuery({ queryKey: ["console", "plans"], queryFn: loadPlans });
+  const models = useQuery({ queryKey: ["console", "models"], queryFn: async () => platformRestaurantModels({ data: { token: await consoleToken() } }) });
   if (rows.isLoading || plans.isLoading) return <Loading what="restaurants" />;
   if (rows.error || !rows.data) return <Failed error={rows.error} />;
   return (
@@ -24,7 +29,8 @@ export function ConsoleRestaurants() {
         <h1 className="font-brand text-3xl">Restaurants</h1>
         <p className="text-sm text-muted-foreground">Plans, subscriptions, feature switches, logins and devices. Payments happen outside the software: record renewals here.</p>
       </div>
-      {rows.data.map((r) => <RestaurantCard key={r.id} r={r} plans={plans.data ?? []} />)}
+      <ConsoleOnboard plans={plans.data ?? []} />
+      {rows.data.map((r) => <RestaurantCard key={r.id} r={r} plans={plans.data ?? []} model={models.data?.[r.id] ?? ""} />)}
     </div>
   );
 }
@@ -150,7 +156,7 @@ function Renewal({ r, price }: { r: RestaurantRow; price: number }) {
   );
 }
 
-function RestaurantCard({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
+function RestaurantCard({ r, plans, model }: { r: RestaurantRow; plans: PlanRow[]; model: string }) {
   const queryClient = useQueryClient();
   const a = r.account;
   const [plan, setPlan] = useState(a?.planId ?? "basic");
@@ -182,7 +188,7 @@ function RestaurantCard({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
   return (
     <Panel title={r.name} action={<span className={cn("rounded-full px-2.5 py-1 text-xs font-bold", a?.live ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive")}>{a?.live ? "Live" : "Not live"}</span>}>
       <p className="-mt-2 mb-4 text-xs text-muted-foreground">
-        {r.city ? <><MapPin className="mr-0.5 inline size-3" />{r.city} · </> : null}{r.slug ? `/${r.slug} · ` : ""}joined {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+        {modelLabel(model) ? <>{modelLabel(model)} · </> : null}{r.city ? <><MapPin className="mr-0.5 inline size-3" />{r.city} · </> : null}{r.slug ? `/${r.slug} · ` : ""}joined {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
         {" · "}last activity {ago(r.lastActivity)} · {r.bills30d} bill changes in 30 days · {r.guestOrders7d} QR orders in 7 days
       </p>
 

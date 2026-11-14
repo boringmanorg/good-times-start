@@ -147,3 +147,35 @@ for this restaurant", not "isn't part of the plan").
 added there too** or the devices never see it. The migration that does this, together with
 the plans-table update, is `docs/migrations/2026-11-13-new-plan-features.sql` — apply it with
 the owner's approval before relying on any of the five.
+
+## Super admin onboarding (14 Nov 2026)
+
+Console → Restaurants → **Onboard a new outlet** creates the account, the restaurant and
+the owner's login in one pass (`ConsoleOnboard` → `platform-restaurants.functions.ts` →
+`platform/restaurants.server.ts`, service role after `superAdminFromToken`). Restaurants
+cannot create themselves; this is the only path.
+
+- Business model (Restaurant / Fine Dine / Café / Cloud Kitchen / Hotel & Resort) is stored
+  in `restaurants.branding.model` — no migration needed, `branding` is already jsonb. It is
+  shown on each restaurant card via `platformRestaurantModels`, because `platform_restaurants`
+  predates the field. Tourism is deliberately not offered yet.
+- The outlet starts `trialing` on the chosen plan (14 days); the first payment recorded under
+  Renewal and payment makes it active. Only the four public plans are offered
+  (`ONBOARDING_PLANS`) — never `owner` or the legacy catalogue entries.
+- The QR slug and the owner's login email derive from the outlet name until either is typed
+  ("Cloud Nine Kitchen" → `cloud-nine-kitchen`, `admin@cloudninekitchen.pos`).
+- Onboarding is all-or-nothing: if the owner login fails, the restaurant and account rows are
+  deleted again, so no half-made outlet is left behind.
+- Rules live in `src/lib/platform-restaurant-logic.ts` (pure, tested).
+
+## Basic / Pro Lite workflow audit (14 Nov 2026)
+
+Every screen was driven as a Basic and a Pro Lite restaurant on desktop and phone. Keep these:
+- Anything a plan does not include must not be *offered* — not just empty. Tables hid
+  "QR Scan & Order" without `qr_ordering`; the menu's food-cost chip needs `recipes`; the
+  dashboard's Purchases tile becomes "GST on sales" without `purchases`; Invoice & GST
+  disables the loyalty % field and hides the Loyalty-points payment mode without `loyalty`.
+- Never force a `min-w-[…]` table on phones: mobile Chrome zooms the whole app out to fit it
+  (the Purchase items table now drops two reference columns below `sm:` instead).
+- Cloud errors must read as English: a failed number allocation says "no connection to the
+  cloud right now", never "TypeError: Failed to fetch".
