@@ -71,16 +71,20 @@ const BASIC: Feature[] = ["billing", "menu", "gst_reports", "manager_app", "insi
 const PRO_LITE: Feature[] = [...BASIC, "purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval"];
 const PRO: Feature[] = [...PRO_LITE, "waiter_app", "qr_ordering", "online_ordering", "marketing", "gift_cards", "feedback"];
 
-/** The published price list, per outlet (website and defaults). Keep in step with the plans table. */
+/**
+ * Standby copy of the price list. The website and the in-app plan screen read the cloud
+ * catalogue (see public-plans.ts); this is only what they fall back to when that read fails,
+ * so keep it in step with the plans table but never treat it as the published price.
+ */
 export const PUBLIC_PLANS: PublicPlan[] = [
-  { id: "basic", name: "Basic", price: 149, tagline: "Billing, menu, GST reports and your sales dashboard",
+  { id: "basic", name: "Basic", price: 199, tagline: "Billing, menu, GST reports and your sales dashboard",
     seats: { pos: 1, waiter: 0, manager: 1 }, features: BASIC },
-  { id: "pro_lite", name: "Pro Lite", price: 299, tagline: "Adds purchases, vendors, recipe costing, loyalty and reservations",
-    seats: { pos: 4, waiter: 0, manager: 1 }, features: PRO_LITE },
-  { id: "pro", name: "Pro", price: 499, tagline: "Adds Waiter Pro, QR ordering, gift cards, guest feedback and marketing", highlight: true,
-    seats: { pos: 6, waiter: 3, manager: 2 }, features: PRO },
+  { id: "pro_lite", name: "Pro Lite", price: 399, tagline: "Adds purchases, vendors, recipe costing, loyalty and reservations",
+    seats: { pos: 3, waiter: 0, manager: 1 }, features: PRO_LITE },
+  { id: "pro", name: "Pro", price: 599, tagline: "Adds Waiter Pro, QR ordering, gift cards, guest feedback and marketing", highlight: true,
+    seats: { pos: 6, waiter: 2, manager: 2 }, features: PRO },
   { id: "enterprise", name: "Enterprise / Brand", price: 999, tagline: "Everything in Pro, unlimited counters and waiters, accounting and audit logs",
-    seats: { pos: null, waiter: null, manager: 5 }, features: [...PRO, "accounting", "audit_log", "multi_outlet"] },
+    seats: { pos: null, waiter: null, manager: 4 }, features: [...PRO, "accounting", "audit_log", "multi_outlet"] },
 ];
 
 /** "₹199 / month", or "Call for quote". */

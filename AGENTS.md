@@ -99,10 +99,13 @@
 ## XTSY POS as software: plans, super admin, website (13 Nov 2026)
 - Names: the software is XTSY POS ("POS by XTSY"); apps are POS Manager (owner/manager), POS Billdesk (counter) and Waiter Pro (waiters).
 - Plans (src/lib/plans.ts, cloud `plans`), prices per outlet per month — seats are devices per app (Billdesk / Admin-Manager / Waiter):
-  - Basic ₹149 (1 / 1 / 0): billing, menu, GST bills & sales reports, POS Manager mobile app.
-  - Pro Lite ₹299 (4 / 1 / 0): + sales dashboard & analysis (insights), purchases, vendors, guest loyalty, table reservations, admin/manager approval codes (admin_approval).
-  - Pro ₹499 (6 / 2 / 3): + Waiter Pro, guest QR ordering (+ QR takeaway/delivery), marketing & branding tools.
-  - Enterprise / Brand ₹999 (unlimited / 5 / unlimited): + audit logs & full reports, multi-outlet.
+  - Basic ₹199 (1 / 1 / 0): billing, menu, GST bills & sales reports, POS Manager mobile app, sales dashboard.
+  - Pro Lite ₹399 (3 / 1 / 0): + purchases, vendors, recipe costing, guest loyalty, table reservations, admin/manager approval codes (admin_approval).
+  - Pro ₹599 (6 / 2 / 2): + Waiter Pro, guest QR ordering (+ QR takeaway/delivery), gift cards, guest feedback, marketing & branding tools.
+  - Enterprise / Brand ₹999 (unlimited / 4 / unlimited): + accounting & bookkeeping, audit logs & full reports, multi-outlet.
+  Prices and seats above are a snapshot: the catalogue in the cloud is the truth and the site
+  reads it live (see "The website reads the price catalogue"). Waiter Pro and QR ordering are
+  Pro and above; Basic and Pro Lite carry no waiter seat.
   A device beyond the plan becomes `over_plan` (can't sync, owner devices exempt) and retries on each check-in. Payments are recorded by hand by the super admin; no payment gateway.
 - Plan gating in the apps (hide, never block billing): AppShell SCREEN_FEATURE (/dashboard insights, /stock purchases, /marketing marketing, /waiter waiter_app; POS Manager starts on the first screen its plan has), Purchase → Vendors tab (vendors), Bookings button/tabs (qr_ordering, bookings; anything already waiting still shows), Roles "On with admin code" (admin_approval), loyalty via useLoyaltyPct (0 without loyalty), Settings cards (audit_log, QR & guest ordering, Brand/WhatsApp). Cloud: QR/online orders check account_feature; guest table bookings check account_feature(…, 'bookings').
 - Website models: live — restaurants, fine dine, cafés, cloud kitchens; coming soon — POS by XTSY for Hotels & Resorts, POS by XTSY for Tourism (separate apps, one XTSY brand).

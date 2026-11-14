@@ -7,10 +7,17 @@ const ent = (over: Partial<Entitlements> = {}): Entitlements => ({
 });
 
 describe("plans", () => {
-  it("publishes the four plans with their per-outlet prices and users", () => {
+  // Standby copy only: the site reads the cloud catalogue and falls back to this (public-plans.ts).
+  it("keeps the standby price list in step with the catalogue", () => {
     expect(PUBLIC_PLANS.map((p) => [p.id, p.price, p.seats.pos, p.seats.waiter, p.seats.manager])).toEqual([
-      ["basic", 149, 1, 0, 1], ["pro_lite", 299, 4, 0, 1], ["pro", 499, 6, 3, 2], ["enterprise", 999, null, null, 5],
+      ["basic", 199, 1, 0, 1], ["pro_lite", 399, 3, 0, 1], ["pro", 599, 6, 2, 2], ["enterprise", 999, null, null, 4],
     ]);
+  });
+
+  it("gives a waiter seat only to the plans that carry Waiter Pro", () => {
+    for (const p of PUBLIC_PLANS) {
+      expect(p.seats.waiter === 0).toBe(!p.features.includes("waiter_app"));
+    }
   });
 
   it("splits the features as XTSY sells them", () => {
