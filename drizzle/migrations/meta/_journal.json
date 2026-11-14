@@ -239,6 +239,13 @@
       "when": 1794385029940,
       "tag": "0033_settled_bill_points_value_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794634433337,
+      "tag": "0034_qr_room_only_deferred_payment",
+      "breakpoints": true
     }
   ]
 }
