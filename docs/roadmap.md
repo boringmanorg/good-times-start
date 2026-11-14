@@ -27,7 +27,7 @@ restaurant by the super admin (`feature_overrides` on `accounts`).
 
 ## Plan ladder after these changes
 
-| Feature | Basic ₹149 | Pro Lite ₹299 | Pro ₹499 | Brand ₹999 |
+| Feature | Basic ₹199 | Pro Lite ₹399 | Pro ₹599 | Brand ₹999 |
 |---|---|---|---|---|
 | Sales dashboard and analysis | **yes (new)** | yes | yes | yes |
 | Recipe management | no | **yes (new)** | yes | yes |

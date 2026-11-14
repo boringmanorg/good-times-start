@@ -230,3 +230,25 @@ for search engines, and `PlanSettings` reads the same list through React Query.
   track the catalogue too. Quote-only plans are left out of the range.
 - `PUBLIC_PLAN_IDS` decides which rows are public: `owner`, `trial` and the legacy catalogue
   entries never reach the page.
+
+## Re-audit of the plan ladder (14 Nov 2026)
+
+The catalogue had drifted from the plan structure: Basic carried `admin_approval`, and
+`vendors` had fallen out of both Pro Lite and Pro while Enterprise kept it — so a Pro
+restaurant was missing a feature a cheaper plan was sold with. Corrected in the cloud:
+
+- `admin_approval` off for Basic (it starts at Pro Lite).
+- `vendors`, `loyalty`, `bookings` on for Pro Lite.
+- `vendors` on for Pro.
+
+The ladder is now exactly the BASIC / PRO_LITE / PRO constants in `plans.ts`:
+
+- **Basic** billing, menu, gst_reports, manager_app, insights
+- **Pro Lite** + purchases, vendors, recipes, loyalty, bookings, admin_approval
+- **Pro** + waiter_app, qr_ordering, online_ordering, marketing, gift_cards, feedback
+- **Enterprise / Brand** + accounting, audit_log, multi_outlet
+
+`plans.test.ts` now asserts the ladder never takes a feature away as you move up, which is
+what would have caught the missing `vendors`. That test guards the standby list; the cloud
+catalogue is data, so re-check it with the feature matrix query whenever plans are edited in
+the console.

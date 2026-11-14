@@ -14,6 +14,16 @@ describe("plans", () => {
     ]);
   });
 
+  // A plan must carry everything the cheaper plan does. Vendor management once went missing
+  // from Pro while Enterprise kept it, so a Pro restaurant lost a feature by paying more.
+  it("never takes a feature away as you move up the ladder", () => {
+    for (let i = 1; i < PUBLIC_PLANS.length; i++) {
+      const below = PUBLIC_PLANS[i - 1]!, above = PUBLIC_PLANS[i]!;
+      const lost = below.features.filter((f) => !above.features.includes(f));
+      expect(lost, `${above.name} is missing ${lost.join(", ")} which ${below.name} has`).toEqual([]);
+    }
+  });
+
   it("gives a waiter seat only to the plans that carry Waiter Pro", () => {
     for (const p of PUBLIC_PLANS) {
       expect(p.seats.waiter === 0).toBe(!p.features.includes("waiter_app"));
