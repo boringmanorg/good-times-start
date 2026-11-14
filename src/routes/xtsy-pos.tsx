@@ -4,8 +4,9 @@ import {
   CalendarCheck, Gift, Check, ChefHat, ClipboardList, FileSpreadsheet, KeyRound, LayoutDashboard, MessageCircle, Printer,
   QrCode, Receipt, Send, ShieldCheck, ShoppingBasket, Smartphone, Store, Tablet, Users, WifiOff, X, Play,
 } from "lucide-react";
-import { FEATURE_NAMES, PUBLIC_FEATURES, PUBLIC_PLANS, SEAT_NAMES, priceText, seatText, whatsappLink, type SeatApp } from "@/lib/plans";
-import { FAQ, PRICE_RANGE, SITE_DESCRIPTION, SITE_TITLE, enquiryMessage, enquiryProblem, type Enquiry } from "@/lib/site-content";
+import { FEATURE_NAMES, PUBLIC_FEATURES, PUBLIC_PLANS, SEAT_NAMES, priceText, seatText, whatsappLink, type PublicPlan, type SeatApp } from "@/lib/plans";
+import { FAQ, SITE_DESCRIPTION, SITE_TITLE, enquiryMessage, enquiryProblem, type Enquiry } from "@/lib/site-content";
+import { loadPublicPlans, priceRange } from "@/lib/public-plans";
 import { siteUrl } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
 import { DemoTour } from "@/components/site/DemoTour";
@@ -16,15 +17,20 @@ import logo from "@/assets/logo.png";
  * Enquiries become a WhatsApp message to XTSY and a copy stays on the visitor's own device.
  */
 export const Route = createFileRoute("/xtsy-pos")({
-  head: () => {
+  // Prices come from the plans catalogue, not a second copy in the code: the console is where
+  // they are changed, and a stale price list on the home page is worse than a slow one.
+  loader: async () => ({ plans: await loadPublicPlans() }),
+  head: ({ loaderData }) => {
     const url = siteUrl();
+    // Before the loader has run (a head-only render), fall back to the compiled list.
+    const range = priceRange(loaderData?.plans ?? PUBLIC_PLANS);
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
         { "@type": "Organization", name: "XTSY", url: "https://xtsy.one", logo: `${url.replace(/\/xtsy-pos$/, "")}/brand/xtsy-logo.png` },
         { "@type": "SoftwareApplication", name: "XTSY POS", alternateName: "POS by XTSY", applicationCategory: "BusinessApplication", applicationSubCategory: "Restaurant POS",
           operatingSystem: "Web, Windows, macOS, Android, iOS", description: SITE_DESCRIPTION, url,
-          offers: { "@type": "AggregateOffer", priceCurrency: "INR", lowPrice: PRICE_RANGE.low, highPrice: PRICE_RANGE.high, offerCount: PUBLIC_PLANS.length } },
+          offers: { "@type": "AggregateOffer", priceCurrency: "INR", lowPrice: range.low, highPrice: range.high, offerCount: range.count } },
         { "@type": "FAQPage", mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
       ],
     };
@@ -52,6 +58,8 @@ export const Route = createFileRoute("/xtsy-pos")({
 const NAV = [{ href: "#brand", l: "Own your brand" }, { href: "#features", l: "Features" }, { href: "#marketing", l: "Marketing" }, { href: "#pricing", l: "Pricing" }, { href: "#faq", l: "FAQ" }];
 
 function SitePage() {
+  const { plans } = Route.useLoaderData();
+  const range = priceRange(plans);
   const [plan, setPlan] = useState("");
   const [demo, setDemo] = useState(false);
   const pick = (name: string) => { setPlan(name); document.getElementById("enquire")?.scrollIntoView({ behavior: "smooth" }); };
@@ -84,7 +92,7 @@ function SitePage() {
               <h1 className="mt-3 text-[2.9rem] leading-[0.98] sm:text-6xl lg:text-7xl">Restaurant billing software, made to be loved.</h1>
               <p className="mt-5 max-w-xl text-lg text-muted-foreground">Billing, KOTs, QR ordering, guest loyalty and a waiter app, live on every device and still working when the internet isn't. Built in Tamil Nadu for India and Asia — restaurants, fine dine, cafés and cloud kitchens.</p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#pricing" className="rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground hover:bg-primary-hover">See plans from ₹{PRICE_RANGE.low}/month</a>
+                <a href="#pricing" className="rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground hover:bg-primary-hover">See plans from ₹{range.low}/month</a>
                 <button type="button" onClick={() => setDemo(true)} className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 font-bold hover:bg-secondary"><Play className="size-4 fill-current text-primary" />Watch the demo</button>
               </div>
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
@@ -232,7 +240,7 @@ function SitePage() {
         {/* Pricing */}
         <Section id="pricing" eyebrow="Simple monthly plans, per outlet" title="Pricing">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {PUBLIC_PLANS.map((p) => (
+            {plans.map((p) => (
               <article key={p.id} className={cn("relative flex flex-col rounded-3xl border p-6", p.highlight ? "border-primary bg-primary-tint" : "border-border bg-card")}>
                 {p.highlight ? <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">Most popular</span> : null}
                 <h3 className="font-brand text-3xl">{p.name}</h3>
@@ -263,13 +271,13 @@ function SitePage() {
               </article>
             ))}
           </div>
-          <PlanComparison />
+          <PlanComparison plans={plans} />
           <p className="mt-5 text-center text-sm text-muted-foreground">Prices are per outlet per month. Users are devices signed in to each app: {Object.values(SEAT_NAMES).join(", ")}. No payment is taken on this website; we set you up after your enquiry. Support runs every day of the week, Saturday and Sunday included, except national holidays.</p>
         </Section>
 
         {/* Enquiry */}
         <Section id="enquire" eyebrow="Tell us what you need" title="Start with XTSY POS">
-          <EnquiryForm plan={plan} setPlan={setPlan} />
+          <EnquiryForm plan={plan} setPlan={setPlan} plans={plans} />
         </Section>
 
         {/* FAQ */}
@@ -331,7 +339,7 @@ function QrShowcase() {
 }
 
 /** Every plan beside every feature, so nothing is hidden behind a "contact us". */
-function PlanComparison() {
+function PlanComparison({ plans }: { plans: PublicPlan[] }) {
   const seats: [SeatApp, string][] = [["pos", SEAT_NAMES.pos], ["manager", SEAT_NAMES.manager], ["waiter", SEAT_NAMES.waiter]];
   return (
     <div className="mt-10">
@@ -342,7 +350,7 @@ function PlanComparison() {
         <thead>
           <tr className="bg-card">
             <th scope="col" className="sticky left-0 bg-card p-3 font-semibold">Compare every plan</th>
-            {PUBLIC_PLANS.map((p) => (
+            {plans.map((p) => (
               <th key={p.id} scope="col" className={cn("p-3 text-center", p.highlight && "bg-primary-tint")}>
                 <span className="font-brand block text-xl leading-none">{p.name}</span>
                 <span className="mt-1 block text-xs font-normal text-muted-foreground">{priceText(p.price)}</span>
@@ -354,7 +362,7 @@ function PlanComparison() {
           {seats.map(([app, label]) => (
             <tr key={app}>
               <th scope="row" className="sticky left-0 bg-background p-3 font-medium">{label} users</th>
-              {PUBLIC_PLANS.map((p) => {
+              {plans.map((p) => {
                 const n = p.seats[app];
                 return <td key={p.id} className={cn("p-3 text-center tabular-nums", p.highlight && "bg-primary-tint/40", n === 0 && "text-muted-foreground")}>{n === null ? "Unlimited" : n === 0 ? "—" : n}</td>;
               })}
@@ -363,7 +371,7 @@ function PlanComparison() {
           {PUBLIC_FEATURES.map((f) => (
             <tr key={f}>
               <th scope="row" className="sticky left-0 bg-background p-3 font-normal">{FEATURE_NAMES[f]}</th>
-              {PUBLIC_PLANS.map((p) => {
+              {plans.map((p) => {
                 const on = p.features.includes(f);
                 return (
                   <td key={p.id} className={cn("p-3 text-center", p.highlight && "bg-primary-tint/40")}>
@@ -452,7 +460,7 @@ function HeroMock() {
 const BLANK: Enquiry = { name: "", business: "", city: "", phone: "", outlets: "1", plan: "", message: "" };
 const SAVED = "xtsy-pos-enquiry";
 
-function EnquiryForm({ plan, setPlan }: { plan: string; setPlan: (p: string) => void }) {
+function EnquiryForm({ plan, setPlan, plans }: { plan: string; setPlan: (p: string) => void; plans: PublicPlan[] }) {
   const [form, setForm] = useState<Enquiry>(() => {
     if (typeof window === "undefined") return BLANK;
     try { const raw = window.localStorage.getItem(SAVED); return raw ? { ...BLANK, ...(JSON.parse(raw) as Partial<Enquiry>), message: "" } : BLANK; } catch { return BLANK; }
@@ -483,7 +491,7 @@ function EnquiryForm({ plan, setPlan }: { plan: string; setPlan: (p: string) => 
         <select value={value.outlets} onChange={set("outlets")} className={input}><option>1</option><option>2–5</option><option>6–20</option><option>More than 20</option></select>
       </label>
       <label className="text-sm font-medium">Plan
-        <select value={value.plan} onChange={set("plan")} className={input}><option value="">Help me choose</option>{PUBLIC_PLANS.map((p) => <option key={p.id} value={p.name}>{p.name} · {priceText(p.price)}</option>)}</select>
+        <select value={value.plan} onChange={set("plan")} className={input}><option value="">Help me choose</option>{plans.map((p) => <option key={p.id} value={p.name}>{p.name} · {priceText(p.price)}</option>)}</select>
       </label>
       <label className="text-sm font-medium sm:col-span-2">Your requirement
         <textarea rows={4} maxLength={800} value={value.message} onChange={set("message")} placeholder="Tables, rooms, counters, waiters, printers, anything special…" className={input} />

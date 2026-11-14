@@ -207,3 +207,23 @@ behaves exactly as it always has:
   existed before keep `none`, so nothing already in flight waits for a step that didn't
   exist when it was placed.
 - Migration: `docs/migrations/2026-11-14-qr-pay-by-screenshot.sql`.
+
+## The website reads the price catalogue (14 Nov 2026)
+
+The home page used to carry its own copy of the prices in `PUBLIC_PLANS`, so every change
+made in the console drifted away from what customers saw. By 14 Nov the live site showed
+₹149/₹299/₹499 while the catalogue said ₹199/₹399/₹599, with different seat counts too.
+
+`src/lib/public-plans.ts` now reads the `plans` table (anon may read active plans) and maps
+rows to `PublicPlan`. The website route loads it in its `loader`, so prices are server-rendered
+for search engines, and `PlanSettings` reads the same list through React Query.
+
+- **Change a price in the console and the site follows — no redeploy.**
+- A row marked `quote` shows "Call for quote" and never leaks its stored number.
+- Any failure (offline, refused read) falls back to the compiled `PUBLIC_PLANS`: a slightly
+  stale price beats an empty pricing section. Keep `PUBLIC_PLANS` roughly current for that
+  reason, but it is no longer what customers normally see.
+- `priceRange()` drives the JSON-LD `AggregateOffer` and the hero's "from ₹X/month", so those
+  track the catalogue too. Quote-only plans are left out of the range.
+- `PUBLIC_PLAN_IDS` decides which rows are public: `owner`, `trial` and the legacy catalogue
+  entries never reach the page.

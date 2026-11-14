@@ -2,6 +2,8 @@ import { Check, MessageCircle, X } from "lucide-react";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { PUBLIC_FEATURES as FEATURES, FEATURE_NAMES, PUBLIC_PLANS, SEAT_APPS, priceText, seatUseText, subscriptionText, whatsappLink, type SeatApp } from "@/lib/plans";
+import { useQuery } from "@tanstack/react-query";
+import { loadPublicPlans } from "@/lib/public-plans";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +11,9 @@ import { cn } from "@/lib/utils";
 export function PlanSettings() {
   const plan = useEntitlements();
   const settings = useRestaurantSettings();
+  // The ladder comes from the catalogue, so a price change in the console shows here too.
+  // Offline, or if the read fails, the compiled list stands in.
+  const { data: plans = PUBLIC_PLANS } = useQuery({ queryKey: ["public-plans"], queryFn: loadPublicPlans, staleTime: 10 * 60_000 });
   const name = settings.name || "our restaurant";
   if (!plan) {
     return <p className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Your plan shows here once this device has been online. Billing works either way.</p>;
@@ -58,7 +63,7 @@ export function PlanSettings() {
       <section className="rounded-2xl border border-border bg-card p-5">
         <h3 className="font-semibold">All plans</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {PUBLIC_PLANS.map((p) => (
+          {plans.map((p) => (
             <div key={p.id} className={cn("rounded-xl border p-4", p.id === plan.plan ? "border-primary bg-primary-tint" : "border-border")}>
               <p className="font-semibold">{p.name}{p.id === plan.plan ? <span className="ml-2 text-xs font-semibold text-primary">Yours</span> : null}</p>
               <p className="text-sm text-muted-foreground">{priceText(p.price)}</p>
