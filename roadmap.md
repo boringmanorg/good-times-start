@@ -1,5 +1,8 @@
 # POS expansion
 
+## Finish QR payment migration
+- [ ] Verify existing private screenshot storage/payment schema, enforce prepaid public QR orders in Cloud and checkout, and test without creating live orders.
+
 ## Purchase ledger
 - [ ] Replace Stock with Purchase and Items catalogue; show standard prices, latest quantity/price, frequency and full purchase history.
 - [ ] Disable recipe deductions, lock purchase items/bills, and implement linked supplier returns within 48 hours with local/cloud validation.

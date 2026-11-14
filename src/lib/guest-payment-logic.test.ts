@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  acceptBlockedReason, canConfirmForPayment, canSendPayment, extFor, guestPayLine,
+  acceptBlockedReason, canConfirmForPayment, canPayOnRoomBill, canSendPayment, extFor, guestPayLine,
   initialPayState, isPayState, MAX_PROOF_BYTES, owesPayment, payLabel, proofPath, proofProblem,
 } from "./guest-payment-logic";
 
 describe("prepaid QR orders", () => {
+  it("allows deferred payment only for in-house room service", () => {
+    expect(canPayOnRoomBill("table", true)).toBe(true);
+    expect(canPayOnRoomBill("table", false)).toBe(false);
+    expect(canPayOnRoomBill("online", true)).toBe(false);
+    expect(canPayOnRoomBill("online", false)).toBe(false);
+  });
   it("only collects money from orders that chose to pay now", () => {
     expect(initialPayState("upi")).toBe("awaiting_confirm");
     expect(initialPayState("counter")).toBe("none");
