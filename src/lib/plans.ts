@@ -45,13 +45,23 @@ export const FEATURE_NAMES: Record<Feature, string> = {
   kds: "Kitchen display screen",
   accounting: "Accounting and restaurant bookkeeping",
   audit_log: "Audit logs and full reports",
-  multi_outlet: "Several outlets under one brand",
+  multi_outlet: "Several outlets under one brand",  // the Brand screen: sales together, add an outlet, push the menu
 };
 
 /** Features listed on the website (internal switches like multi_outlet stay off the price cards). */
-/** Features listed on the website. multi_outlet and online_ordering are internal switches; kds is
- * turned on per restaurant by XTSY rather than sold with a plan, so neither goes on the price cards. */
-export const PUBLIC_FEATURES: Feature[] = FEATURES.filter((f) => f !== "multi_outlet" && f !== "online_ordering" && f !== "kds");
+/**
+ * Features listed on the website and on the in-app plan screen.
+ *
+ * Left out: online_ordering is an internal switch; kds is turned on per restaurant by XTSY
+ * rather than sold with a plan; and accounting is NOT BUILT YET — it stays off the comparison
+ * table until it ships, because a plan must not advertise what it cannot do. Put "accounting"
+ * back here the day the feature lands.
+ *
+ * multi_outlet is listed: the Brand screen makes it real (sales across outlets, add an outlet,
+ * push the menu), so it is the headline reason to take Enterprise / Brand.
+ */
+const NOT_ON_PRICE_CARDS: Feature[] = ["online_ordering", "kds", "accounting"];
+export const PUBLIC_FEATURES: Feature[] = FEATURES.filter((f) => !NOT_ON_PRICE_CARDS.includes(f));
 
 export const SEAT_NAMES: Record<SeatApp, string> = { manager: "Admin / Manager", pos: "Billdesk", waiter: "Waiter" };
 export const SEAT_APPS: Record<SeatApp, string> = { manager: "POS Manager", pos: "POS Billdesk", waiter: "Waiter Pro" };
@@ -83,7 +93,7 @@ export const PUBLIC_PLANS: PublicPlan[] = [
     seats: { pos: 3, waiter: 0, manager: 1 }, features: PRO_LITE },
   { id: "pro", name: "Pro", price: 599, tagline: "Adds Waiter Pro, QR ordering, gift cards, guest feedback and marketing", highlight: true,
     seats: { pos: 6, waiter: 2, manager: 2 }, features: PRO },
-  { id: "enterprise", name: "Enterprise / Brand", price: 999, tagline: "Everything in Pro, unlimited counters and waiters, accounting and audit logs",
+  { id: "enterprise", name: "Enterprise / Brand", price: 999, tagline: "Everything in Pro, unlimited counters and waiters, several outlets under one brand, audit logs",
     seats: { pos: null, waiter: null, manager: 4 }, features: [...PRO, "accounting", "audit_log", "multi_outlet"] },
 ];
 

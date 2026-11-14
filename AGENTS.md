@@ -252,3 +252,29 @@ The ladder is now exactly the BASIC / PRO_LITE / PRO constants in `plans.ts`:
 what would have caught the missing `vendors`. That test guards the standby list; the cloud
 catalogue is data, so re-check it with the feature matrix query whenever plans are edited in
 the console.
+
+## Brand / Enterprise: real multi-outlet (14 Nov 2026)
+
+The multi-outlet backend already existed and **nothing used it** — `create_outlet`, `push_menu`
+and `outlet_sales` were in the cloud, `src/lib/outlet-actions.ts` wrapped all three, and no
+screen called any of them. Brand was a label, not a feature.
+
+`/brand` (POS Manager, gated by `SCREEN_FEATURE["/brand"] = "multi_outlet"`) now uses them:
+
+- **Sales together** over 7 / 30 / 90 days: brand totals plus a per-outlet table ranked by
+  sales with each outlet's share. An outlet with no sales reads as zero, never missing.
+- **Add an outlet**, optionally copying an existing outlet's menu, settings, materials and
+  suppliers (`create_outlet` already does the copy). The cloud enforces `plans.max_outlets`
+  (Enterprise 50, every other plan 1) and account ownership.
+- **Push the menu across the brand**: copy one outlet's dishes and prices over the outlets you
+  tick. Never runs with nothing ticked — an empty selection reads as "push to all" and isn't.
+
+Rules are pure and tested in `src/lib/brand-logic.ts`.
+
+`multi_outlet` is now on the public comparison table: it does something real, so it is the
+headline reason to take Enterprise / Brand. `accounting` came OFF that table in the same pass,
+because it is advertised but not built — put it back the day it ships.
+
+Still missing for a full brand offering: central kitchen and inter-outlet stock transfers, a
+consolidated P&L, and an outlet switcher in the header (`prepareOutletSwitch` in
+outlet-actions.ts has the safe-switch guards already written, but no UI calls it).

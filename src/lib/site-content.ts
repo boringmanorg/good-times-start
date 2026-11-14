@@ -15,7 +15,7 @@ export const FAQ: { q: string; a: string }[] = [
   { q: "Is the price per outlet?", a: "Yes. Every plan is priced per outlet per month: Basic ₹149, Pro Lite ₹299, Pro ₹499 and Enterprise / Brand ₹999. Each outlet gets its own users and devices." },
   { q: "Which plan has the waiter app and QR ordering?", a: "Waiter Pro, guest QR ordering, gift cards and guest feedback come with Pro and Enterprise / Brand. Pro Lite adds purchases, vendor management, recipe costing, guest loyalty and table reservations to Basic. Basic itself includes your sales dashboard." },
   { q: "How do I pay for a plan?", a: "There's no online payment on this website. Send an enquiry with your requirement and the XTSY team sets you up and shares the payment details." },
-  { q: "What is in the Enterprise / Brand plan?", a: "Everything in Pro, with unlimited Billdesk and Waiter users, up to 5 admins, accounting and restaurant bookkeeping, and full access to audit logs and reports. For chains and brands with special requirements, send an enquiry and we'll fulfil them." },
+  { q: "What is in the Enterprise / Brand plan?", a: "Everything in Pro, with unlimited Billdesk and Waiter users, up to 4 admins, several outlets under one brand, and full access to audit logs and reports. For chains and brands with special requirements, send an enquiry and we'll fulfil them." },
   { q: "When can I get support?", a: "Every day of the week, Saturday and Sunday included. We're closed on national holidays. Reach the XTSY team on WhatsApp and a person answers." },
 ];
 

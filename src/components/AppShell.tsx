@@ -2,7 +2,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useMarketingAccess, useMarketingOutbox } from "@/lib/marketing-access";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChefHat, ClipboardList, LayoutGrid, BarChart3, UtensilsCrossed, Settings, Package, Users, Tablet, Wifi, WifiOff, RefreshCw, AlertTriangle, Sparkles, LogIn, LogOut, Store, ShieldCheck, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ArrowRightLeft } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, BarChart3, Building2, ChefHat, ClipboardList, LayoutDashboard, LayoutGrid, LogIn, LogOut, Package, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Sparkles, Store, Tablet, Users, UtensilsCrossed, Wifi, WifiOff } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ const NAV = [
   { to: "/customers", label: "Guests", icon: Users },
   { to: "/reports", label: "Summary", icon: BarChart3 },
   { to: "/marketing", label: "Marketing", icon: Sparkles },
+  { to: "/brand", label: "Brand", icon: Building2 },
   { to: "/waiter", label: "Waiter", icon: Tablet },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
@@ -73,11 +74,11 @@ function policyAllows(role: string, to: NavPath): boolean {
 
 /** Screens that need a plan feature (all others come with every plan). */
 // The kitchen screen is off until XTSY switches it on for the restaurant, so it fails closed (see DEFAULT_OFF).
-const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app", "/kitchen": "kds" };
+const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app", "/kitchen": "kds", "/brand": "multi_outlet" };
 
 /** Screens each app shows, in menu order. */
 const APP_SCREENS: Record<AppKind, NavPath[]> = {
-  manager: ["/dashboard", "/menu", "/stock", "/customers", "/reports", "/marketing", "/settings"],
+  manager: ["/dashboard", "/menu", "/stock", "/customers", "/reports", "/marketing", "/brand", "/settings"],
   // Marketing shows on a POS terminal only after the admin enables that terminal (Settings → Terminals).
   pos: ["/tables", "/customers", "/menu", "/stock", "/reports", "/dashboard", "/kitchen", "/marketing", "/settings"],
   waiter: ["/waiter"],
