@@ -15,6 +15,11 @@ export type PayState = "none" | "awaiting_confirm" | "awaiting_payment" | "paid"
 export const PAY_STATES: PayState[] = ["none", "awaiting_confirm", "awaiting_payment", "paid"];
 export const isPayState = (v: unknown): v is PayState => PAY_STATES.includes(v as PayState);
 
+/** Deferred payment is exclusive to an in-house room-service order. */
+export function canPayOnRoomBill(channel: string, inHouseRoom: boolean): boolean {
+  return channel === "table" && inHouseRoom;
+}
+
 /** What a prepaid order starts as. Pay-at-counter orders collect nothing here. */
 export function initialPayState(payment: "counter" | "upi"): PayState {
   return payment === "upi" ? "awaiting_confirm" : "none";

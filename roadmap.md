@@ -1,5 +1,8 @@
 # POS expansion
 
+## Finish QR payment migration
+- [x] Verified existing private screenshot storage/payment schema; applied and read back room-only deferred-payment enforcement in Cloud, updated checkout and payment wording, passed 26 tests and public/room checkout browser checks with no errors or live orders. Automatic build OK. Checkout changes await publishing; actual guest payment submission was not exercised.
+
 ## Purchase ledger
 - [ ] Replace Stock with Purchase and Items catalogue; show standard prices, latest quantity/price, frequency and full purchase history.
 - [ ] Disable recipe deductions, lock purchase items/bills, and implement linked supplier returns within 48 hours with local/cloud validation.

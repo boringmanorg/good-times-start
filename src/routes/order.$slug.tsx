@@ -13,6 +13,7 @@ import { ItemOptions } from "@/components/ItemOptions";
 import { VegMark } from "@/components/VegMark";
 import { computeTotals, formatINR, upiLink } from "@/lib/billing";
 import { GuestPayment } from "@/components/guest/GuestPayment";
+import { canPayOnRoomBill } from "@/lib/guest-payment-logic";
 import { needsOptions, orderCategories, outsideHours } from "@/lib/menu-logic";
 import {
   GUEST_STATUS_LABEL, PUBLIC_ORDER_TYPES, guestMenuItems, addToGuestCart, guestEntry, guestRequired, cleanMapLink, mapPinUrl, pinCoords, publicTypeFrom, withMapPin, orderTypeFor, type PublicOrderType, asMenuItem, guestLineFor, guestOrderPayload, guestSubtotal, pickupChoices, setGuestQty,
@@ -242,7 +243,7 @@ function Menu({ store, channel, publicType, tableId, tableLabel, source, stay = 
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary">{stay || roomTable ? <BedDouble className="size-5" /> : channel === "table" ? <UtensilsCrossed className="size-5" /> : publicType === "delivery" ? <Truck className="size-5" /> : publicType === "dine-in" ? <Users className="size-5" /> : <ShoppingBag className="size-5" />}</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold">{stay ? "Room service" : channel === "table" ? `Ordering to ${tableLabel ?? ""}` : publicType === "delivery" ? "Delivery order" : publicType === "dine-in" ? "Dine-in order" : "Takeaway order"}</p>
-              <p className="text-xs text-muted-foreground">{stay || roomTable ? "We bring it to your room. It goes on your room bill: pay before check-out, or whenever the front desk asks." : channel === "table" ? "We bring it to you. Pay when you leave." : publicType === "dine-in" ? "Order now and we'll seat you. Pay when you leave." : publicType === "delivery" ? "We bring it to your door. Pay on delivery." : `Usually ready in about ${store.prepMinutes} minutes.`}</p>
+              <p className="text-xs text-muted-foreground">{stay || roomTable ? "We bring it to your room. It goes on your room bill: pay before check-out, or whenever the front desk asks." : publicType === "dine-in" ? "We'll confirm your order before you pay by UPI, then seat you when you arrive." : "The restaurant confirms your order before you pay by UPI and send the screenshot."}</p>
               {channel === "online" ? (
                 <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Order type">
                   {PUBLIC_ORDER_TYPES.map((t) => <button key={t.id} type="button" role="radio" aria-checked={publicType === t.id} onClick={() => void navigate({ search: { s: source, mode: t.id }, replace: true })}
@@ -406,7 +407,9 @@ function Checkout({ store, channel, publicType, stay, roomTable, tableId, tableL
   const [name, setName] = useState(saved.name ?? "");
   const [phone, setPhone] = useState(saved.phone ?? "");
   const [note, setNote] = useState("");
-  const [payment, setPayment] = useState<"counter" | "upi">("counter");
+  const roomBillAllowed = canPayOnRoomBill(channel, stay || roomTable);
+  const [payment, setPayment] = useState<"counter" | "upi">(roomBillAllowed ? "counter" : "upi");
+  const paymentUnavailable = !roomBillAllowed && !store.upiVpa;
   // Takeaway guests pick when they'll arrive: a real time, not "as soon as possible".
   const slots = useMemo(() => pickupChoices(new Date(), store.prepMinutes).filter((c) => c.at), [store.prepMinutes]);
   const [pickup, setPickup] = useState<string>("");
@@ -462,7 +465,7 @@ function Checkout({ store, channel, publicType, stay, roomTable, tableId, tableL
   };
 
   const place = async () => {
-    if (submitting.current || !cart.length || short || missing || store.paused) return;
+    if (submitting.current || !cart.length || short || missing || store.paused || paymentUnavailable) return;
     submitting.current = true;
     setBusy(true);
     setError("");
@@ -473,7 +476,7 @@ function Checkout({ store, channel, publicType, stay, roomTable, tableId, tableL
     try {
       const base = {
         _slug: store.slug, _channel: channel, _table_id: placeId ?? "", _name: name.trim(), _phone: phone.trim(), _note: fullNote,
-        _lines: guestOrderPayload(cart) as never, _payment: payment, ...(kind === "takeaway" && pickup ? { _pickup_at: pickup } : {}),
+        _lines: guestOrderPayload(cart) as never, _payment: roomBillAllowed ? payment : "upi", ...(kind === "takeaway" && pickup ? { _pickup_at: pickup } : {}),
       };
       let { data, error: failure } = await supabase.rpc("place_guest_order_v2" as never, {
         ...base, _order_type: kind ?? "", _address: kind === "delivery" ? withMapPin(address, pin) : "", _landmark: kind === "delivery" ? landmark.trim() : "",
@@ -601,20 +604,21 @@ function Checkout({ store, channel, publicType, stay, roomTable, tableId, tableL
         {store.upiVpa ? (
           <fieldset>
             <legend className="text-sm font-medium">Payment</legend>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              {([["counter", stay || roomTable ? "Add to room bill" : channel === "table" || kind === "dine-in" ? "Pay at the end" : kind === "delivery" ? "Pay on delivery" : "Pay at pickup", Store], ["upi", "Pay now by UPI", Smartphone]] as const).map(([v, l, Icon]) => (
-                <button key={v} type="button" role="radio" aria-checked={payment === v} onClick={() => setPayment(v)}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm font-semibold ${payment === v ? "border-primary bg-primary-tint" : "border-border"}`}><Icon className="size-4" />{l}</button>
+            <div className={`mt-1 grid gap-2 ${roomBillAllowed ? "grid-cols-2" : "grid-cols-1"}`} role="radiogroup" aria-label="Payment">
+              {([["counter", "Add to room bill", Store], ["upi", "Pay by UPI after confirmation", Smartphone]] as const).filter(([v]) => v === "upi" || roomBillAllowed).map(([v, l, Icon]) => (
+                <Button key={v} type="button" variant="outline" role="radio" aria-checked={payment === v} onClick={() => setPayment(v)}
+                  className={`h-auto justify-start whitespace-normal px-3 py-2.5 text-left ${payment === v ? "border-primary bg-primary-tint" : "border-border"}`}><Icon className="size-4 shrink-0" />{l}</Button>
               ))}
             </div>
           </fieldset>
         ) : null}
       </div>
 
+      {paymentUnavailable ? <p role="alert" className="mt-3 text-sm font-semibold text-destructive">UPI ordering is unavailable right now. Please contact the restaurant.</p> : null}
       {short ? <p className="mt-3 text-sm font-semibold text-destructive">The minimum {kind === "delivery" ? "delivery" : "takeaway"} order is {formatINR(store.minOrder, 0)}.</p> : null}
       {missing && !busy ? <p className="mt-3 text-sm text-muted-foreground">To place the order, add {gaps.join(", ")}.</p> : null}
       {error ? <p role="alert" className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
-      <Button className="mt-4 h-12 w-full text-base" disabled={busy || !cart.length || short || missing || store.paused} onClick={() => void place()}>
+      <Button className="mt-4 h-12 w-full text-base" disabled={busy || !cart.length || short || missing || store.paused || paymentUnavailable} onClick={() => void place()}>
         {busy ? "Sending…" : `Place order · ${formatINR(totals.total, 0)}`}
       </Button>
     </div>

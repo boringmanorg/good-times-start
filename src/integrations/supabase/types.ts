@@ -57,13 +57,16 @@ export type Database = {
           billing_email: string
           billing_gstin: string
           billing_phone: string
+          complimentary: boolean
           created_at: string
+          feature_overrides: Json
           id: string
           name: string
           notes: string
           owner_id: string | null
           paid_until: string | null
           plan_id: string
+          seat_overrides: Json
           status: string
           trial_ends_at: string | null
         }
@@ -71,13 +74,16 @@ export type Database = {
           billing_email?: string
           billing_gstin?: string
           billing_phone?: string
+          complimentary?: boolean
           created_at?: string
+          feature_overrides?: Json
           id?: string
           name: string
           notes?: string
           owner_id?: string | null
           paid_until?: string | null
           plan_id?: string
+          seat_overrides?: Json
           status?: string
           trial_ends_at?: string | null
         }
@@ -85,13 +91,16 @@ export type Database = {
           billing_email?: string
           billing_gstin?: string
           billing_phone?: string
+          complimentary?: boolean
           created_at?: string
+          feature_overrides?: Json
           id?: string
           name?: string
           notes?: string
           owner_id?: string | null
           paid_until?: string | null
           plan_id?: string
+          seat_overrides?: Json
           status?: string
           trial_ends_at?: string | null
         }
@@ -104,6 +113,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      admin_code_uses: {
+        Row: {
+          restaurant_id: string
+          step: number
+          used_at: string
+        }
+        Insert: {
+          restaurant_id: string
+          step: number
+          used_at?: string
+        }
+        Update: {
+          restaurant_id?: string
+          step?: number
+          used_at?: string
+        }
+        Relationships: []
       }
       bill_payments: {
         Row: {
@@ -292,6 +319,7 @@ export type Database = {
           bill_no: string | null
           channel: string
           code: string
+          confirmed_at: string | null
           created_at: string
           customer_name: string
           customer_phone: string
@@ -304,6 +332,9 @@ export type Database = {
           opt_in_at: string | null
           order_type: string | null
           order_uid: string | null
+          paid_at: string | null
+          pay_proof: string | null
+          pay_state: string
           payment: string
           pickup_at: string | null
           qr_no: number | null
@@ -323,6 +354,7 @@ export type Database = {
           bill_no?: string | null
           channel: string
           code: string
+          confirmed_at?: string | null
           created_at?: string
           customer_name?: string
           customer_phone?: string
@@ -335,6 +367,9 @@ export type Database = {
           opt_in_at?: string | null
           order_type?: string | null
           order_uid?: string | null
+          paid_at?: string | null
+          pay_proof?: string | null
+          pay_state?: string
           payment?: string
           pickup_at?: string | null
           qr_no?: number | null
@@ -354,6 +389,7 @@ export type Database = {
           bill_no?: string | null
           channel?: string
           code?: string
+          confirmed_at?: string | null
           created_at?: string
           customer_name?: string
           customer_phone?: string
@@ -366,6 +402,9 @@ export type Database = {
           opt_in_at?: string | null
           order_type?: string | null
           order_uid?: string | null
+          paid_at?: string | null
+          pay_proof?: string | null
+          pay_state?: string
           payment?: string
           pickup_at?: string | null
           qr_no?: number | null
@@ -663,36 +702,66 @@ export type Database = {
       plans: {
         Row: {
           active: boolean
+          admin_seats: number | null
+          billdesk_seats: number | null
           features: Json
           id: string
           max_outlets: number
           max_staff: number
           monthly_price: number
           name: string
+          quote: boolean
           sort: number
+          tagline: string
+          waiter_seats: number | null
           yearly_price: number
         }
         Insert: {
           active?: boolean
+          admin_seats?: number | null
+          billdesk_seats?: number | null
           features?: Json
           id: string
           max_outlets?: number
           max_staff?: number
           monthly_price?: number
           name: string
+          quote?: boolean
           sort?: number
+          tagline?: string
+          waiter_seats?: number | null
           yearly_price?: number
         }
         Update: {
           active?: boolean
+          admin_seats?: number | null
+          billdesk_seats?: number | null
           features?: Json
           id?: string
           max_outlets?: number
           max_staff?: number
           monthly_price?: number
           name?: string
+          quote?: boolean
           sort?: number
+          tagline?: string
+          waiter_seats?: number | null
           yearly_price?: number
+        }
+        Relationships: []
+      }
+      platform_admin_emails: {
+        Row: {
+          added_at: string
+          email: string
+        }
+        Insert: {
+          added_at?: string
+          email: string
+        }
+        Update: {
+          added_at?: string
+          email?: string
         }
         Relationships: []
       }
@@ -1145,6 +1214,9 @@ export type Database = {
       terminals: {
         Row: {
           app: string
+          approved_at: string | null
+          approved_by: string | null
+          approved_via: string | null
           description: string
           device_id: string
           device_kind: string
@@ -1161,6 +1233,9 @@ export type Database = {
         }
         Insert: {
           app?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_via?: string | null
           description?: string
           device_id: string
           device_kind?: string
@@ -1177,6 +1252,9 @@ export type Database = {
         }
         Update: {
           app?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_via?: string | null
           description?: string
           device_id?: string
           device_kind?: string
@@ -1234,7 +1312,12 @@ export type Database = {
         Returns: boolean
       }
       account_is_live: { Args: { _account: string }; Returns: boolean }
+      account_of: { Args: { _restaurant: string }; Returns: string }
       admin_accounts: { Args: never; Returns: Json }
+      admin_code_step: {
+        Args: { _code: string; _restaurant: string }
+        Returns: number
+      }
       admin_record_payment: {
         Args: {
           _amount: number
@@ -1276,6 +1359,15 @@ export type Database = {
         Args: { _id: string; _table: string }
         Returns: undefined
       }
+      approve_this_terminal: {
+        Args: {
+          _code: string
+          _device: string
+          _name: string
+          _restaurant: string
+        }
+        Returns: string
+      }
       claim_counter_print: {
         Args: { _device: string; _restaurant: string }
         Returns: Json
@@ -1294,6 +1386,7 @@ export type Database = {
         Args: { _device: string; _restaurant: string }
         Returns: undefined
       }
+      confirm_guest_order_payment: { Args: { _id: string }; Returns: string }
       create_outlet: {
         Args: {
           _account: string
@@ -1304,6 +1397,15 @@ export type Database = {
         Returns: string
       }
       create_restaurant: { Args: { _name: string }; Returns: string }
+      decide_terminal: {
+        Args: {
+          _approve: boolean
+          _device: string
+          _name: string
+          _restaurant: string
+        }
+        Returns: string
+      }
       enqueue_counter_print: {
         Args: {
           _id: string
@@ -1419,6 +1521,68 @@ export type Database = {
         }
         Returns: Json
       }
+      plan_seats: {
+        Args: { _app: string; _restaurant: string }
+        Returns: number
+      }
+      platform_overview: { Args: never; Returns: Json }
+      platform_payments: { Args: { _account: string }; Returns: Json }
+      platform_record_payment: {
+        Args: {
+          _account: string
+          _amount: number
+          _method: string
+          _months: number
+          _reference: string
+        }
+        Returns: Json
+      }
+      platform_restaurants: { Args: never; Returns: Json }
+      platform_save_plan: {
+        Args: {
+          _active: boolean
+          _admin: number
+          _billdesk: number
+          _features: Json
+          _id: string
+          _monthly: number
+          _name: string
+          _quote: boolean
+          _tagline: string
+          _waiter: number
+        }
+        Returns: undefined
+      }
+      platform_set_terminal: {
+        Args: { _action: string; _device: string; _restaurant: string }
+        Returns: string
+      }
+      platform_staff: { Args: { _restaurant: string }; Returns: Json }
+      platform_update_account: {
+        Args: {
+          _complimentary: boolean
+          _feature_overrides: Json
+          _id: string
+          _notes: string
+          _paid_until: string
+          _plan: string
+          _seat_overrides: Json
+          _status: string
+        }
+        Returns: undefined
+      }
+      platform_update_restaurant: {
+        Args: {
+          _billing_email: string
+          _billing_phone: string
+          _city: string
+          _id: string
+          _name: string
+          _slug: string
+        }
+        Returns: undefined
+      }
+      platform_whoami: { Args: never; Returns: Json }
       public_booking_availability: {
         Args: { _arrival: string; _hours?: number; _slug: string }
         Returns: Json
@@ -1472,6 +1636,7 @@ export type Database = {
         }
         Returns: Json
       }
+      restaurant_entitlements: { Args: { _restaurant: string }; Returns: Json }
       restaurant_role_of: {
         Args: { _restaurant_id: string }
         Returns: Database["public"]["Enums"]["restaurant_role"]
