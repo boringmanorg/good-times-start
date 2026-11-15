@@ -1475,6 +1475,15 @@ export type Database = {
         Args: { _id: string; _status: string }
         Returns: undefined
       }
+      outlet_purchases: {
+        Args: { _from: string; _outlets: string[]; _to: string }
+        Returns: {
+          day: string
+          entries: number
+          restaurant_id: string
+          spend: number
+        }[]
+      }
       outlet_sales: {
         Args: { _from: string; _outlets: string[]; _to: string }
         Returns: {
@@ -1663,6 +1672,10 @@ export type Database = {
           _restaurant: string
           _series: string
         }
+        Returns: string
+      }
+      transfer_stock: {
+        Args: { _from: string; _items: Json; _note?: string; _to: string }
         Returns: string
       }
       unique_slug: { Args: { _text: string }; Returns: string }
