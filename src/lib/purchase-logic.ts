@@ -9,8 +9,16 @@ export function approvalStatus(entry: Pick<StockEntry, "approval">): "approved" 
 /** Only approved purchases and returns count in history, totals and vendor amounts. */
 export const counts = (entry: Pick<StockEntry, "approval">) => approvalStatus(entry) === "approved";
 
+export function purchaseApprovedAt(purchase: StockEntry): number {
+  return purchase.approval?.decidedAt ?? purchase.approvedAt ?? purchase.at;
+}
+
+export function purchaseReturnDeadline(purchase: StockEntry): number {
+  return purchaseApprovedAt(purchase) + PURCHASE_RETURN_WINDOW_MS;
+}
+
 export function canReturnPurchase(purchase: StockEntry, now = Date.now()): boolean {
-  return purchase.type === "purchase" && counts(purchase) && now >= purchase.at && now <= purchase.at + PURCHASE_RETURN_WINDOW_MS;
+  return purchase.type === "purchase" && counts(purchase) && now >= purchaseApprovedAt(purchase) && now <= purchaseReturnDeadline(purchase);
 }
 
 export function remainingPurchaseQty(purchase: StockEntry, returns: StockEntry[], materialId: string): number {
@@ -22,7 +30,7 @@ export function remainingPurchaseQty(purchase: StockEntry, returns: StockEntry[]
 }
 
 export function validatePurchaseReturn(purchase: StockEntry, returns: StockEntry[], items: StockEntry["items"], now = Date.now()): void {
-  if (!canReturnPurchase(purchase, now)) throw new Error("Supplier returns are available only within 48 hours of purchase.");
+  if (!canReturnPurchase(purchase, now)) throw new Error("Supplier returns are available only within 48 hours of admin approval.");
   if (!items.length) throw new Error("Select an item to return.");
   const seen = new Set<string>();
   for (const item of items) {

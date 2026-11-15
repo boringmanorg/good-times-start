@@ -280,6 +280,8 @@ export interface StockEntry {
   otherOutlet?: string;
   otherOutletName?: string;
   supplierName?: string;
+  /** Direct admin purchases are approved when recorded, independently of the supplier purchase date. */
+  approvedAt?: number;
   /** Purchases and returns recorded by the bill desk wait for an admin's approval; none = recorded by an admin (approved). */
   approval?: PurchaseApproval;
 }

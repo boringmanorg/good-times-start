@@ -1,5 +1,9 @@
 # POS expansion
 
+## Purchase form and approval-based returns
+- [ ] Add labelled New item rows and purchase date; save new catalogue items and purchase together, with Billdesk requests pending admin approval.
+- [ ] Start local/cloud 48-hour returns from approval; test purchase submission and return boundaries without production test writes.
+
 ## Finish QR payment migration
 - [x] Verified existing private screenshot storage/payment schema; applied and read back room-only deferred-payment enforcement in Cloud, updated checkout and payment wording, passed 26 tests and public/room checkout browser checks with no errors or live orders. Automatic build OK. Checkout changes await publishing; actual guest payment submission was not exercised.
 
