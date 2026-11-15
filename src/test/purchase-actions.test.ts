@@ -46,6 +46,29 @@ describe("immutable purchase records", () => {
   });
 });
 describe("bill desk purchases wait for the admin", () => {
+  it("submits new items with a backdated purchase, pending until approval, then permits returns from that approval", async () => {
+    const at = Date.now() - 7 * 86400000;
+    const item = { id: "new-oil", name: "Groundnut oil", unit: "l" as const, costPerUnit: 140, lowStockLevel: 0 };
+    const p = await actions.recordStockEntry({ type: "purchase", at, reference: "NEW-1", items: [{ materialId: item.id, qty: 5, unitCost: 150 }] }, { by: "Billdesk", login: "billdesk" }, [item]);
+    expect(await db.getDb().materials.get(item.id)).toEqual(item);
+    expect(p.at).toBe(at);
+    expect(p.approval?.status).toBe("pending");
+    expect(p.items[0]).toMatchObject({ name: "Groundnut oil", unit: "l", qty: 5, unitCost: 150 });
+    await expect(actions.recordStockEntry({ type: "return", purchaseId: p.id, items: [{ materialId: item.id, qty: -1 }] }, { by: "Billdesk" })).rejects.toThrow(/admin approval/);
+    const approved = await actions.decidePurchase(p.id, "approved", { name: "Admin" }, { billChecked: true });
+    expect(approved.approval?.decidedAt).toBeGreaterThan(at + 48 * 3600000);
+    const returned = await actions.recordStockEntry({ type: "return", purchaseId: p.id, items: [{ materialId: item.id, qty: -1 }] }, { by: "Billdesk" });
+    expect(returned.items[0]?.unitCost).toBe(150);
+    expect(returned.approval?.status).toBe("pending");
+    expect((await db.getDb().outbox.toArray()).map((o) => o.kind)).toContain("material");
+  });
+  it("preserves a separate recording-time approval for a backdated admin purchase", async () => {
+    const at = Date.now() - 7 * 86400000;
+    const p = await actions.recordStockEntry({ type: "purchase", at, items: [{ materialId: "rice", qty: 5, unitCost: 80 }] });
+    expect(p.approvedAt).toBeGreaterThan(at + 48 * 3600000);
+    const r = await actions.recordStockEntry({ type: "return", purchaseId: p.id, items: [{ materialId: "rice", qty: -1 }] });
+    expect(r.items[0]?.unitCost).toBe(80);
+  });
   it("records a purchase as waiting, then an admin approves it only after checking the bill, or rejects it with a reason", async () => {
     await actions.saveMaterial({ id: "oil", name: "Oil", unit: "l", costPerUnit: 150, lowStockLevel: 0 });
     const p = await actions.recordStockEntry({ type: "purchase", reference: "INV-9", items: [{ materialId: "oil", qty: 5, unitCost: 150 }] }, { by: "Billdesk", login: "billdesk" });

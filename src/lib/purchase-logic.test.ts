@@ -4,6 +4,19 @@ import type { StockEntry } from "./types";
 
 const purchase: StockEntry = { id: "p1", type: "purchase", at: 1000000, items: [{ materialId: "rice", qty: 10, unitCost: 80 }] };
 describe("supplier purchase rules", () => {
+  it("starts the 48-hour return window from admin approval, even when purchase was days earlier", () => {
+    const decidedAt = purchase.at + 7 * 86400000;
+    const approved: StockEntry = { ...purchase, approval: { status: "approved", requestedBy: "Billdesk", requestedAt: purchase.at, decidedAt } };
+    expect(canReturnPurchase(approved, decidedAt - 1)).toBe(false);
+    expect(canReturnPurchase(approved, decidedAt + 48 * 3600000)).toBe(true);
+    expect(canReturnPurchase(approved, decidedAt + 48 * 3600000 + 1)).toBe(false);
+    expect(() => validatePurchaseReturn(approved, [], [{ materialId: "rice", qty: -1 }], decidedAt + 47 * 3600000)).not.toThrow();
+  });
+  it("uses recording-time approval for backdated purchases entered directly by an admin", () => {
+    const approvedAt = purchase.at + 5 * 86400000;
+    expect(canReturnPurchase({ ...purchase, approvedAt }, approvedAt + 48 * 3600000)).toBe(true);
+    expect(canReturnPurchase({ ...purchase, approvedAt }, approvedAt + 48 * 3600000 + 1)).toBe(false);
+  });
   it("permits returns through 48 hours and refuses the next millisecond", () => {
     expect(canReturnPurchase(purchase, purchase.at + 48 * 3600000)).toBe(true);
     expect(canReturnPurchase(purchase, purchase.at + 48 * 3600000 + 1)).toBe(false);

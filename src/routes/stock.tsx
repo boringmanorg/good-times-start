@@ -15,7 +15,7 @@ import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
 import { STOCK_UNITS, formatQty, purchaseTotal } from "@/lib/stock-logic";
 import { decidePurchase, deleteMaterial, deletePurchase, deleteSupplier, recordStockEntry, updatePurchase, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
-import { approvalStatus, canRequestReturn, canReturnPurchase, entryAmount, itemPurchaseLines, itemTotals, remainingPurchaseQty, supplierHistories } from "@/lib/purchase-logic";
+import { approvalStatus, canRequestReturn, canReturnPurchase, entryAmount, itemPurchaseLines, itemTotals, purchaseReturnDeadline, remainingPurchaseQty, supplierHistories } from "@/lib/purchase-logic";
 import { gstinError } from "@/lib/validation";
 import { downloadXlsx } from "@/lib/xlsx";
 import { dayKey } from "@/lib/report-logic";
@@ -134,25 +134,39 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
   const needsApproval = !can(user, "stock.purchase");
   const [supplierId, setSupplierId] = useState(purchase?.supplierId ?? "");
   const [reference, setReference] = useState(purchase?.reference ?? "");
-  const [rows, setRows] = useState(purchase ? purchase.items.map((i) => ({ key: newUid(), materialId: i.materialId, qty: String(i.qty), cost: String(i.unitCost ?? 0) })) : [{ key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }]);
+  const [purchaseDate, setPurchaseDate] = useState(dayKey(purchase?.at ?? Date.now()));
+  type PurchaseRow = { key: string; materialId: string; qty: string; cost: string; newItem?: { name: string; unit: StockUnit; standardPrice: string } };
+  const [rows, setRows] = useState<PurchaseRow[]>(purchase ? purchase.items.map((i) => ({ key: newUid(), materialId: i.materialId, qty: String(i.qty), cost: String(i.unitCost ?? 0) })) : [{ key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }]);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const parsed = rows.map((r) => ({ materialId: r.materialId, qty: num(r.qty), unitCost: num(r.cost) }));
   const valid = parsed.filter((p) => p.materialId && p.qty !== null && p.qty > 0);
   const total = purchaseTotal(valid.map((p) => ({ materialId: p.materialId, qty: p.qty ?? 0, unitCost: p.unitCost ?? 0 })));
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (busy) return;
     if (valid.length !== rows.length || parsed.some((p) => p.unitCost === null || (p.unitCost ?? -1) < 0)) { setError("Add all items with a quantity. Costs must be numbers."); return; }
+    const newMaterials: Material[] = [];
+    for (const row of rows) {
+      if (!row.newItem) continue;
+      const price = num(row.newItem.standardPrice);
+      if (!row.newItem.name.trim() || price === null || price < 0) { setError("Enter each new item's name and standard price, 0 or more."); return; }
+      newMaterials.push({ id: row.materialId, name: row.newItem.name.trim(), unit: row.newItem.unit, costPerUnit: price, lowStockLevel: 0 });
+    }
+    const at = purchase?.at ?? new Date(`${purchaseDate}T00:00:00`).getTime();
+    if (!Number.isFinite(at) || at > Date.now()) { setError("Enter a valid purchase date, no later than today."); return; }
+    if (needsApproval && !reference.trim()) { setError("Enter the supplier's invoice number, so the admin can check the bill."); return; }
+    setBusy(true); setError("");
     const items = valid.map((p) => ({ materialId: p.materialId, qty: p.qty ?? 0, ...(p.unitCost !== undefined && p.unitCost !== null ? { unitCost: p.unitCost } : {}) }));
     try {
       if (purchase) {
         await updatePurchase(purchase.id, { items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}) });
         toast.success("Purchase bill updated"); onDone(); return;
       }
-      if (needsApproval && !reference.trim()) { setError("Enter the supplier's invoice number, so the admin can check the bill."); return; }
-      await recordStockEntry({ type: "purchase", items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) },
-        needsApproval && user ? { by: user.displayName, ...(user.login ? { login: user.login } : {}) } : undefined);
-    } catch (e) { setError(e instanceof Error ? e.message : "Could not record purchase"); return; }
+      await recordStockEntry({ type: "purchase", at, items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) },
+        needsApproval && user ? { by: user.displayName, ...(user.login ? { login: user.login } : {}) } : undefined, newMaterials);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not record purchase"); return; } finally { setBusy(false); }
     toast.success(needsApproval ? `Purchase of ${formatINR(total, 0)} sent to the admin for approval` : `Purchase of ${formatINR(total, 0)} recorded`);
     onDone();
   };
@@ -166,26 +180,36 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
         </label>
         <label className="block text-sm font-medium">Invoice number<input maxLength={40} value={reference} onChange={(e) => setReference(e.target.value)} className={inputClass} /></label>
       </div>
+      <label className="block text-sm font-medium">Date of purchase<input type="date" required disabled={!!purchase} max={dayKey(Date.now())} value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className={inputClass} /></label>
       <div className="space-y-2">
         {rows.map((row, index) => {
-          const unit = materials.find((m) => m.id === row.materialId)?.unit ?? "";
+          const unit = row.newItem?.unit ?? materials.find((m) => m.id === row.materialId)?.unit ?? "";
           const update = (change: Partial<typeof row>) => setRows(rows.map((r, i) => (i === index ? { ...r, ...change } : r)));
           return (
-            <div key={row.key} className="flex gap-2">
-              <Dropdown ariaLabel="Item" className="min-w-0 flex-1" value={row.materialId} onChange={(materialId) => update({ materialId, cost: String(materials.find((m) => m.id === materialId)?.costPerUnit ?? 0) })} placeholder="Choose item"
+            <div key={row.key} className="border-t border-border pt-3">
+              {row.newItem ? <div className="mb-2 grid grid-cols-2 gap-2">
+                <label className="col-span-2 block text-sm font-medium">New item name<input required maxLength={60} value={row.newItem.name} onChange={(e) => update({ newItem: { name: e.target.value, unit: row.newItem?.unit ?? "kg", standardPrice: row.newItem?.standardPrice ?? "" } })} className={inputClass} /></label>
+                <label className="block text-sm font-medium">Unit<Dropdown ariaLabel="New item unit" className="mt-1" value={row.newItem.unit} onChange={(unit) => update({ newItem: { name: row.newItem?.name ?? "", standardPrice: row.newItem?.standardPrice ?? "", unit } })} options={STOCK_UNITS.map((u) => ({ value: u.v, label: u.l }))} /></label>
+                <label className="block text-sm font-medium">Standard price / {unit}<input required aria-label="New item standard price" inputMode="decimal" value={row.newItem.standardPrice} onChange={(e) => update({ newItem: { name: row.newItem?.name ?? "", unit: row.newItem?.unit ?? "kg", standardPrice: e.target.value } })} className={inputClass} /></label>
+              </div> : null}
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_6rem_auto]">
+              {!row.newItem ? <label className="col-span-3 block min-w-0 text-sm font-medium sm:col-span-1">Item<Dropdown ariaLabel="Item" className="mt-1" value={row.materialId} onChange={(materialId) => update({ materialId, cost: String(materials.find((m) => m.id === materialId)?.costPerUnit ?? 0) })} placeholder="Choose item"
                 options={[...materials.map((m) => ({ value: m.id, label: m.name, hint: m.unit })), ...(purchase?.items ?? []).filter((i) => !materials.some((m) => m.id === i.materialId)).map((i) => ({ value: i.materialId, label: i.name ?? "Deleted item", hint: i.unit ?? "" }))]} />
-              <input aria-label="Quantity" inputMode="decimal" value={row.qty} onChange={(e) => update({ qty: e.target.value })} placeholder={unit || "Qty"} className="w-20 rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
-              <input aria-label="Cost per unit" inputMode="decimal" value={row.cost} onChange={(e) => update({ cost: e.target.value })} placeholder={`₹/${unit}`} className="w-20 rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
+              </label> : <span className="hidden text-sm font-semibold sm:block">New item</span>}
+              <label className="block min-w-0 text-sm font-medium">Quantity{unit ? ` (${unit})` : ""}<input aria-label="Quantity" inputMode="decimal" value={row.qty} onChange={(e) => update({ qty: e.target.value })} className={inputClass} /></label>
+              <label className="block min-w-0 text-sm font-medium">Unit price<input aria-label="Cost per unit" inputMode="decimal" value={row.cost} onChange={(e) => update({ cost: e.target.value })} className={inputClass} /></label>
               {rows.length > 1 ? <Button type="button" size="icon" variant="ghost" aria-label="Remove line" onClick={() => setRows(rows.filter((_, i) => i !== index))}><X /></Button> : null}
+              </div>
             </div>
           );
         })}
       </div>
-      <Button type="button" size="sm" variant="ghost" onClick={() => setRows([...rows, { key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }])}><Plus />Add line</Button>
+      <div className="flex gap-2"><Button type="button" size="sm" variant="ghost" onClick={() => setRows([...rows, { key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }])}><Plus />Add line</Button>
+      {!purchase ? <Button type="button" size="sm" variant="outline" onClick={() => setRows([...rows.filter((r) => r.materialId || r.qty), { key: newUid(), materialId: newUid(), qty: "", cost: "", newItem: { name: "", unit: "kg", standardPrice: "" } }])}><Plus />New item</Button> : null}</div>
       <p className="text-right text-sm font-semibold">Total {formatINR(total)}</p>
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
       <div className="flex gap-2">
-        <ConfirmButton id="stock-purchase" submit disabled={!valid.length} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={purchase ? "Tap again to save" : "Tap again to record"}>{purchase ? "Save changes" : "Record purchase"}</ConfirmButton>
+        <ConfirmButton id="stock-purchase" submit disabled={busy || !valid.length} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={purchase ? "Tap again to save" : "Tap again to record"}>{purchase ? "Save changes" : needsApproval ? "Submit for approval" : "Record purchase"}</ConfirmButton>
         <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
       </div>
     </form>
@@ -252,7 +276,7 @@ function ReturnForm({ purchase, entries, materials, onDone }: { purchase: StockE
     } catch (e) { setError(e instanceof Error ? e.message : "Could not record return"); } finally { setBusy(false); }
   };
   return <form onSubmit={(e) => void submit(e)} className="space-y-4">
-    <p className="text-sm text-muted-foreground">Return deadline: {new Date(purchase.at + 48 * 3600000).toLocaleString("en-IN")}</p>
+    <p className="text-sm text-muted-foreground">Return deadline (48 hours from approval): {new Date(purchaseReturnDeadline(purchase)).toLocaleString("en-IN")}</p>
     {[...new Set(purchase.items.map((i) => i.materialId))].map((id) => {
       const material = materials.find((m) => m.id === id);
       const remaining = remainingPurchaseQty(purchase, entries, id);
@@ -318,8 +342,8 @@ function StockPage() {
 
   return <AppShell><div className="mx-auto max-w-6xl p-4 lg:p-6">
     <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Purchase</h1><p className="text-sm text-muted-foreground">{active.length} items · {purchases.length} purchase bills · {formatINR(vendors.reduce((n, v) => n + v.amount, 0), 0)} purchased</p></div>
-      {admin ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSheet({ kind: "item" })}><Plus/>Item</Button><Button variant="outline" onClick={exportPurchase}><Download/>Excel</Button><Button disabled={!active.length} onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase</Button></div>
-        : requester ? <Button disabled={!active.length} onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase (needs approval)</Button> : null}
+      {admin ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSheet({ kind: "item" })}><Plus/>Item</Button><Button variant="outline" onClick={exportPurchase}><Download/>Excel</Button><Button onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase</Button></div>
+        : requester ? <Button onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase (needs approval)</Button> : null}
     </header>
     {(admin || requester) && pending.length ? (
       <section aria-label="Waiting for approval" className="mb-5 overflow-hidden rounded-2xl border border-gold/60 bg-card">

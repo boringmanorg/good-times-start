@@ -4,10 +4,11 @@ import { newUid } from "./sync-core";
 import type { CartLine, Material, StockEntry, Supplier } from "./types";
 
 /** Add a stock movement to the ledger and share it. */
-export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { id?: string; at?: number }, request?: { by: string; login?: string }): Promise<StockEntry> {
+export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { id?: string; at?: number }, request?: { by: string; login?: string }, newMaterials: Material[] = []): Promise<StockEntry> {
   const db = getDb();
   const now = Date.now();
   const saved: StockEntry = { ...entry, id: entry.id ?? newUid(), at: entry.at ?? now, items: entry.items.filter((i) => i.qty !== 0),
+    ...(!request && entry.type === "purchase" ? { approvedAt: entry.approvedAt ?? now } : {}),
     // The bill desk records it; it waits for the admin's approval before it counts.
     ...(request ? { approval: { status: "pending" as const, requestedBy: request.by, ...(request.login ? { requestedLogin: request.login } : {}), requestedAt: now } } : {}) };
   await db.transaction("rw", db.stockEntries, db.materialLevels, db.materials, async () => {
@@ -17,8 +18,14 @@ export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { 
       return;
     }
     if (saved.type === "purchase") {
+      if (!Number.isFinite(saved.at) || saved.at > now) throw new Error("Enter a valid purchase date, no later than today.");
       if (!saved.items.length || saved.items.some((i) => !Number.isFinite(i.qty) || i.qty <= 0 || !Number.isFinite(i.unitCost) || (i.unitCost ?? -1) < 0)) {
         throw new Error("Each purchase item needs a positive quantity and a valid unit price.");
+      }
+      for (const material of newMaterials) {
+        if (!saved.items.some((i) => i.materialId === material.id) || !material.name.trim() || !Number.isFinite(material.costPerUnit) || (material.costPerUnit ?? -1) < 0) throw new Error("Each new item needs a name and a valid standard price.");
+        if (await db.materials.get(material.id)) throw new Error("This item already exists. Choose it from the item list.");
+        await db.materials.add({ ...material, name: material.name.trim() });
       }
     } else if (saved.type === "return" && saved.purchaseId) {
       const purchase = await db.stockEntries.get(saved.purchaseId);
@@ -42,7 +49,7 @@ export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { 
     await applyEntryToLevels(db, saved.id, saved);
     await db.stockEntries.add(saved);
   });
-  await markDirty(["stock_entry", saved.id]);
+  await markDirty(...newMaterials.map((m): ["material", string] => ["material", m.id]), ["stock_entry", saved.id]);
   return saved;
 }
 
