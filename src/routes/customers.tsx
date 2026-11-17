@@ -24,6 +24,12 @@ import { Dropdown } from "@/components/Dropdown";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { can } from "@/lib/permissions";
 import { BillPrintButton } from "@/components/BillPrintButton";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { loadBrandingAndMarketing } from "@/lib/marketing-actions";
+import { reviewMessage } from "@/lib/review-request";
+import { featureOn } from "@/lib/plans";
+import { useEntitlements } from "@/lib/use-entitlements";
 
 export const Route = createFileRoute("/customers")({
   head: () => ({
@@ -91,6 +97,7 @@ function CustomerDetail({ customer, stats, orders, loyaltyOn, onClose }: { custo
         </section>
       ) : null}
 
+      <ReviewRequest customer={customer} />
       <WhatsappConsent customer={customer} />
 
       <form className="space-y-3" onSubmit={(event) => void saveDetails(event)}>
@@ -124,6 +131,30 @@ function CustomerDetail({ customer, stats, orders, loyaltyOn, onClose }: { custo
         ) : <p className="mt-1 text-sm text-muted-foreground">No settled bills yet.</p>}
       </section>
     </div>
+  );
+}
+
+/** Thank-you on WhatsApp pointing the guest to the Google profile and Instagram (Pro and up). */
+function ReviewRequest({ customer }: { customer: Customer }) {
+  const { user } = useStaff();
+  const on = featureOn(useEntitlements(), "feedback");
+  const restaurant = useRestaurantSettings().name;
+  const { data } = useQuery({
+    queryKey: ["branding", user?.restaurantId],
+    enabled: on && !!user?.restaurantId,
+    queryFn: () => loadBrandingAndMarketing(user?.restaurantId ?? ""),
+    staleTime: 5 * 60_000,
+  });
+  if (!on) return null;
+  const text = reviewMessage({ guest: customer.name, restaurant, links: data?.branding?.links });
+  return (
+    <section className="rounded-lg border border-border bg-card p-3">
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold"><Star className="size-4 text-primary" />Ask for a review</h3>
+      {text ? <>
+        <p className="mt-1 text-xs text-muted-foreground">Opens WhatsApp with a thank-you and your Google review and Instagram links.</p>
+        <a href={waLink(customer.id, text)} target="_blank" rel="noreferrer" className={cn(buttonVariants({ size: "sm" }), "mt-2")}><Send />Send on WhatsApp</a>
+      </> : <p className="mt-1 text-xs text-muted-foreground">Add your Google review and Instagram links in Marketing → Brand to send review requests.</p>}
+    </section>
   );
 }
 
