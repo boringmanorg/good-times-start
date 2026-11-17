@@ -68,7 +68,48 @@ function OptionRows({ label, hint, rows, onChange, pricePlaceholder }: {
   );
 }
 
-function ItemEditor({ item, stock, categories, stations, materials, onClose }: {
+function RecipeRows({ rows, materials, price, onChange }: {
+  rows: MenuDraft["recipe"];
+  materials: Material[];
+  price: number;
+  onChange: (rows: MenuDraft["recipe"]) => void;
+}) {
+  const byId = new Map(materials.map((m) => [m.id, m]));
+  const cost = Math.round(rows.reduce((sum, r) => sum + (Number(r.qty) || 0) * (byId.get(r.materialId)?.costPerUnit ?? 0), 0) * 100) / 100;
+  const share = foodCostShare(cost, price);
+  const update = (i: number, patch: Partial<MenuDraft["recipe"][number]>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  return (
+    <fieldset className="rounded-lg border border-border p-3">
+      <legend className="px-1 text-sm font-semibold">Recipe (per portion)</legend>
+      <p className="text-xs text-muted-foreground">Purchase items one portion uses. Used for food cost only — nothing is deducted when bills settle.</p>
+      {materials.length === 0 ? <p className="mt-2 text-xs text-warning">Add items in Purchase first, then pick them here.</p> : null}
+      <div className="mt-2 space-y-2">
+        {rows.map((r, i) => {
+          const m = byId.get(r.materialId);
+          return (
+            <div key={i} className="flex items-end gap-2">
+              <label className="min-w-0 flex-1 text-xs font-medium">Item
+                <Dropdown<string> ariaLabel={`Recipe item ${i + 1}`} className="mt-1" searchable value={r.materialId} onChange={(v) => update(i, { materialId: v })}
+                  options={materials.map((x) => ({ value: x.id, label: `${x.name} (${x.unit})` }))} placeholder="Choose item" />
+              </label>
+              <label className="w-24 text-xs font-medium">Qty{m ? ` (${m.unit})` : ""}
+                <input inputMode="decimal" aria-label={`Recipe quantity ${i + 1}`} value={r.qty} onChange={(e) => update(i, { qty: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-card px-2 py-2 text-right text-sm" />
+              </label>
+              <Button type="button" size="icon" variant="ghost" aria-label={`Remove recipe line ${i + 1}`} onClick={() => onChange(rows.filter((_, j) => j !== i))}><Trash2 /></Button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <Button type="button" size="sm" variant="outline" disabled={materials.length === 0} onClick={() => onChange([...rows, { materialId: "", qty: "" }])}><Plus />Add ingredient</Button>
+        {rows.length ? <span className="text-sm">Cost {formatINR(cost)}{price > 0 ? <> · <span className={share > 0.35 ? "font-semibold text-warning" : ""}>food cost {Math.round(share * 100)}%</span></> : null}</span> : null}
+      </div>
+    </fieldset>
+  );
+}
+
+function ItemEditor({ item, stock, categories, stations, materials, recipesOn, onClose }: {
+  recipesOn: boolean;
   item: MenuItem | null;
   stock: InventoryItem | undefined;
   categories: string[];
@@ -175,6 +216,8 @@ function ItemEditor({ item, stock, categories, stations, materials, onClose }: {
           </div>
         </fieldset>
       ) : null}
+
+      {recipesOn ? <RecipeRows rows={draft.recipe} materials={materials} price={Number(draft.variants[0]?.price ?? draft.price) || 0} onChange={(rows) => set("recipe", rows)} /> : null}
 
       <fieldset className="rounded-lg border border-border p-3">
         <legend className="px-1 text-sm font-semibold">Portions in stock</legend>
@@ -327,6 +370,7 @@ function MenuPage() {
               categories={categories}
               stations={stations}
               materials={materials}
+              recipesOn={recipesOn}
               onClose={() => setEditing(null)}
             />
           ) : null}

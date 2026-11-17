@@ -260,6 +260,20 @@
       "when": 1794905094959,
       "tag": "0036_billdesk_can_add_purchase_items",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794907935415,
+      "tag": "0037_brand_gift_cards",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794907959359,
+      "tag": "0038_gift_card_code_fix",
+      "breakpoints": true
     }
   ]
 }
