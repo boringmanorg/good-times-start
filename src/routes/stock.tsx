@@ -317,9 +317,18 @@ function StockPage() {
   const lineName = (i: StockEntry["items"][number]) => i.name ?? material(i.materialId)?.name ?? "Deleted item";
   const lineUnit = (i: StockEntry["items"][number]): StockUnit => i.unit ?? material(i.materialId)?.unit ?? "pcs";
   const vendors = supplierHistories(entries, suppliers);
-  const shown = active.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
+  // Every item ever bought shows here, even one whose item card never reached this terminal
+  // (lost new items, archived or deleted cards): the purchase lines carry its name and unit.
+  const listed: Material[] = [...active];
+  for (const e of history) for (const i of e.items) {
+    if (listed.some((m) => m.id === i.materialId)) continue;
+    const known = material(i.materialId);
+    listed.push(known ?? ({ id: i.materialId, name: i.name ?? "Unnamed item", unit: i.unit ?? "pcs", costPerUnit: i.unitCost } as Material));
+  }
+  listed.sort((a, b) => a.name.localeCompare(b.name));
+  const shown = listed.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
   const exportPurchase = () => downloadXlsx(`purchase-${dayKey(Date.now())}`, [
-    { name: "Items", title: "Purchase items", columns: [{ header: "Item" }, { header: "Unit" }, { header: "Standard price", format: "inr" }, { header: "Bought (net)", format: "qty" }, { header: "Amount", format: "inr" }, { header: "Bills" }], rows: active.map((m) => { const t = itemTotals(itemPurchaseLines(m.id, entries, suppliers)); return [m.name, m.unit, m.costPerUnit ?? null, t.qty, t.amount, t.bills]; }) },
+    { name: "Items", title: "Purchase items", columns: [{ header: "Item" }, { header: "Unit" }, { header: "Standard price", format: "inr" }, { header: "Bought (net)", format: "qty" }, { header: "Amount", format: "inr" }, { header: "Bills" }], rows: listed.map((m) => { const t = itemTotals(itemPurchaseLines(m.id, entries, suppliers)); return [m.name, m.unit, m.costPerUnit ?? null, t.qty, t.amount, t.bills]; }) },
     { name: "Vendors", title: "Purchases by vendor and day", columns: [{ header: "Vendor" }, { header: "Day" }, { header: "Amount", format: "inr" }, { header: "Bills" }], rows: vendors.flatMap((v) => v.days.map((d) => [v.name, d.day, d.amount, d.entries.filter((e) => e.type === "purchase").length])) },
     { name: "History", title: "Purchase and return history", columns: [{ header: "Date", format: "datetime" }, { header: "Type" }, { header: "Vendor" }, { header: "Invoice" }, { header: "Item" }, { header: "Quantity", format: "qty" }, { header: "Unit" }, { header: "Unit price", format: "inr" }, { header: "Amount", format: "inr" }], rows: history.flatMap((e) => e.items.map((i) => [e.at, e.purchaseId ? "Supplier return" : "Purchase", e.supplierName ?? suppliers.find((s) => s.id === e.supplierId)?.name ?? "", e.reference ?? "", lineName(i), Math.abs(i.qty), lineUnit(i), i.unitCost ?? null, (e.purchaseId ? -1 : 1) * Math.abs(i.qty) * (i.unitCost ?? 0)])) },
   ], { title: "Purchase" });
@@ -372,7 +381,7 @@ function StockPage() {
             <td className="p-3">{last ? <><span className="tabular-nums">{formatQty(last.qty, m.unit)} at {formatINR(last.unitCost)}</span><span className="block text-xs text-muted-foreground">{last.supplier} · {dateText(last.at)}</span></> : <span className="text-muted-foreground">Not bought yet</span>}</td>
             <td className="hidden p-3 text-right tabular-nums sm:table-cell">{totals.bills ? formatQty(totals.qty, m.unit) : "—"}<span className="block text-xs text-muted-foreground">{totals.bills} {totals.bills === 1 ? "bill" : "bills"}</span></td>
             <td className="p-3 text-right font-semibold tabular-nums">{totals.bills ? formatINR(totals.amount) : "—"}</td>
-            {admin ? <td className="p-3 text-right"><Button size="sm" variant="outline" aria-label={`Edit ${m.name}`} onClick={() => setSheet({ kind: "item", material: m })}><Pencil />Edit</Button></td> : null}
+            {admin ? <td className="p-3 text-right">{materials.some((x) => x.id === m.id) ? <Button size="sm" variant="outline" aria-label={`Edit ${m.name}`} onClick={() => setSheet({ kind: "item", material: m })}><Pencil />Edit</Button> : null}</td> : null}
           </tr>
           {open ? <tr className="bg-secondary/30"><td colSpan={admin ? 6 : 5} className="px-3 pb-4 pt-1">
             {lines.length ? <table className="w-full text-xs"><thead className="text-muted-foreground"><tr><th className="py-1.5 text-left font-medium">Date</th><th className="py-1.5 text-left font-medium">Vendor</th><th className="py-1.5 text-left font-medium">Invoice</th><th className="py-1.5 text-right font-medium">Qty</th><th className="py-1.5 text-right font-medium">Price / {m.unit}</th><th className="py-1.5 text-right font-medium">Amount</th></tr></thead>
