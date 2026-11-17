@@ -12,10 +12,9 @@ import { getDb } from "@/lib/db";
 import { createOutlet, outletPurchases, outletSales, pushMenu, transferStock } from "@/lib/outlet-actions";
 import { brandPnl, brandTotals, newOutletProblem, outletCountText, pnlByOutlet, pushMenuProblem, ranked, shareOfBrand, totalsByOutlet, transferLines, transferProblem, type Outlet } from "@/lib/brand-logic";
 import { useEntitlements } from "@/lib/use-entitlements";
-import { useStaff } from "@/lib/staff";
+import { isAdmin, useStaff } from "@/lib/staff";
 import { cn } from "@/lib/utils";
 import { GiftCards } from "@/components/brand/GiftCards";
-import { isAdmin } from "@/lib/staff";
 import { featureOn } from "@/lib/plans";
 
 export const Route = createFileRoute("/brand")({
