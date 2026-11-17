@@ -14,6 +14,9 @@ import { brandPnl, brandTotals, newOutletProblem, outletCountText, pnlByOutlet, 
 import { useEntitlements } from "@/lib/use-entitlements";
 import { useStaff } from "@/lib/staff";
 import { cn } from "@/lib/utils";
+import { GiftCards } from "@/components/brand/GiftCards";
+import { isAdmin } from "@/lib/staff";
+import { featureOn } from "@/lib/plans";
 
 export const Route = createFileRoute("/brand")({
   head: () => ({ meta: [{ title: "Brand — XTSY POS" }, { name: "description", content: "Every outlet under one brand: sales together, add an outlet, push the menu." }, { name: "robots", content: "noindex" }] }),
@@ -193,6 +196,8 @@ function BrandPage() {
         <SendStock outlets={outlets} mine={user?.restaurantId ?? null} />
 
         <PushMenu outlets={outlets} mine={user?.restaurantId ?? null} />
+
+        <GiftCards accountId={brand.data?.accountId ?? null} outlets={outlets} mine={user?.restaurantId ?? null} admin={isAdmin(user)} enabled={featureOn(plan, "gift_cards")} />
 
         {plan && !plan.features["multi_outlet"] ? (
           <p className="text-xs text-muted-foreground">Several outlets under one brand come with the Enterprise / Brand plan.</p>
