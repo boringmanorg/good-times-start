@@ -1,0 +1,1 @@
+ALTER FUNCTION public.issue_gift_card(uuid, numeric, text, text, date) SET search_path = public, extensions;
