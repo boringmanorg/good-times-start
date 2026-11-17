@@ -11,6 +11,7 @@ import { dayStart } from "./report-logic";
 import type { Order } from "./types";
 
 const DAY = 86_400_000;
+const soldAt = (o: Order) => (typeof o.settledAt === "number" && Number.isFinite(o.settledAt) ? o.settledAt : o.createdAt);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 /** Trading days needed before a forecast is shown; fewer and one odd day swings it too much. */
 export const MIN_TRADING_DAYS = 7;
@@ -48,7 +49,10 @@ export function kpiForecast(orders: Order[], now: number = Date.now()): KpiForec
   const today = dayStart(now);
   const offset = now - today;
   const lookFrom = dayStart(today - LOOKBACK_DAYS * DAY + 3_600_000);
-  const settled = orders.filter((o) => o.status === "settled" && o.createdAt < now);
+  // A sale belongs to the moment it was paid (a bill opened at 11 pm and paid after midnight is
+  // tomorrow's sale), matching the Summary. Older bills without a settle time use their open time.
+  const settled = orders.filter((o) => o.status === "settled" && soldAt(o) <= now)
+    .map((o) => ({ ...o, createdAt: soldAt(o) }));
 
   // Past days in the look-back window, with what was billed after this time of day.
   const days = new Map<number, DayTotals>();

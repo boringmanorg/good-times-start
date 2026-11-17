@@ -194,7 +194,9 @@ function ForecastCard() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 60_000); return () => window.clearInterval(t); }, []);
   const from = dayStart(now - (LOOKBACK_DAYS + 1) * 86_400_000);
-  const orders = useLiveQuery(() => reportOrders({ from, to: now }), [from]);
+  // Read up to tomorrow, not the mount time: the live query re-runs on every new bill, and a
+  // fixed "to" froze "billed so far" at whatever was settled when the screen opened.
+  const orders = useLiveQuery(() => reportOrders({ from, to: Date.now() + 86_400_000 }), [from]);
   const f = useMemo(() => (orders ? kpiForecast(orders, now) : null), [orders, now]);
   const weekday = new Date(now).toLocaleDateString("en-IN", { weekday: "long" });
   return (
