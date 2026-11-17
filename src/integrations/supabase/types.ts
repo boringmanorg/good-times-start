@@ -314,6 +314,95 @@ export type Database = {
           },
         ]
       }
+      gift_card_events: {
+        Row: {
+          account_id: string
+          amount: number
+          at: string
+          bill_no: string | null
+          by_user: string | null
+          card_id: string
+          id: string
+          kind: string
+          restaurant_id: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number
+          at?: string
+          bill_no?: string | null
+          by_user?: string | null
+          card_id: string
+          id?: string
+          kind: string
+          restaurant_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          at?: string
+          bill_no?: string | null
+          by_user?: string | null
+          card_id?: string
+          id?: string
+          kind?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_card_events_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "gift_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gift_cards: {
+        Row: {
+          account_id: string
+          balance: number
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_on: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          initial_amount: number
+          issued_restaurant_id: string
+          status: string
+        }
+        Insert: {
+          account_id: string
+          balance: number
+          code: string
+          created_at?: string
+          created_by?: string | null
+          expires_on?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          initial_amount: number
+          issued_restaurant_id: string
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          balance?: number
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          expires_on?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          initial_amount?: number
+          issued_restaurant_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       guest_orders: {
         Row: {
           bill_no: string | null
@@ -1467,6 +1556,35 @@ export type Database = {
         Args: { _restaurant_id: string }
         Returns: boolean
       }
+      issue_gift_card: {
+        Args: {
+          _amount: number
+          _expires_on?: string
+          _guest_name?: string
+          _guest_phone?: string
+          _restaurant: string
+        }
+        Returns: {
+          account_id: string
+          balance: number
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_on: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          initial_amount: number
+          issued_restaurant_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gift_cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       log_qr_scan: {
         Args: { _slug: string; _source?: string }
         Returns: undefined
@@ -1606,6 +1724,34 @@ export type Database = {
         Args: { _device: string; _restaurant_id: string; _units: Json }
         Returns: Json
       }
+      redeem_gift_card: {
+        Args: {
+          _amount: number
+          _bill_no?: string
+          _code: string
+          _restaurant: string
+        }
+        Returns: {
+          account_id: string
+          balance: number
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_on: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          initial_amount: number
+          issued_restaurant_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gift_cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       remove_member: {
         Args: { _restaurant_id: string; _user_id: string }
         Returns: undefined
@@ -1692,6 +1838,29 @@ export type Database = {
       verify_void_approval_code: {
         Args: { _bill_uid: string; _code: string; _restaurant_id: string }
         Returns: boolean
+      }
+      void_gift_card: {
+        Args: { _card: string; _restaurant: string }
+        Returns: {
+          account_id: string
+          balance: number
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_on: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          initial_amount: number
+          issued_restaurant_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gift_cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
