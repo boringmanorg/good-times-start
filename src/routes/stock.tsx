@@ -381,7 +381,14 @@ function StockPage() {
             <td className="p-3">{last ? <><span className="tabular-nums">{formatQty(last.qty, m.unit)} at {formatINR(last.unitCost)}</span><span className="block text-xs text-muted-foreground">{last.supplier} · {dateText(last.at)}</span></> : <span className="text-muted-foreground">Not bought yet</span>}</td>
             <td className="hidden p-3 text-right tabular-nums sm:table-cell">{totals.bills ? formatQty(totals.qty, m.unit) : "—"}<span className="block text-xs text-muted-foreground">{totals.bills} {totals.bills === 1 ? "bill" : "bills"}</span></td>
             <td className="p-3 text-right font-semibold tabular-nums">{totals.bills ? formatINR(totals.amount) : "—"}</td>
-            {admin ? <td className="p-3 text-right">{materials.some((x) => x.id === m.id) ? <Button size="sm" variant="outline" aria-label={`Edit ${m.name}`} onClick={() => setSheet({ kind: "item", material: m })}><Pencil />Edit</Button> : null}</td> : null}
+            {admin ? <td className="p-3 text-right"><Button size="sm" variant="outline" aria-label={`Edit ${m.name}`} onClick={async () => {
+              // Items that only exist on purchase lines get their item card created first (same id, so history stays linked), then the editor opens.
+              if (!materials.some((x) => x.id === m.id)) {
+                try { await saveMaterial({ id: m.id, name: m.name, unit: m.unit, costPerUnit: m.costPerUnit ?? 0, lowStockLevel: 0 }); }
+                catch (e) { toast.error(e instanceof Error ? e.message : "Could not add the item card"); return; }
+              }
+              setSheet({ kind: "item", material: m });
+            }}><Pencil />Edit</Button></td> : null}
           </tr>
           {open ? <tr className="bg-secondary/30"><td colSpan={admin ? 6 : 5} className="px-3 pb-4 pt-1">
             {lines.length ? <table className="w-full text-xs"><thead className="text-muted-foreground"><tr><th className="py-1.5 text-left font-medium">Date</th><th className="py-1.5 text-left font-medium">Vendor</th><th className="py-1.5 text-left font-medium">Invoice</th><th className="py-1.5 text-right font-medium">Qty</th><th className="py-1.5 text-right font-medium">Price / {m.unit}</th><th className="py-1.5 text-right font-medium">Amount</th></tr></thead>
