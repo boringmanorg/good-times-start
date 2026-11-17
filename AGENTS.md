@@ -334,3 +334,4 @@ host that should show the website and nothing else.
 is not treated as a website-only host, and fails if any source file reintroduces the old
 address (preview-host, previewAuthStorage and app-install-logic are exempt — they name lovable
 hosts on purpose, to detect the editor).
+- restaurant_records INSERT policy lets cashiers create new `material` rows (edits/deletes stay admin via protect_purchase_ledger); the policy, not only the trigger, must allow every write a role's UI offers, because push RPC refusals are swallowed per row and look like "didn't sync".
