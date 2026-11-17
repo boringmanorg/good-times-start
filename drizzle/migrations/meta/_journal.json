@@ -253,6 +253,13 @@
       "when": 1794718256087,
       "tag": "0035_purchase_items_and_approval_return_window",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794905094959,
+      "tag": "0036_billdesk_can_add_purchase_items",
+      "breakpoints": true
     }
   ]
 }

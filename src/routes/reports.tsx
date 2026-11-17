@@ -39,6 +39,9 @@ import { counterPayments, counterCanClose } from "@/lib/counter-logic";
 import { dateLabel, dayBounds } from "@/lib/orders-history";
 import { useDeviceCode } from "@/lib/use-device-code";
 import { reportOrders } from "@/lib/report-orders";
+import { SummaryInsights } from "@/components/SummaryInsights";
+import { useEntitlements } from "@/lib/use-entitlements";
+import { featureOn } from "@/lib/plans";
 
 export const Route = createFileRoute("/reports")({
   head: () => ({
@@ -51,7 +54,7 @@ export const Route = createFileRoute("/reports")({
 
 const PIE = ["var(--color-primary)", "var(--color-gold)", "var(--color-success)", "var(--color-destructive)", "var(--color-muted-foreground)", "var(--color-ring)"];
 type Preset = "today" | "yesterday" | "7d" | "month" | "custom";
-type Tab = "overview" | "summary" | "items" | "gst" | "staff" | "bills" | "close";
+type Tab = "overview" | "insights" | "summary" | "items" | "gst" | "staff" | "bills" | "close";
 const ORDER_TYPE_LABEL: Record<string, string> = { "dine-in": "Dine-in", takeaway: "Takeaway", delivery: "Delivery", swiggy: "Swiggy", zomato: "Zomato" };
 
 function download(name: string, csv: string) {
@@ -357,6 +360,8 @@ function ReportsPage() {
   const all = useLiveQuery(() => reportOrders(range), [range.from, range.to], []);
   const orders = inRange(all, range);
   const restaurant = useRestaurantSettings().name;
+  // Insights come with Pro Lite and above (the plans that carry purchases).
+  const insightsOn = featureOn(useEntitlements(), "purchases");
   const exportAll = async () => {
     const db = getDb();
     const [menu, closes] = await Promise.all([db.menu.toArray(), db.dayCloses.where("day").between(dayKey(range.from), dayKey(range.to), true, true).toArray()]);
@@ -367,7 +372,7 @@ function ReportsPage() {
     { v: "today", l: "Today" }, { v: "yesterday", l: "Yesterday" }, { v: "7d", l: "Last 7 days" }, { v: "month", l: "This month" }, { v: "custom", l: "Pick dates" },
   ] : [{ v: "today", l: "Today" }, { v: "yesterday", l: "Yesterday" }];
   const tabs: { v: Tab; l: string }[] = full ? [
-    { v: "overview", l: "Overview" }, { v: "summary", l: "Sales Summary" }, { v: "items", l: "Items" }, { v: "gst", l: "GST" }, { v: "staff", l: "Staff" }, { v: "bills", l: "Bills" }, { v: "close", l: "Cash counter" },
+    { v: "overview", l: "Overview" }, ...(insightsOn ? [{ v: "insights" as const, l: "Insights" }] : []), { v: "summary", l: "Sales Summary" }, { v: "items", l: "Items" }, { v: "gst", l: "GST" }, { v: "staff", l: "Staff" }, { v: "bills", l: "Bills" }, { v: "close", l: "Cash counter" },
   ] : staffTabs;
 
   const dateChips = showDates ? (
@@ -427,6 +432,7 @@ function ReportsPage() {
         ) : null}
 
         {tab === "overview" ? <Overview orders={orders} range={range} /> : null}
+        {tab === "insights" && full && insightsOn ? <SummaryInsights orders={orders} range={range} /> : null}
         {tab === "summary" ? <SalesSummary orders={orders} range={range} restaurant={restaurant} canExport={full ? can(user, "reports.export") : true} /> : null}
         {tab === "items" ? <Items orders={orders} file={file} canExport={full ? can(user, "reports.export") : false} /> : null}
         {tab === "gst" ? <Gst orders={orders} file={file} /> : null}
