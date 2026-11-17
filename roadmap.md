@@ -137,3 +137,8 @@
 - [ ] Apply the owner's menu corrections once returned.
 
 - [x] Menu: only Export/Import + admin-only Add dish; remove TAB Bistro menu and printed-prices buttons
+
+## Nov 17 — three features at once
+- [x] In-app recipe editor in the dish editor (Pro Lite+, syncs with menu)
+- [ ] WhatsApp review prompt → Google profile + Instagram (Pro+, feedback)
+- [ ] Gift cards across outlets, managed on /brand (gift_cards)
