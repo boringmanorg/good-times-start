@@ -140,5 +140,5 @@
 
 ## Nov 17 — three features at once
 - [x] In-app recipe editor in the dish editor (Pro Lite+, syncs with menu)
-- [ ] WhatsApp review prompt → Google profile + Instagram (Pro+, feedback)
-- [ ] Gift cards across outlets, managed on /brand (gift_cards)
+- [x] WhatsApp review prompt → Google profile + Instagram (Pro+, feedback)
+- [x] Gift cards across outlets, managed on /brand (gift_cards)

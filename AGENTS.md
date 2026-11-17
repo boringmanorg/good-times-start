@@ -334,3 +334,4 @@ host that should show the website and nothing else.
 is not treated as a website-only host, and fails if any source file reintroduces the old
 address (preview-host, previewAuthStorage and app-install-logic are exempt — they name lovable
 hosts on purpose, to detect the editor).
+- Gift cards live in the cloud (`gift_cards`, `gift_card_events`) per brand account, changed only through `issue_gift_card` / `redeem_gift_card` / `void_gift_card` RPCs, because one balance is shared across outlets and must update atomically.
