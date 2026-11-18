@@ -150,7 +150,7 @@ function Toggle({ label, hint, checked, disabled, onChange }: { label: string; h
   );
 }
 
-const PAY_LABELS: Record<PaymentMode, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due (pay later)", points: "Loyalty points" };
+const PAY_LABELS: Record<PaymentMode, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due (pay later)", points: "Loyalty points", gift_card: "Gift card" };
 
 function BillingSettings() {
   const { user } = useStaff();

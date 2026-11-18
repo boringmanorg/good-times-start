@@ -22,6 +22,8 @@ import { useStaff } from "./staff";
 import { getDeviceId } from "./terminal-actions";
 import { heldTable, holdByOther, withoutHold, type HeldBy } from "./table-hold";
 import { queueBillBookingCancellation } from "./booking-cancellation";
+import { commitGiftCardBill } from './gift-card-checkout';
+import { giftPaymentProblem } from './gift-card-checkout-logic';
 
 function kotGroups(lines: CartLine[]) {
   const groups = new Map<string, CartLine[]>();
@@ -502,6 +504,7 @@ export function useCart(initialTableId?: string) {
     options: { autoKot?: boolean; onKots?: (kots: Kot[]) => void } = {},
   ): Promise<Order | null> => {
     if (!lines.length) return null;
+    if (Array.isArray(payment) && giftPaymentProblem(payment)) { toast.error(giftPaymentProblem(payment)); return null; }
     const detailsError = guestDetailsError(customer, guestCount, await tableCapacityOf(tableId));
     if (detailsError) { toast.error(detailsError); return null; }
     let latest: Order | null;
@@ -549,6 +552,10 @@ export function useCart(initialTableId?: string) {
       return null;
     }
     Object.assign(order, numbered);
+    if (payments.some(p => p.mode === 'gift_card')) {
+      try { await commitGiftCardBill(order, user?.restaurantId); }
+      catch (e) { toast.error(e instanceof Error ? e.message : 'Gift card payment could not be confirmed'); return null; }
+    }
     const db = getDb();
     const id = order.id ? await db.orders.put(order) : Number(await db.orders.add(order));
     order.id = id;
@@ -560,13 +567,14 @@ export function useCart(initialTableId?: string) {
     await finishTable([["order", order.uid ?? ""], ...ticketChanges]);
     toast.success(`Bill ${order.billNo} settled`);
     return order;
-  }, [checkStillOpen, customer, guestCount, discountPct, finishTable, lines, orderType, pendingCancelLines, pendingKitchenLines, reservationId, sendKitchenWithOrder, serviceChargePct, tableId, tax]);
+  }, [checkStillOpen, customer, guestCount, discountPct, finishTable, lines, orderType, pendingCancelLines, pendingKitchenLines, reservationId, sendKitchenWithOrder, serviceChargePct, tableId, tax, user?.restaurantId]);
 
   /**
    * Settle part of a running bill now (guests paying separately). The chosen
    * quantities become their own settled bill; the rest stays on the table.
    */
   const settlePart = useCallback(async (quantities: Record<string, number>, payment: Payment[], closedBy?: string): Promise<Order | null> => {
+    if (payment.some(p => p.mode === 'gift_card')) { toast.error('Use Whole bill with a gift card; the remaining amount can be paid by Cash, UPI or Card'); return null; }
     const latest = await checkStillOpen();
     if (latest === false) return null;
     if (!latest) { toast.error("This running bill is no longer available. Refresh the table before splitting payment."); return null; }

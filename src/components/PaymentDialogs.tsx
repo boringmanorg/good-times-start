@@ -12,6 +12,8 @@ import { Dropdown } from "@/components/Dropdown";
 import { Segmented } from "@/components/Segmented";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { cn } from "@/lib/utils";
+import { GiftCardTender } from './GiftCardTender';
+import { giftPaymentProblem } from '@/lib/gift-card-checkout-logic';
 
 /** Shows a UPI QR for the exact amount so the guest can pay from their phone. */
 export function UpiPay({ vpa, payee, amount, billNo, onPaid }: { vpa: string; payee: string; amount: number; billNo: string; onPaid: () => void }) {
@@ -33,14 +35,17 @@ export function UpiPay({ vpa, payee, amount, billNo, onPaid }: { vpa: string; pa
 
 /** Extra rules on top of the totals: points can't exceed the balance, and dues need a known guest. */
 function paymentRuleError(entries: Payment[], pointsAvailable: number, hasCustomer: boolean): string {
+  const giftError = giftPaymentProblem(entries);
+  if (giftError) return giftError;
   const points = entries.filter((e) => e.mode === "points").reduce((s, e) => s + Math.max(0, e.amount), 0);
   if (points > pointsAvailable) return `The guest has ${pointsAvailable} points to spend.`;
   if (!hasCustomer && entries.some((e) => e.mode === "credit" && e.amount > 0)) return "Add the guest's phone number on the bill to record a due.";
   return "";
 }
 
-function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer, allowedModes }: {
+function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer, allowedModes, restaurantId }: {
   total: number; entries: Payment[]; setEntries: (next: Payment[]) => void; pointsAvailable: number; hasCustomer: boolean; allowedModes?: PaymentMode[];
+  restaurantId?: string;
 }) {
   const summary = paymentSummary(entries, total);
   const ruleError = paymentRuleError(entries, pointsAvailable, hasCustomer);
@@ -51,13 +56,16 @@ function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer,
     <div>
       <div className="space-y-2">
         {entries.map((p, index) => (
-          <div key={index} className="flex gap-2">
+          <div key={index}>
+          <div className="flex gap-2">
             <Dropdown ariaLabel="Payment mode" className="w-36 shrink-0" value={p.mode} onChange={(mode) => update(index, { mode })}
               options={modes.map((m) => ({ value: m.v, label: m.l, ...(m.v === "points" ? { hint: `${pointsAvailable} pts` } : {}) }))} />
             <input aria-label="Amount" inputMode="decimal" value={Number.isFinite(p.amount) && p.amount !== 0 ? String(p.amount) : ""}
               onChange={(e) => update(index, { amount: Number(e.target.value) || 0 })} placeholder="0"
               className="min-w-0 flex-1 rounded-lg border border-input bg-card px-3 py-2 text-right text-sm" />
             {entries.length > 1 ? <Button type="button" size="icon" variant="ghost" aria-label="Remove payment" onClick={() => setEntries(entries.filter((_, i) => i !== index))}><X /></Button> : null}
+          </div>
+          {p.mode === 'gift_card' ? <GiftCardTender payment={p} onChange={change => update(index, change)} restaurantId={restaurantId} /> : null}
           </div>
         ))}
       </div>
@@ -81,7 +89,7 @@ function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer,
  * Settle with several payment modes (cash and UPI, say), or split the bill so
  * some guests pay for their items now and the rest stays on the table.
  */
-export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, canSplitBill, pointsAvailable = 0, hasCustomer = false, allowedModes, onSettle, onSettlePart }: {
+export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, canSplitBill, pointsAvailable = 0, hasCustomer = false, allowedModes, onSettle, onSettlePart, initialGiftCard = false, restaurantId }: {
   lines: CartLine[];
   discountPct: number;
   serviceChargePct: number;
@@ -91,6 +99,8 @@ export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, c
   allowedModes?: PaymentMode[];
   pointsAvailable?: number;
   hasCustomer?: boolean;
+  initialGiftCard?: boolean;
+  restaurantId?: string;
   onSettle: (payments: Payment[]) => void;
   onSettlePart: (quantities: Record<string, number>, payments: Payment[]) => void;
 }) {
@@ -102,8 +112,9 @@ export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, c
   // eslint-disable-next-line react-hooks/exhaustive-deps -- tax rules are fixed for an open bill
   }, [discountPct, lines, quantities, serviceChargePct]);
   const total = tab === "pay" ? computeTotals(lines, discountPct, serviceChargePct, tax).total : splitTotal.total;
-  const [entries, setEntries] = useState<Payment[]>([{ mode: "cash", amount: total }]);
-  useEffect(() => { setEntries([{ mode: "cash", amount: total }]); }, [total]);
+  const [entries, setEntries] = useState<Payment[]>([{ mode: initialGiftCard ? 'gift_card' : 'cash', amount: total }]);
+  useEffect(() => { setEntries([{ mode: initialGiftCard ? 'gift_card' : 'cash', amount: total }]); }, [total, initialGiftCard]);
+  const [busy, setBusy] = useState(false);
   const summary = paymentSummary(entries, total);
 
   return (
@@ -137,12 +148,12 @@ export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, c
       <div className="mt-4">
         {tab === "split" && splitTotal.count === 0
           ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">Pick items above to see this guest's share.</p>
-          : <PaymentRows total={total} entries={entries} setEntries={setEntries} pointsAvailable={pointsAvailable} hasCustomer={hasCustomer} {...(allowedModes ? { allowedModes } : {})} />}
+          : <PaymentRows total={total} entries={entries} setEntries={setEntries} pointsAvailable={pointsAvailable} hasCustomer={hasCustomer} restaurantId={restaurantId} allowedModes={tab === 'split' ? (allowedModes ?? PAYMENT_MODES.map(m => m.v)).filter(m => m !== 'gift_card') : allowedModes} />}
       </div>
 
       <ConfirmButton id="settle-panel" className={cn(buttonVariants(), "mt-4 h-11 w-full")} armedClassName="!bg-gold !text-gold-foreground"
-        disabled={!summary.complete || !!paymentRuleError(entries, pointsAvailable, hasCustomer) || (tab === "split" && splitTotal.count === 0)}
-        onConfirm={() => (tab === "pay" ? onSettle(entries) : onSettlePart(quantities, entries))}
+        disabled={busy || !summary.complete || !!paymentRuleError(entries, pointsAvailable, hasCustomer) || (tab === "split" && splitTotal.count === 0)}
+        onConfirm={async () => { setBusy(true); try { await (tab === 'pay' ? onSettle(entries) : onSettlePart(quantities, entries)); } finally { setBusy(false); } }}
         confirm={`Tap again to settle ${formatINR(total, 0)}`}>
         {tab === "pay" ? `Settle ${formatINR(total, 0)}` : `Settle ${splitTotal.count} item${splitTotal.count === 1 ? "" : "s"}, ${formatINR(total, 0)}`}
       </ConfirmButton>

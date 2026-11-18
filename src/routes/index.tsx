@@ -41,6 +41,8 @@ import { usePolicy } from "@/lib/use-policy";
 import { COUNTER_TYPES, isCounterType } from "@/lib/bill-entry";
 import { useFirstSyncDone } from "@/lib/use-first-sync";
 import { billLabel, hasBillNumber } from "@/lib/bill-numbering";
+import { useEntitlements } from '@/lib/use-entitlements';
+import { featureOn } from '@/lib/plans';
 
 export const Route = createFileRoute("/")({
   // Staff screens read this device's saved data, so skip server rendering and open straight from the device.
@@ -152,6 +154,8 @@ function PosPage() {
   const closedBy = user?.displayName;
   const printConfig = usePrintConfig();
   const [payOpen, setPayOpen] = useState(false);
+  const [giftCheckout, setGiftCheckout] = useState(false);
+  const giftCardsOn = featureOn(useEntitlements(), 'gift_cards');
   const [upiOpen, setUpiOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -412,10 +416,11 @@ function PosPage() {
                 </ConfirmButton>
               )
             ))}
-            <button disabled={blocked || !can(user, "bill.split")} onClick={() => void allow(user, "bill.split", "Split the bill or payment").then((ok) => { if (ok) setPayOpen(true); })}
+            <button disabled={blocked || !can(user, "bill.split")} onClick={() => void allow(user, "bill.split", "Split the bill or payment").then((ok) => { if (ok) { setGiftCheckout(false); setPayOpen(true); } })}
               className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl bg-primary-tint text-xs font-semibold text-primary transition-[background,transform] hover:bg-accent active:scale-[0.97] disabled:opacity-40">
               <Wallet className="size-4" />Split
             </button>
+            {giftCardsOn ? <Button variant="outline" className="col-span-4 min-h-11" disabled={blocked} onClick={() => void allow(user, 'bill.settle', 'Pay with a gift card').then(ok => { if (ok) { setGiftCheckout(true); setPayOpen(true); } })}>Gift card</Button> : null}
           </div>
         ) : <p className="mt-2 rounded-lg bg-secondary p-2.5 text-center text-xs text-muted-foreground">The cashier settles this bill.</p>}
       </div>
@@ -537,9 +542,10 @@ function PosPage() {
         <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto">
           {payOpen ? <PaymentPanel lines={cart.lines} discountPct={cart.discountPct} serviceChargePct={cart.serviceChargePct}
             canSplitBill={!!cart.activeOrder && cart.lines.reduce((s, l) => s + l.qty, 0) > 1} tax={cart.tax}
-            {...(settings.paymentModes ? { allowedModes: settings.paymentModes } : {})}
+            allowedModes={[...(settings.paymentModes ?? ['cash', 'upi', 'card', 'wallet', 'credit', 'points'] as PaymentMode[]).filter(m => m !== 'gift_card'), ...(giftCardsOn ? ['gift_card' as const] : [])]}
+            initialGiftCard={giftCheckout} restaurantId={user?.restaurantId}
             pointsAvailable={loyaltyPct > 0 ? guest?.stats.points ?? 0 : 0} hasCustomer={!!guestId}
-            onSettle={(p) => void payWith(p)} onSettlePart={(q, p) => void payPart(q, p)} /> : null}
+            onSettle={payWith} onSettlePart={payPart} /> : null}
         </DialogContent>
       </Dialog>
 

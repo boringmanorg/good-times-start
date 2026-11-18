@@ -45,7 +45,7 @@ export const BILL_END_FEED_MM = 30;
 export interface Slip { paper: Paper; lines: SlipLine[]; qr?: string | undefined; endFeedMm?: number; startFeedMm?: number; /** Side margin in mm. */ marginMm?: number; /** Characters a line was laid out for. */ cols?: number }
 
 const ORDER_TYPE: Record<string, string> = { "dine-in": "DINE IN", takeaway: "TAKEAWAY", delivery: "DELIVERY", swiggy: "SWIGGY", zomato: "ZOMATO" };
-const PAY: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points" };
+const PAY: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points", gift_card: "Gift card" };
 
 /** Thermal printers print ASCII; swap the few characters menus and names use. */
 export function plain(text: string): string {

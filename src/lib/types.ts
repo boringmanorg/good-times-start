@@ -1,6 +1,6 @@
 export type OrderType = "dine-in" | "takeaway" | "delivery" | "swiggy" | "zomato";
 /** "credit" is an amount the guest pays later (a due); "points" is loyalty points spent. */
-export type PaymentMode = "cash" | "upi" | "card" | "wallet" | "credit" | "points";
+export type PaymentMode = "cash" | "upi" | "card" | "wallet" | "credit" | "points" | "gift_card";
 export type TableStatus = "free" | "occupied" | "billed" | "reserved";
 /** "served" hides a ticket from the kitchen screen once it has left the pass. */
 export type KotStatus = "new" | "preparing" | "ready" | "served";
@@ -84,7 +84,7 @@ export interface Order {
   sgst: number;
   roundOff: number;
   total: number;
-  payments: { mode: PaymentMode; amount: number }[];
+  payments: { mode: PaymentMode; amount: number; giftCardCode?: string }[];
   status: "held" | "settled" | "void";
   voidReason?: string;
   cancelledAt?: number;

@@ -7,7 +7,7 @@ import { formatINR, upiLink } from "@/lib/billing";
 import { exemptionNote, gstModeOf } from "@/lib/billing-config";
 import { useRestaurantSettings } from "@/lib/use-settings";
 
-const PAY_LABEL: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points" };
+const PAY_LABEL: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points", gift_card: "Gift card" };
 
 function Rule() {
   return <div className="my-2 border-t border-dashed border-black/50" />;

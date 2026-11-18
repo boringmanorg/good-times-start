@@ -324,6 +324,7 @@ export type Database = {
           card_id: string
           id: string
           kind: string
+          order_uid: string | null
           restaurant_id: string
         }
         Insert: {
@@ -335,6 +336,7 @@ export type Database = {
           card_id: string
           id?: string
           kind: string
+          order_uid?: string | null
           restaurant_id: string
         }
         Update: {
@@ -346,6 +348,7 @@ export type Database = {
           card_id?: string
           id?: string
           kind?: string
+          order_uid?: string | null
           restaurant_id?: string
         }
         Relationships: [

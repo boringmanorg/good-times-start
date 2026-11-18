@@ -1,5 +1,9 @@
 # POS expansion
 
+## Gift-card checkout
+- [ ] Link gift-card tenders and split payments to bills atomically in Cloud, with safe retries and brand isolation.
+- [ ] Add checkout balance lookup, receipt/report labels and isolated workflow/regression checks; no production test money.
+
 ## Purchase form and approval-based returns
 - [ ] Add labelled New item rows and purchase date; save new catalogue items and purchase together, with Billdesk requests pending admin approval.
 - [ ] Start local/cloud 48-hour returns from approval; test purchase submission and return boundaries without production test writes.

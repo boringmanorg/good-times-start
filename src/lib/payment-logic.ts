@@ -7,9 +7,10 @@ export const PAYMENT_MODES: { v: PaymentMode; l: string }[] = [
   { v: "wallet", l: "Wallet" },
   { v: "credit", l: "Due (pay later)" },
   { v: "points", l: "Loyalty points" },
+  { v: "gift_card", l: "Gift card" },
 ];
 
-export interface Payment { mode: PaymentMode; amount: number }
+export interface Payment { mode: PaymentMode; amount: number; giftCardCode?: string }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -37,7 +38,9 @@ export function settledPayments(entries: Payment[], total: number): Payment[] {
   const byMode = new Map<PaymentMode, number>();
   for (const p of entries) if (p.amount > 0) byMode.set(p.mode, r2((byMode.get(p.mode) ?? 0) + p.amount));
   if (change > 0) byMode.set("cash", r2((byMode.get("cash") ?? 0) - change));
-  return [...byMode].filter(([, amount]) => amount > 0).map(([mode, amount]) => ({ mode, amount }));
+  return [...byMode].filter(([, amount]) => amount > 0).map(([mode, amount]) => ({ mode, amount,
+    ...(mode === "gift_card" ? { giftCardCode: entries.find(p => p.mode === "gift_card")?.giftCardCode?.trim().toUpperCase().replace(/\s+/g, "") ?? "" } : {}),
+  }));
 }
 
 /** Repair only legacy zero tenders on queued settlements; never infer or alter money received. */

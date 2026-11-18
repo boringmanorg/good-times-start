@@ -224,5 +224,5 @@ export function toCsv(rows: (string | number | undefined)[][]): string {
 }
 
 export function paymentLabel(mode: PaymentMode | string): string {
-  return ({ cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points" } as Record<string, string>)[mode] ?? mode;
+  return ({ cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points", gift_card: "Gift card" } as Record<string, string>)[mode] ?? mode;
 }
