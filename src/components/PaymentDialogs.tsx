@@ -44,8 +44,8 @@ function paymentRuleError(entries: Payment[], pointsAvailable: number, hasCustom
 }
 
 function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer, allowedModes, restaurantId }: {
-  total: number; entries: Payment[]; setEntries: (next: Payment[]) => void; pointsAvailable: number; hasCustomer: boolean; allowedModes?: PaymentMode[];
-  restaurantId?: string;
+  total: number; entries: Payment[]; setEntries: (next: Payment[]) => void; pointsAvailable: number; hasCustomer: boolean; allowedModes?: PaymentMode[] | undefined;
+  restaurantId?: string | null | undefined;
 }) {
   const summary = paymentSummary(entries, total);
   const ruleError = paymentRuleError(entries, pointsAvailable, hasCustomer);
@@ -96,11 +96,11 @@ export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, c
   tax?: TaxOptions;
   canSplitBill: boolean;
   /** Payment modes this restaurant accepts; all when left out. */
-  allowedModes?: PaymentMode[];
+  allowedModes?: PaymentMode[] | undefined;
   pointsAvailable?: number;
   hasCustomer?: boolean;
   initialGiftCard?: boolean;
-  restaurantId?: string;
+  restaurantId?: string | null | undefined;
   onSettle: (payments: Payment[]) => void;
   onSettlePart: (quantities: Record<string, number>, payments: Payment[]) => void;
 }) {

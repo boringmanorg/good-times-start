@@ -5,7 +5,7 @@ import { redeemProblem, type GiftCard } from '@/lib/gift-card-logic';
 import { formatINR } from '@/lib/billing';
 import type { Payment } from '@/lib/payment-logic';
 
-export function GiftCardTender({ payment, onChange, restaurantId }: { payment: Payment; onChange: (change: Partial<Payment>) => void; restaurantId?: string }) {
+export function GiftCardTender({ payment, onChange, restaurantId }: { payment: Payment; onChange: (change: Partial<Payment>) => void; restaurantId?: string | null | undefined }) {
   const [card, setCard] = useState<GiftCard | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);

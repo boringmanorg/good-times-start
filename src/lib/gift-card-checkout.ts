@@ -20,7 +20,7 @@ export async function lookupCheckoutCard(restaurantId: string, code: string): Pr
 }
 
 /** No local financial closure until Cloud has committed the bill and debit together. */
-export async function commitGiftCardBill(order: Order, restaurantId: string | undefined): Promise<Order> {
+export async function commitGiftCardBill(order: Order, restaurantId: string | null | undefined): Promise<Order> {
   const problem = giftPaymentProblem(order.payments);
   if (problem) throw new Error(problem);
   if (!navigator.onLine || !restaurantId || !order.uid) throw new Error('Connect to the internet to settle a gift card');
