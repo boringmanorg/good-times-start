@@ -467,3 +467,16 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
 - Live status: loyalty card removed (points live in the guest profile); KOT times read
   "Today, 9:42 am" / "Yesterday, …" / "15 Nov, …" (`kotWhen`), and running bills say
   "Running bill · open 2 h 15 min".
+
+## Purchase → Purchases and History as itemized bill cards (19 Nov 2026)
+
+- `PurchaseBillCard`: receipt-style card per bill — icon tile, vendor, invoice `#`, date/time,
+  who recorded it, approval chip, total and item count; payment chips (Pay later in red,
+  "Payment not recorded" dashed) and round-off; dashed item rows "qty × price" with the line
+  amount (first 5, "Show all N items"); approve panel and actions (Return items, Edit, Delete)
+  in the foot. Returns have a red edge, "−₹" total and "Against purchase #…".
+- Both tabs: search (vendor, invoice no. or item — `billMatches`), filter chips (Purchases:
+  All / Pay later / Waiting for approval / Payment not recorded; History: All / Purchases /
+  Returns), grouped by day with sticky headings "Today", "Yesterday", "Sun, 15 Nov 2026" and the
+  day's net total (`billsByDay`: approved only, returns subtract, round-off in). Two columns
+  from `lg`. Tested in purchase-bills.test.ts.

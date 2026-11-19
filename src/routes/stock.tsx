@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
-import { Check, ChevronRight, Clock, Download, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Download, Pencil, Plus, Search, Trash2, Undo2, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -15,7 +15,7 @@ import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
 import { STOCK_UNITS, formatQty, purchaseTotal } from "@/lib/stock-logic";
 import { decidePurchase, deleteMaterial, deletePurchase, deleteSupplier, recordStockEntry, updatePurchase, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
-import { approvalStatus, canRequestReturn, canReturnPurchase, entriesBetween, entryAmount, itemPurchaseLines, itemTotals, purchaseReturnDeadline, remainingPurchaseQty, spendSummary, supplierHistories } from "@/lib/purchase-logic";
+import { approvalStatus, billMatches, billsByDay, canRequestReturn, canReturnPurchase, entriesBetween, itemPurchaseLines, itemTotals, purchaseReturnDeadline, remainingPurchaseQty, spendSummary, supplierHistories } from "@/lib/purchase-logic";
 import { gstinError } from "@/lib/validation";
 import { downloadXlsx } from "@/lib/xlsx";
 import { dayKey } from "@/lib/report-logic";
@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { PurchaseSpendDashboard } from "@/components/PurchaseSpendDashboard";
 import { PurchasePayments, type PayRow } from "@/components/PurchasePayments";
 import { PurchaseItemsList } from "@/components/PurchaseItemsList";
+import { PurchaseBillCard } from "@/components/PurchaseBillCard";
 import { paymentText, purchasePayProblem } from "@/lib/purchase-pay-logic";
 import { can } from "@/lib/permissions";
 
@@ -310,9 +311,9 @@ function ReturnForm({ purchase, entries, materials, onDone }: { purchase: StockE
   </form>;
 }
 
+type BillFilter = "all" | "credit" | "pending" | "unpaid" | "purchases" | "returns";
 type Sheet = { kind: "item"; material?: Material } | { kind: "purchase"; purchase?: StockEntry } | { kind: "supplier"; supplier: Supplier | null } | { kind: "return"; purchase: StockEntry };
 const dateText = (at: number) => new Date(at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-const timeText = (at: number) => new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
 
 function StockPage() {
   const { user } = useStaff();
@@ -331,6 +332,8 @@ function StockPage() {
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [openVendor, setOpenVendor] = useState<string | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
+  const [billSearch, setBillSearch] = useState("");
+  const [billFilter, setBillFilter] = useState<BillFilter>("all");
   const close = () => setSheet(null);
   const material = (id: string) => materials.find((m) => m.id === id);
   const lineName = (i: StockEntry["items"][number]) => i.name ?? material(i.materialId)?.name ?? "Deleted item";
@@ -362,20 +365,34 @@ function StockPage() {
   const thisMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); })();
   const month = spendSummary(entriesBetween(entries, thisMonth, Date.now() + 1));
   const pending = entries.filter((e) => approvalStatus(e) === "pending").sort((a, b) => (a.approval?.requestedAt ?? a.at) - (b.approval?.requestedAt ?? b.at));
-  const billCard = (p: StockEntry) => <li key={p.id} className="py-3 text-sm">
-    <div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold">{p.purchaseId ? "Supplier return" : "Purchase"} · {p.supplierName ?? suppliers.find((s) => s.id === p.supplierId)?.name ?? "Supplier not recorded"}<span className="ml-2 font-normal text-muted-foreground">{p.reference ? `Invoice ${p.reference}` : ""}</span><ApprovalChip entry={p} /></div>
-      <span className={cn("font-semibold tabular-nums", p.purchaseId && "text-destructive")}>{formatINR(entryAmount(p))}</span></div>
-    <p className="mt-0.5 text-xs text-muted-foreground">{dateText(p.at)}, {timeText(p.at)}{p.by ? ` · ${p.by}` : ""}{p.purchaseId ? "" : ` · ${paymentText(p)}`}{p.roundOff ? ` (round off ${p.roundOff > 0 ? "+" : "−"}${formatINR(Math.abs(p.roundOff))})` : ""}</p>
-    <table className="mt-2 w-full text-xs"><tbody>{p.items.map((i, index) => <tr key={index} className="border-t border-border/60"><td className="py-1 pr-2">{lineName(i)}</td><td className="py-1 pr-2 text-right tabular-nums">{formatQty(Math.abs(i.qty), lineUnit(i))}</td><td className="py-1 pr-2 text-right tabular-nums">{i.unitCost !== undefined ? `${formatINR(i.unitCost)} / ${lineUnit(i)}` : "—"}</td><td className="py-1 text-right font-semibold tabular-nums">{formatINR(Math.abs(i.qty) * (i.unitCost ?? 0))}</td></tr>)}</tbody></table>
-    {(admin ? canReturnPurchase(p) : requester && user ? canRequestReturn(p, { name: user.displayName, login: user.login ?? undefined }) : false) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0) ? <Button size="sm" variant="outline" className="mt-2" onClick={() => setSheet({ kind: "return", purchase: p })}>Return items</Button> : null}
-    {admin && approvalStatus(p) === "pending" ? <ApprovePanel entry={p} /> : null}
-    {admin && !p.purchaseId && approvalStatus(p) !== "rejected" && !entries.some((e) => e.purchaseId === p.id) ? <div className="mt-2 inline-flex gap-2 pl-2">
-      <Button size="sm" variant="outline" onClick={() => setSheet({ kind: "purchase", purchase: p })}><Pencil />Edit</Button>
-      <ConfirmButton id={`delete-purchase-${p.id}`} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-destructive hover:text-destructive")} armedClassName="!bg-destructive !text-destructive-foreground"
-        onConfirm={async () => { try { await deletePurchase(p.id); toast.success("Purchase bill deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete"); } }} confirm={<><Trash2 />Tap again to delete</>}><Trash2 />Delete</ConfirmButton>
-    </div> : null}
-    {p.purchaseId ? <p className="mt-1 text-xs text-muted-foreground">Against purchase {entries.find((e) => e.id === p.purchaseId)?.reference || "without invoice no."}</p> : null}
-  </li>;
+  const vendorOf = (p: StockEntry) => p.supplierName ?? suppliers.find((x) => x.id === p.supplierId)?.name ?? "Supplier not recorded";
+  const billCard = (p: StockEntry) => {
+    const canReturn = (admin ? canReturnPurchase(p) : requester && user ? canRequestReturn(p, { name: user.displayName, login: user.login ?? undefined }) : false) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0);
+    const canEdit = admin && !p.purchaseId && approvalStatus(p) !== "rejected" && !entries.some((e) => e.purchaseId === p.id);
+    const original = p.purchaseId ? entries.find((e) => e.id === p.purchaseId) : undefined;
+    return <PurchaseBillCard key={p.id} entry={p} vendor={vendorOf(p)} lineName={lineName} lineUnit={lineUnit} status={<ApprovalChip entry={p} />}
+      against={p.purchaseId ? (original?.reference ? `#${original.reference}` : "without invoice no.") : undefined}
+      actions={canReturn || canEdit ? <>
+        {canReturn ? <Button size="sm" variant="outline" onClick={() => setSheet({ kind: "return", purchase: p })}><Undo2 />Return items</Button> : null}
+        {canEdit ? <Button size="sm" variant="outline" onClick={() => setSheet({ kind: "purchase", purchase: p })}><Pencil />Edit</Button> : null}
+        {canEdit ? <ConfirmButton id={`delete-purchase-${p.id}`} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-destructive hover:text-destructive")} armedClassName="!bg-destructive !text-destructive-foreground"
+          onConfirm={async () => { try { await deletePurchase(p.id); toast.success("Purchase bill deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete"); } }} confirm={<><Trash2 />Tap again to delete</>}><Trash2 />Delete</ConfirmButton> : null}
+      </> : undefined}>
+      {admin && approvalStatus(p) === "pending" ? <ApprovePanel entry={p} /> : null}
+    </PurchaseBillCard>;
+  };
+  const listFor = tab === "purchases" ? purchases : history;
+  const shownBills = listFor
+    .filter((e) => billMatches(e, billSearch, vendorOf(e), lineName))
+    .filter((e) => billFilter === "all" ? true
+      : billFilter === "credit" ? !!e.payments?.some((x) => x.mode === "credit")
+      : billFilter === "pending" ? approvalStatus(e) === "pending"
+      : billFilter === "unpaid" ? e.type === "purchase" && !e.payments?.length
+      : billFilter === "purchases" ? e.type === "purchase" : e.type === "return");
+  const billDays = billsByDay(shownBills);
+  const billFilters: { v: BillFilter; l: string }[] = tab === "purchases"
+    ? [{ v: "all", l: "All" }, { v: "credit", l: "Pay later" }, { v: "pending", l: "Waiting for approval" }, { v: "unpaid", l: "Payment not recorded" }]
+    : [{ v: "all", l: "All" }, { v: "purchases", l: "Purchases" }, { v: "returns", l: "Returns" }];
 
   return <AppShell><div className="mx-auto max-w-6xl p-4 lg:p-6">
     <header className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Purchase</h1><p className="text-sm text-muted-foreground">Supplier bills, how they were paid, and what each item costs you.</p></div>
@@ -394,15 +411,33 @@ function StockPage() {
           <h2 className="flex items-center gap-2 text-base font-bold"><Clock className="size-4" />Waiting for admin approval <span className="rounded-full bg-gold px-2 text-xs text-gold-foreground">{pending.length}</span></h2>
           <p className="text-xs text-muted-foreground">{admin ? "Check each supplier bill, then approve or reject. Nothing here counts in purchases until approved." : "The admin checks the supplier bill and approves it. You'll hear a chime when they do."}</p>
         </div>
-        <ul className="divide-y divide-border px-4">{pending.map(billCard)}</ul>
+        <div className="grid items-start gap-3 p-3 lg:grid-cols-2">{pending.map(billCard)}</div>
       </section>
     ) : null}
-    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
+    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={(t) => { setTab(t); setBillFilter("all"); }} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
 
     {tab === "items" ? <PurchaseItemsList items={listed} entries={entries} suppliers={suppliers} onEdit={admin ? (m) => void editItem(m) : undefined} /> : null}
 
     {tab === "spend" && admin ? <PurchaseSpendDashboard entries={entries} suppliers={suppliers} materials={materials} /> : null}
-    {tab === "purchases" || tab === "history" ? <ul className="mt-4 divide-y divide-border">{(tab === "purchases" ? purchases : history).map(billCard)}{!(tab === "purchases" ? purchases : history).length ? <li className="py-8 text-center text-muted-foreground">No purchase history yet</li> : null}</ul> : null}
+    {tab === "purchases" || tab === "history" ? <div className="mt-4 space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative min-w-0 flex-1 basis-60">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input aria-label="Find a bill" placeholder="Vendor, invoice no. or item" value={billSearch} onChange={(e) => setBillSearch(e.target.value)} className="w-full rounded-lg border border-input bg-card py-2 pl-9 pr-3 text-sm" />
+        </label>
+        <div className="flex max-w-full gap-1.5 overflow-x-auto">
+          {billFilters.map((f) => <Button key={f.v} size="sm" variant={billFilter === f.v ? "default" : "secondary"} className="shrink-0" onClick={() => setBillFilter(f.v)}>{f.l}</Button>)}
+        </div>
+      </div>
+      {billDays.map((d) => <section key={d.day} aria-label={d.label}>
+        <div className="sticky top-0 z-10 -mx-1 mb-2 flex items-baseline justify-between gap-3 bg-background/95 px-1 py-1.5">
+          <h2 className="text-sm font-semibold">{d.label}<span className="ml-2 text-xs font-normal text-muted-foreground">{d.entries.length} {d.entries.length === 1 ? "bill" : "bills"}</span></h2>
+          <span className="text-sm font-semibold tabular-nums">{formatINR(d.total, 0)}</span>
+        </div>
+        <div className="grid items-start gap-3 lg:grid-cols-2">{d.entries.map(billCard)}</div>
+      </section>)}
+      {!billDays.length ? <p className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">{listFor.length ? "No bills match" : "No purchase bills yet"}</p> : null}
+    </div> : null}
 
     {tab === "suppliers" && vendorsOn ? <div className="mt-4 space-y-3">
       {admin ? <Button variant="outline" onClick={() => setSheet({ kind: "supplier", supplier: null })}><Plus/>Add vendor</Button> : null}

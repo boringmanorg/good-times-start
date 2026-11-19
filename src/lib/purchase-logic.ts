@@ -252,3 +252,38 @@ export function topItems(entries: StockEntry[], materials: { id: string; name: s
   }
   return [...map.values()].filter((r) => r.amount !== 0 || r.qty !== 0).sort((a, b) => b.amount - a.amount);
 }
+
+/* ---- Bill lists (Purchases and History tabs) ---- */
+
+export interface BillDay { day: string; label: string; entries: StockEntry[]; total: number }
+
+/** "Today", "Yesterday", or "Mon, 17 Nov 2026" for a list heading. */
+export function billDayLabel(at: number, now = Date.now()): string {
+  const day = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const diff = Math.round((day(now) - day(at)) / 86_400_000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  const d = new Date(at);
+  return `${d.toLocaleDateString("en-IN", { weekday: "short" })}, ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+}
+
+/** Bills grouped by local day, newest first, each day with its net total (returns subtract; rejected bills don't count). */
+export function billsByDay(entries: StockEntry[], now = Date.now()): BillDay[] {
+  const days = new Map<string, BillDay>();
+  for (const e of [...entries].sort((a, b) => b.at - a.at)) {
+    const d = new Date(e.at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const row = days.get(key) ?? { day: key, label: billDayLabel(e.at, now), entries: [], total: 0 };
+    row.entries.push(e);
+    if (counts(e)) row.total = Math.round((row.total + entryAmount(e)) * 100) / 100;
+    days.set(key, row);
+  }
+  return [...days.values()];
+}
+
+/** Does a bill match what was typed: vendor, invoice number or any item on it. */
+export function billMatches(e: StockEntry, typed: string, vendor: string, itemName: (i: StockEntry["items"][number]) => string): boolean {
+  const q = typed.trim().toLowerCase();
+  if (!q) return true;
+  return vendor.toLowerCase().includes(q) || (e.reference ?? "").toLowerCase().includes(q) || e.items.some((i) => itemName(i).toLowerCase().includes(q));
+}
