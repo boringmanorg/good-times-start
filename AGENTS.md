@@ -520,6 +520,11 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
   it as order type swiggy/zomato (`platformOrderType`, `cartLinesFromGuest(..., billAs)`), so the
   platform's prices and the section 9(5) GST rule apply. `guard_guest_order_origin` stops staff
   changing platform / external id / is_test / payment. Migration:
-  `docs/migrations/2026-11-19-aggregators-sandbox.sql` (tested on local Postgres 16: 11 cases).
+  `docs/migrations/2026-11-19-aggregators-sandbox.sql` (tested on local Postgres 16: 11 cases) —
+  **applied 19 Nov 2026**.
+- Plan catalogue drifted again by 19 Nov (Basic had purchases; Pro Lite lacked vendors and
+  bookings; Pro lacked gift_cards; Pro and Enterprise had kds). Restored to the ladder at the
+  owner's choice; TAB Bistro keeps its kitchen screen as a per-outlet override (`kds: true`).
+  Console plan edits are not logged — re-check the feature matrix after any plan edit.
 - Durability: Dexie v9 indexes `kots.orderUid` and `kots.submissionId`; `kotsForBill` replaces
   full KOT scans at settlement/print numbering, sync renumbering and table moves.
