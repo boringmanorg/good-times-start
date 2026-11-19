@@ -334,3 +334,21 @@ host that should show the website and nothing else.
 is not treated as a website-only host, and fails if any source file reintroduces the old
 address (preview-host, previewAuthStorage and app-install-logic are exempt — they name lovable
 hosts on purpose, to detect the editor).
+
+## Round-off never blocks a settled bill (19 Nov 2026)
+
+`guard_settled_bill_points_value` (drizzle 0033, 11 Nov) refused a settled bill whose
+`taxable` was more than 1 paisa above `total`. On a no-GST bill `taxable` is the amount before
+rounding, so every bill rounded DOWN (₹1163.40 → ₹1163) was refused and held on the device;
+rounded-up bills passed, which hid it. On 19 Nov all 50 settled bills in the cloud were
+rounded up or exact — none down.
+
+- The bill's own `roundOff` is now allowed in that rule; a round-off of more than
+  ₹100 (`MAX_ROUND_OFF`) either way is refused. Payments must still equal the rounded
+  `total` — that rule is unchanged and correct.
+- `settledValueProblem` in billing.ts mirrors the cloud rule and runs in `settle` and
+  `settlePart` **before** the bill takes its number, so a bill the cloud would refuse never
+  leaves the counter with a number.
+- `round-off.test.ts` runs every discount 0–100% × service charge × tax setup through
+  `computeTotals` and the rule. Run it whenever the bill maths or the guard changes.
+- Migration: `docs/migrations/2026-11-19-round-off-allowance.sql`.

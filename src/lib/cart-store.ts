@@ -3,7 +3,7 @@ import { billLabel, hasBillNumber, stampKotsWithBillNo, withBillNumber } from ".
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 import type { CartLine, Kot, MenuItem, Order, OrderType, PaymentMode } from "./types";
-import { computeTotals } from "./billing";
+import { computeTotals, settledValueProblem } from "./billing";
 import { getDb, markDirty } from "./db";
 import { allocateRestaurantNumber, allocatedNumberRequestId } from "./restaurant-numbering";
 import { additionsNotInShared, accumulateSubmittedQuantities, cancelledKitchenLines, guestDetailsError, linesAfterSharedChange, sentCovered, removeCancelled, reopenedLines, submittedQuantitiesFromKots, subtractSettledQuantities, subtractSubmittedQuantities, unsentKitchenLines } from "./kitchen-order";
@@ -544,6 +544,8 @@ export function useCart(initialTableId?: string) {
       customer, guestCount, reservationId: latest?.reservationId ?? reservationId,
       ...(closedBy ? { closedBy } : {}),
     });
+    const valueProblem = settledValueProblem(t);
+    if (valueProblem) { toast.error(valueProblem); return null; }
     const giftProblem = await giftCardCheckBeforeNumbering(payments, user?.restaurantId);
     if (giftProblem) { toast.error(giftProblem); return null; }
     let numbered: Order;
@@ -589,6 +591,8 @@ export function useCart(initialTableId?: string) {
     const latestRawSubmitted = latestKots.length ? submittedQuantitiesFromKots(latestKots) : undefined;
     const now = Date.now();
     const t = computeTotals(split, discountPct, serviceChargePct, tax);
+    const valueProblem = settledValueProblem(t);
+    if (valueProblem) { toast.error(valueProblem); return null; }
     const label = latest?.tableLabel ?? await tableLabelOf(tableId);
     const partUid = newUid();
     const part: Order = withCustomerId({

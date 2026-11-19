@@ -87,3 +87,23 @@ export function upiLink(opts: { vpa: string; name: string; amount: number; billN
   });
   return `upi://pay?${p.toString()}`;
 }
+
+/** Most a bill may be rounded either way; the cloud refuses more (guard_settled_bill_points_value). */
+export const MAX_ROUND_OFF = 100;
+
+/**
+ * The cloud's settled-bill value rule, run before a bill takes its number so a
+ * bill the cloud would refuse never leaves the counter. The bill's own round-off
+ * is allowed: ₹1163.40 rounded to ₹1163 is a normal bill, not "₹0.40 over".
+ */
+export function settledValueProblem(bill: { total: number; taxable?: number; subtotal?: number; discountAmt?: number; roundOff?: number }): string | null {
+  const round = Number.isFinite(bill.roundOff) ? (bill.roundOff as number) : 0;
+  if (Math.abs(round) > MAX_ROUND_OFF) return `Round-off can't be more than ₹${MAX_ROUND_OFF} either way`;
+  const allow = Math.abs(round) + 0.01;
+  if (Number.isFinite(bill.taxable)) {
+    if ((bill.taxable as number) > bill.total + allow) return "Bill value is more than the settled total";
+  } else if (Number.isFinite(bill.subtotal) && (bill.subtotal as number) - (bill.discountAmt ?? 0) > bill.total + Math.max(1, allow)) {
+    return "Bill value is more than the settled total";
+  }
+  return null;
+}
