@@ -351,7 +351,7 @@ rounded up or exact — none down.
   leaves the counter with a number.
 - `round-off.test.ts` runs every discount 0–100% × service charge × tax setup through
   `computeTotals` and the rule. Run it whenever the bill maths or the guard changes.
-- Migration: `docs/migrations/2026-11-19-round-off-allowance.sql`.
+- Migration: `docs/migrations/2026-11-19-round-off-allowance.sql` — **applied 19 Nov 2026**.
 - **Cashier's round-off**: the payment dialog offers "Round off −₹1 · settle at ₹1,162" when the
   guest paid a little less, or paid more by UPI/card with no cash to give change from (cash over
   is change, never round-off). One tap settles at what was received; the difference joins the
