@@ -131,7 +131,7 @@ export function GiftCards({ accountId, outlets, mine, admin, enabled }: { accoun
                 <Button size="sm" disabled={!!redeemErr || redeem.isPending || !mine} onClick={() => redeem.mutate()}>{redeem.isPending ? "Saving…" : "Take from card"}</Button>
                 {take && redeemErr ? <span className="text-xs text-muted-foreground">{redeemErr}</span> : null}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Then settle the bill with "Other" for the same amount.</p>
+              <p className="mt-2 text-xs text-muted-foreground">To pay a bill, use Gift card at checkout on the Billdesk instead: it takes the amount off the card and links it to the bill. Use this box only for a spend with no POS bill, or the card is charged twice.</p>
             </div>
           ) : null}
         </div>
