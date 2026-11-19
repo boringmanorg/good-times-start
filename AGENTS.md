@@ -422,3 +422,48 @@ before still sync and stay in the audit log. Don't build anything new on them.
 - Purchase header: four KPI cards (spent this month, pay later this month, waiting for
   approval, items). Admins land on Spend. Bill cards and the Excel History sheet show "Paid by".
 - Not yet: settling "Pay later" (marking vendor credit paid) — the dashboard shows it as owed.
+
+## Windows 7 counters: Chrome 109 colours and dropdowns (19 Nov 2026)
+
+The counter PCs run Windows 7, so Chrome 109 at most. Tailwind 4 writes every translucent
+colour (`bg-gold/15`, `border-border/50`…) as a FULL-colour fallback plus the real tint inside
+`@supports (color: color-mix())`, which Chrome 109 lacks — so tinted tiles, banners and badges
+turned solid (orange text on solid orange, solid red alerts). Fixed at build time:
+
+- `src/build/legacy-colors.ts` (tested) adds `--x-rgb` channel tokens beside every hex token
+  (per theme) and rewrites each paired fallback to `rgb(var(--x-rgb) / N%)`, splitting the
+  fallbacks Tailwind shares between `.bg-x` and `.bg-x/40`. The `xtsy-legacy-colors` plugin in
+  vite.config.ts runs it on the emitted CSS (build only; dev is unchanged). New browsers still
+  use the color-mix rules. ~109 fallbacks rewritten.
+- `select option` gets explicit popover colours (Windows drew the native list pale on white).
+- `@supports not (color: color-mix(...))` (old browsers only) brightens `--muted-foreground`,
+  `--border`, `--input` and sets body weight 500 on staff screens, for the dim screens.
+- Checked by simulating Chrome 109 (stripping the color-mix @supports blocks) on the real
+  Tables screen: old CSS showed the solid orange banner and table; new CSS matches modern.
+- **Don't use colours that only exist inside color-mix/oklch without a hex token** — anything
+  added to the theme must be a hex `--token` so the build can make its `-rgb` twin.
+
+## Guests: priority, guest discount, bill messages, suggestions (19 Nov 2026)
+
+- Customer fields: `priority` (star in the list, suggestions and on the bill), `discountPct`
+  (standing discount, auto-applied once per bill when the guest is picked and the bill has none;
+  staff may still change it), `billMessages` (WhatsApp bill message offered after settling; on
+  unless false). Offers stay `whatsapp.optIn` (consent) — never merged with bill messages.
+- Priority and discount are admin-only: Guest settings on the profile; cloud
+  `guard_customer_points_adjustment` quietly keeps non-admin changes to `pointsAdjustment`,
+  `discountPct` and `priority` from landing (docs/migrations/2026-11-19-guest-discount-admin-only.sql,
+  tested on local Postgres).
+- After settlement, a guest with a mobile and bill messages on gets a 20 s toast "Send POS/… on
+  WhatsApp?" opening `waLink` with `billMessage` (customer-logic.ts). One-tap (wa.me), not the
+  Business API: automatic sending still needs WHATSAPP_ACCESS_TOKEN / PHONE_NUMBER_ID and an
+  approved template.
+- Profile: stats, Guest settings, a WhatsApp block (test message = their last bill, review
+  request, offers consent), details, points, visits. List: KPI cards, sort, Priority filter,
+  initials avatars, discount chip.
+- Bill name box (`GuestDetailsFields`): `guestMatches` ranks starts-with, then word-start, then
+  anywhere/phone digits; priority and frequent guests first. Gold-bordered "Returning guest"
+  list with ↑↓/Enter; the picked guest's priority, discount and note show under the fields.
+  The discount menu always includes the bill's current % (a 12% guest discount isn't a preset).
+- Live status: loyalty card removed (points live in the guest profile); KOT times read
+  "Today, 9:42 am" / "Yesterday, …" / "15 Nov, …" (`kotWhen`), and running bills say
+  "Running bill · open 2 h 15 min".

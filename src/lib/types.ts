@@ -321,6 +321,12 @@ export interface Customer {
   createdAt: number;
   /** WhatsApp consent. Offers only ever go to guests with optIn true. */
   whatsapp?: { optIn: boolean; at: number; source?: string; lastMessagedAt?: number };
+  /** Bill and visit messages on WhatsApp: on unless set to false for this guest (offers stay opt-in). */
+  billMessages?: boolean;
+  /** Priority guest: starred in the directory, in name suggestions and on their bill. */
+  priority?: boolean;
+  /** Standing discount the admin set for this guest, applied when they're picked on a bill. */
+  discountPct?: number;
 }
 
 /** One counter's cash drawer closed at the end of a day. Id is `${YYYY-MM-DD}:${series}`. */

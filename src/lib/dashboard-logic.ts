@@ -163,3 +163,14 @@ export function salesByDay(orders: Order[], range: Range): { day: number; net: n
   }
   return out;
 }
+
+/** "Today, 9:42 am" · "Yesterday, 10:13 pm" · "15 Nov, 7:01 pm" — KOT times on Live status carry their day. */
+export function kotWhen(at: number, now = Date.now()): string {
+  const time = new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+  const day = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const diff = Math.round((day(now) - day(at)) / 86_400_000);
+  if (diff === 0) return `Today, ${time}`;
+  if (diff === 1) return `Yesterday, ${time}`;
+  const d = new Date(at);
+  return `${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", ...(d.getFullYear() === new Date(now).getFullYear() ? {} : { year: "numeric" as const }) })}, ${time}`;
+}

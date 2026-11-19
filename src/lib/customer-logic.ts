@@ -89,3 +89,59 @@ export function recentPointAwards(recent: Order[], guestOrders: Order[], custome
     return { orderId: o.id, billNo: o.billNo || null, customerId: o.customerId!, name: c?.name ?? o.customer?.name ?? "Guest", points: pending || !withBill || !without ? 0 : Math.max(0, withBill.pointsEarned - without.pointsEarned), balance: withBill?.points ?? 0, pending, at: o.settledAt ?? o.createdAt };
   }).sort((a, b) => b.at - a.at);
 }
+
+/* ---- Guest directory: suggestions, priority, guest discount, WhatsApp bill messages ---- */
+
+/** The admin's standing discount for this guest, 0 when none (always 0–100). */
+export function guestDiscount(c: Pick<Customer, "discountPct"> | undefined | null): number {
+  const d = Number(c?.discountPct ?? 0);
+  return Number.isFinite(d) ? Math.min(100, Math.max(0, Math.round(d * 100) / 100)) : 0;
+}
+
+/**
+ * Bill and visit messages on WhatsApp are on for every guest with a mobile number unless
+ * someone switched them off for that guest. Offers are separate and need the guest's yes.
+ */
+export function guestGetsMessages(c: Pick<Customer, "phone" | "billMessages"> | undefined | null): boolean {
+  return !!c && normalisePhone(c.phone) !== null && c.billMessages !== false;
+}
+
+/**
+ * Saved guests for what's been typed in the name box: names starting with it first, then a
+ * word in the name starting with it, then anywhere (or the digits of the phone); priority
+ * guests and frequent visitors first within each group.
+ */
+export function guestMatches<T extends Pick<Customer, "id" | "phone" | "name" | "priority">>(guests: T[], typed: string, visits: Map<string, number> = new Map(), limit = 8): T[] {
+  const q = typed.trim().toLowerCase();
+  if (!q) return [];
+  const digits = q.replace(/\D/g, "");
+  const rank = (g: T): number => {
+    const name = (g.name ?? "").toLowerCase();
+    if (name.startsWith(q)) return 0;
+    if (name.split(/\s+/).some((w) => w.startsWith(q))) return 1;
+    if (name.includes(q)) return 2;
+    if (digits.length >= 3 && g.phone.replace(/\D/g, "").includes(digits)) return 3;
+    return -1;
+  };
+  return guests
+    .filter((g) => g.name && rank(g) >= 0)
+    .sort((a, b) => rank(a) - rank(b) || Number(!!b.priority) - Number(!!a.priority) || (visits.get(b.id) ?? 0) - (visits.get(a.id) ?? 0) || (a.name ?? "").localeCompare(b.name ?? ""))
+    .slice(0, limit);
+}
+
+/** The thank-you with the bill that staff send on WhatsApp after settling. */
+export function billMessage(order: Pick<Order, "billNo" | "total" | "payments" | "settledAt" | "createdAt" | "customer" | "lines">, restaurant: string): string {
+  const first = (order.customer?.name ?? "").trim().split(/\s+/)[0];
+  const when = new Date(order.settledAt ?? order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const items = order.lines.reduce((n, l) => n + l.qty, 0);
+  const paid = order.payments.length ? ` · paid by ${[...new Set(order.payments.map((p) => (p.mode === "upi" ? "UPI" : p.mode === "gift_card" ? "gift card" : p.mode)))].join(" + ")}` : "";
+  const amount = `₹${order.total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  return [
+    `Hi${first ? ` ${first}` : ""}, thank you for visiting ${restaurant || "us"}!`,
+    "",
+    `Bill ${order.billNo} · ${when}`,
+    `${items} ${items === 1 ? "item" : "items"} · ${amount}${paid}`,
+    "",
+    "See you again soon.",
+  ].join("\n");
+}

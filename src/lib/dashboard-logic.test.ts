@@ -70,3 +70,14 @@ describe("live status", () => {
     expect(live.cards[0]?.kots[0]?.lines).toEqual([{ name: "Noodles", qty: 1 }, { name: "Tea", qty: 3 }]);
   });
 });
+
+import { kotWhen } from "./dashboard-logic";
+describe("KOT times on Live status", () => {
+  const now = new Date(2026, 10, 19, 17, 0).getTime();
+  it("says which day", () => {
+    expect(kotWhen(new Date(2026, 10, 19, 9, 42).getTime(), now)).toBe("Today, 9:42 am");
+    expect(kotWhen(new Date(2026, 10, 18, 22, 13).getTime(), now)).toBe("Yesterday, 10:13 pm");
+    expect(kotWhen(new Date(2026, 10, 15, 19, 1).getTime(), now)).toBe("15 Nov, 7:01 pm");
+    expect(kotWhen(new Date(2025, 11, 31, 20, 0).getTime(), now)).toBe("31 Dec 2025, 8:00 pm");
+  });
+});

@@ -9,7 +9,8 @@ import { useRestaurantSettings } from "@/lib/use-settings";
 import { PaymentPanel, ReasonPrompt, UpiPay } from "@/components/PaymentDialogs";
 import { isAdmin, useStaff } from "@/lib/staff";
 import { maxDiscountFor, type Payment } from "@/lib/payment-logic";
-import { customerStats, normalisePhone } from "@/lib/customer-logic";
+import { billMessage, customerStats, guestDiscount, guestGetsMessages, normalisePhone } from "@/lib/customer-logic";
+import { waLink } from "@/lib/marketing-logic";
 import { saveFeedback } from "@/lib/customer-actions";
 import { ItemOptions } from "@/components/ItemOptions";
 import { gstinError } from "@/lib/validation";
@@ -168,7 +169,9 @@ function PosPage() {
   const maxDiscount = maxDiscountFor(user?.role ?? "unknown", settings.staffDiscountLimit ?? 10);
   const canDiscount = can(user, "bill.discount");
   const canNc = can(user, "bill.nc");
-  const discountChoices = [0, 5, 10, 15, 20, 25, 30, 50, 100].filter((d) => d === cart.discountPct || d === 0 || (d === 100 ? canNc : canDiscount && d <= maxDiscount));
+  // The bill's own discount always shows, even a guest discount that isn't one of the presets (12%, say).
+  const discountChoices = [...new Set([0, 5, 10, 15, 20, 25, 30, 50, 100, cart.discountPct])].sort((a, b) => a - b)
+    .filter((d) => d === cart.discountPct || d === 0 || (d === 100 ? canNc : canDiscount && d <= maxDiscount));
   const canCancel = can(user, "bill.cancel");
   /** Discount goes through Settings → Roles: 100% is NC (complimentary). */
   const chooseDiscount = async (pct: number) => {
@@ -190,12 +193,32 @@ function PosPage() {
     if (guestName && !cart.customer.name) cart.setCustomer({ ...cart.customer, name: guestName });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fill the name once when a known guest is recognised
   }, [guestName]);
+  // A guest's standing discount (set by the admin on their profile) goes on their bill once, when
+  // they're picked and the bill has no discount yet. Staff can still change it like any discount.
+  const appliedGuestDiscount = useRef<string | null>(null);
+  const standing = guestDiscount(guest?.customer);
+  const billKey = `${cart.activeOrder?.uid ?? search.table ?? search.bill ?? "counter"}:${guestId ?? ""}`;
+  useEffect(() => {
+    if (!standing || !guestId || cart.discountPct !== 0 || appliedGuestDiscount.current === billKey) return;
+    appliedGuestDiscount.current = billKey;
+    cart.setDiscountPct(standing);
+    toast.success(`${guest?.customer.name ?? "Guest"}'s ${standing}% guest discount applied`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per bill and guest
+  }, [standing, billKey]);
   /** Captains take orders and send KOTs; a cashier or manager settles. */
   const canSettle = can(user, "bill.settle");
 
   const done = (o: Order | null) => {
     if (!o) return;
     if (printConfig.autoPrintBill) void printBill(o);
+    // Bill messages are on for every guest with a mobile unless switched off on their profile.
+    void (async () => {
+      const id = normalisePhone(o.customer?.phone);
+      const who = id ? await getDb().customers.get(id) : undefined;
+      if (!id || !guestGetsMessages(who ?? { phone: id })) return;
+      const link = waLink(id, billMessage(o, settings.name));
+      toast(`Send ${o.billNo} to ${o.customer?.name || "the guest"} on WhatsApp?`, { duration: 20_000, action: { label: "Send", onClick: () => window.open(link, "_blank", "noopener") } });
+    })();
     setReceipt(o);
     setCartOpen(false);
     setPayOpen(false);

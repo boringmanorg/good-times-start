@@ -1,4 +1,3 @@
-import { useLoyaltyPct } from "@/lib/use-loyalty";
 import { featureOn } from "@/lib/plans";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -11,11 +10,11 @@ import { Dropdown } from "@/components/Dropdown";
 import { getDb } from "@/lib/db";
 import { reportOrders } from "@/lib/report-orders";
 import { formatINR } from "@/lib/billing";
-import { PRESET_LABELS, businessOverview, dashboardRange, liveStatus, salesByDay, type Preset } from "@/lib/dashboard-logic";
+import { PRESET_LABELS, businessOverview, dashboardRange, kotWhen, liveStatus, salesByDay, type Preset } from "@/lib/dashboard-logic";
+import { openFor } from "@/lib/orders-history";
 import { dayStart, type Range } from "@/lib/report-logic";
 import { kpiForecast, LOOKBACK_DAYS } from "@/lib/forecast";
 import { cn } from "@/lib/utils";
-import { recentPointAwards } from "@/lib/customer-logic";
 import { can } from "@/lib/permissions";
 import { useStaff } from "@/lib/staff";
 
@@ -346,40 +345,22 @@ function LiveStatus() {
     const held = await db.orders.where("status").equals("held").toArray();
     const ids = held.map((o) => o.id).filter((id): id is number => id !== undefined);
     const kots = ids.length ? await db.kots.where("orderId").anyOf(ids).toArray() : [];
-    const since = dayStart(Date.now());
-    const guestOrders = (await db.orders.where("customerId").above("").toArray()).filter((o) => o.status === "settled");
-    const recent = guestOrders.filter((o) => (o.settledAt ?? o.createdAt) >= since);
-    const customers = await db.customers.toArray();
-    return { held, kots, recent, guestOrders, customers };
-  }, [], { held: [], kots: [], recent: [], guestOrders: [], customers: [] });
+    return { held, kots };
+  }, [], { held: [], kots: [] });
   const live = useMemo(() => liveStatus(data.held, data.kots), [data]);
-  const loyaltyPct = useLoyaltyPct(1);
-  const awards = useMemo(() => recentPointAwards(data.recent, data.guestOrders, data.customers, loyaltyPct), [data, loyaltyPct]);
+  const now = Date.now();
   return (
     <div>
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Live status</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Latest orders first · each KOT shown newest on top.</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Running bills, latest first · each bill's KOTs newest on top, with the day they were sent.</p>
         </div>
         <div className="flex gap-3">
           <div className="rounded-xl bg-card px-4 py-2 ring-1 ring-border/70"><p className="text-xs text-muted-foreground">Running bills</p><p className="text-xl font-bold tabular-nums">{live.cards.length}</p></div>
           <div className="rounded-xl bg-card px-4 py-2 ring-1 ring-border/70"><p className="text-xs text-muted-foreground">Expected total</p><p className="text-xl font-bold tabular-nums">{money(live.total)}</p></div>
         </div>
       </header>
-      {awards.length ? (
-        <section aria-label="Loyalty points today" className="mb-5 rounded-2xl bg-card p-4 ring-1 ring-border/70">
-          <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Gift className="size-4 text-primary" />Loyalty points today</h2>
-          <ul className="flex flex-wrap gap-2 text-sm">
-            {awards.slice(0, 12).map((a) => (
-              <li key={`${a.orderId}-${a.customerId}`} className="rounded-xl bg-muted px-3 py-1.5">
-                <span className="font-medium">{a.name}</span>
-                <span className="ml-2 tabular-nums text-muted-foreground">{a.pending ? "Waiting for sync" : `+${a.points} pts · Bill ${a.billNo} · balance ${a.balance}`}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
       {live.cards.length ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {live.cards.map((c) => (
@@ -387,9 +368,9 @@ function LiveStatus() {
               <header className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
                 <div className="min-w-0">
                   <h2 className="flex items-center gap-1.5 truncate font-semibold">{c.kind === "table" ? <UtensilsCrossed className="size-4 text-primary" /> : <ShoppingBag className="size-4 text-primary" />}{c.title}</h2>
-                  <p className="text-xs text-muted-foreground">Bill {c.billNo}</p>
+                  <p className="text-xs text-muted-foreground">{c.billNo ? `Bill ${c.billNo}` : "Running bill"} · open {openFor(c.since, now)}</p>
                 </div>
-                <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">{timeOf(c.since)}</span>
+                <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">Opened {kotWhen(c.since, now)}</span>
               </header>
               {c.guestName || c.guestPhone ? (
                 <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 text-sm">
@@ -404,7 +385,7 @@ function LiveStatus() {
                       <span className={cn("absolute -left-[5px] top-3 size-2 rounded-full", i === 0 ? "bg-primary" : "bg-muted-foreground/40")} />
                       <p className={cn("mb-1 flex justify-between gap-2 text-xs", k.cancel ? "text-destructive" : i === 0 ? "font-semibold text-primary" : "text-muted-foreground")}>
                         <span>{k.cancel ? "Cancelled · " : i === 0 ? "Latest · " : ""}{k.kotNo || "KOT"}</span>
-                        <span className="tabular-nums">{new Date(k.at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</span>
+                        <span className="shrink-0 tabular-nums">{kotWhen(k.at, now)}</span>
                       </p>
                       <ul className="space-y-0.5">{k.lines.map((l) => <li key={l.name} className={cn("flex justify-between gap-3", k.cancel && "line-through opacity-70")}><span className="min-w-0 truncate">{l.name}</span><span className="tabular-nums text-muted-foreground">{l.qty}</span></li>)}</ul>
                     </li>

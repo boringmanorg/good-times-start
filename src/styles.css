@@ -117,6 +117,17 @@
     letter-spacing: -0.015em;
   }
 
+  /* Dropdown lists are drawn by the operating system. Without explicit colours, Windows 7
+     showed the options pale on white — readable only under the mouse. */
+  select option, select optgroup {
+    background-color: var(--color-popover);
+    color: var(--color-popover-foreground);
+  }
+  select option:checked {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
   input, textarea {
     border-radius: 10px;
   }
@@ -298,5 +309,25 @@ html:not(.theme-xtsy) ::-webkit-scrollbar-track { background: transparent; }
   label:has(> input[type="checkbox"]),
   label:has(> input[type="radio"]) {
     min-height: 44px;
+  }
+}
+
+/* Old browsers only (no color-mix: Chrome 109 and earlier — the Windows 7 counter PCs).
+   Their screens and font rendering make grey text and thin type fade, so lift the
+   secondary text and borders and give body text a little more weight. Staff screens only;
+   guest pages (.theme-xtsy) keep their own palette. Modern browsers never read this. */
+@supports not (color: color-mix(in lab, red, red)) {
+  html:not(.theme-xtsy) {
+    --muted-foreground: #e4e4e8;
+    --muted-foreground-rgb: 228 228 232;
+    --border: #4a4a52;
+    --border-rgb: 74 74 82;
+    --input: #5a5a62;
+  }
+  html:not(.theme-xtsy) body {
+    font-weight: 500;
+  }
+  html:not(.theme-xtsy) ::placeholder {
+    color: #9a9aa2;
   }
 }
