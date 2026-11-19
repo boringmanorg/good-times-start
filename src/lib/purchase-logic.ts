@@ -59,10 +59,11 @@ export function purchaseItemSummary(material: Material, purchases: StockEntry[])
 
 export interface PurchaseLineView { entryId: string; at: number; kind: "purchase" | "return"; supplier: string; invoice: string; qty: number; unitCost: number; amount: number }
 
-/** Signed amount of an entry: purchases add, supplier returns subtract. */
+/** Signed amount of an entry: purchases add (with their round-off, so it is what was paid), supplier returns subtract. */
 export function entryAmount(entry: StockEntry): number {
   const sign = entry.type === "return" ? -1 : 1;
-  return Math.round(sign * entry.items.reduce((n, i) => n + Math.abs(i.qty) * (i.unitCost ?? 0), 0) * 100) / 100;
+  const lines = entry.items.reduce((n, i) => n + Math.abs(i.qty) * (i.unitCost ?? 0), 0);
+  return Math.round((sign * lines + (entry.type === "purchase" ? entry.roundOff ?? 0 : 0)) * 100) / 100;
 }
 
 function supplierLabel(entry: StockEntry, suppliers: { id: string; name: string }[], purchases?: StockEntry[]): string {
@@ -194,4 +195,60 @@ export function spendBySupplier(entries: StockEntry[], suppliers: { id: string; 
   }
   const list = [...totals.values()].sort((a, b) => b.amount - a.amount);
   return { buckets, suppliers: list, total: Math.round(list.reduce((n, s) => n + s.amount, 0) * 100) / 100 };
+}
+
+/* ---- Item price trends and period summaries (Spend dashboard, Items tab) ---- */
+
+export interface ItemInsight { lastPrice?: number; previousPrice?: number; changePct?: number; averagePrice?: number; lastAt?: number; lastSupplier?: string }
+
+/** Latest and previous purchase price of an item, the change between them, and the average price paid. */
+export function itemInsight(lines: PurchaseLineView[]): ItemInsight {
+  const buys = lines.filter((l) => l.kind === "purchase").sort((a, b) => b.at - a.at);
+  const last = buys[0];
+  if (!last) return {};
+  const previous = buys.find((l) => l.entryId !== last.entryId);
+  const qty = buys.reduce((n, l) => n + l.qty, 0);
+  const amount = buys.reduce((n, l) => n + l.amount, 0);
+  const changePct = previous && previous.unitCost > 0 ? Math.round(((last.unitCost - previous.unitCost) / previous.unitCost) * 1000) / 10 : undefined;
+  return {
+    lastPrice: last.unitCost, lastAt: last.at, lastSupplier: last.supplier,
+    ...(previous ? { previousPrice: previous.unitCost } : {}),
+    ...(changePct !== undefined ? { changePct } : {}),
+    ...(qty > 0 ? { averagePrice: Math.round((amount / qty) * 100) / 100 } : {}),
+  };
+}
+
+/** Approved purchases and linked returns between `from` (inclusive) and `to` (exclusive). */
+export function entriesBetween(entries: StockEntry[], from: number, to: number): StockEntry[] {
+  return entries.filter((e) => counts(e) && e.at >= from && e.at < to && (e.type === "purchase" || (e.type === "return" && !!e.purchaseId)));
+}
+
+export interface SpendSummary { spend: number; bills: number; averageBill: number; returns: number; payLater: number }
+
+/** Net spend, bill count, average bill, returns and "pay later" for a set of entries. */
+export function spendSummary(entries: StockEntry[]): SpendSummary {
+  const purchases = entries.filter((e) => e.type === "purchase");
+  const bought = purchases.reduce((n, e) => n + entryAmount(e), 0);
+  const returns = -entries.filter((e) => e.type === "return").reduce((n, e) => n + entryAmount(e), 0);
+  const payLater = purchases.flatMap((e) => e.payments ?? []).filter((p) => p.mode === "credit").reduce((n, p) => n + p.amount, 0);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  return { spend: r2(bought - returns), bills: purchases.length, averageBill: purchases.length ? r2(bought / purchases.length) : 0, returns: r2(returns), payLater: r2(payLater) };
+}
+
+export interface TopItem { materialId: string; name: string; unit: string; qty: number; amount: number }
+
+/** Items by net spend (returns subtracted) in these entries, most first. */
+export function topItems(entries: StockEntry[], materials: { id: string; name: string; unit: string }[]): TopItem[] {
+  const map = new Map<string, TopItem>();
+  for (const e of entries) {
+    const sign = e.type === "return" ? -1 : 1;
+    for (const i of e.items) {
+      const known = materials.find((m) => m.id === i.materialId);
+      const row = map.get(i.materialId) ?? { materialId: i.materialId, name: i.name ?? known?.name ?? "Deleted item", unit: i.unit ?? known?.unit ?? "pcs", qty: 0, amount: 0 };
+      row.qty = Math.round((row.qty + sign * Math.abs(i.qty)) * 1000) / 1000;
+      row.amount = Math.round((row.amount + sign * Math.abs(i.qty) * (i.unitCost ?? 0)) * 100) / 100;
+      map.set(i.materialId, row);
+    }
+  }
+  return [...map.values()].filter((r) => r.amount !== 0 || r.qty !== 0).sort((a, b) => b.amount - a.amount);
 }

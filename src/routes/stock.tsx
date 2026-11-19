@@ -1,7 +1,7 @@
 import { featureOn } from "@/lib/plans";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { createFileRoute } from "@tanstack/react-router";
-import { Fragment, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 import { Check, ChevronRight, Clock, Download, Pencil, Plus, Trash2, X } from "lucide-react";
@@ -15,7 +15,7 @@ import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
 import { STOCK_UNITS, formatQty, purchaseTotal } from "@/lib/stock-logic";
 import { decidePurchase, deleteMaterial, deletePurchase, deleteSupplier, recordStockEntry, updatePurchase, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
-import { approvalStatus, canRequestReturn, canReturnPurchase, entryAmount, itemPurchaseLines, itemTotals, purchaseReturnDeadline, remainingPurchaseQty, supplierHistories } from "@/lib/purchase-logic";
+import { approvalStatus, canRequestReturn, canReturnPurchase, entriesBetween, entryAmount, itemPurchaseLines, itemTotals, purchaseReturnDeadline, remainingPurchaseQty, spendSummary, supplierHistories } from "@/lib/purchase-logic";
 import { gstinError } from "@/lib/validation";
 import { downloadXlsx } from "@/lib/xlsx";
 import { dayKey } from "@/lib/report-logic";
@@ -25,6 +25,9 @@ import { Segmented } from "@/components/Segmented";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { cn } from "@/lib/utils";
 import { PurchaseSpendDashboard } from "@/components/PurchaseSpendDashboard";
+import { PurchasePayments, type PayRow } from "@/components/PurchasePayments";
+import { PurchaseItemsList } from "@/components/PurchaseItemsList";
+import { paymentText, purchasePayProblem } from "@/lib/purchase-pay-logic";
 import { can } from "@/lib/permissions";
 
 export const Route = createFileRoute("/stock")({
@@ -85,6 +88,14 @@ function MaterialForm({ material, onDone }: { material?: Material; onDone: () =>
   </form>;
 }
 
+function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: "warn" | undefined }) {
+  return <div className={cn("rounded-2xl border bg-card p-3 sm:p-4", tone === "warn" ? "border-gold/60" : "border-border")}>
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className={cn("mt-1 text-lg font-bold tabular-nums sm:text-xl", tone === "warn" && "text-warning")}>{value}</p>
+    <p className="text-xs text-muted-foreground">{note}</p>
+  </div>;
+}
+
 /** Waiting / approved / rejected badge for purchases and returns the bill desk recorded. */
 function ApprovalChip({ entry }: { entry: StockEntry }) {
   const a = entry.approval;
@@ -142,6 +153,13 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
   const parsed = rows.map((r) => ({ materialId: r.materialId, qty: num(r.qty), unitCost: num(r.cost) }));
   const valid = parsed.filter((p) => p.materialId && p.qty !== null && p.qty > 0);
   const total = purchaseTotal(valid.map((p) => ({ materialId: p.materialId, qty: p.qty ?? 0, unitCost: p.unitCost ?? 0 })));
+  // One payment line follows the bill total until someone types an amount or splits it.
+  const [payFollows, setPayFollows] = useState(!purchase?.payments?.length);
+  const [payRowsState, setPayRowsState] = useState<PayRow[]>(purchase?.payments?.length ? purchase.payments.map((p) => ({ mode: p.mode, amount: String(p.amount) })) : [{ mode: "cash", amount: "" }]);
+  const payRows: PayRow[] = payFollows ? [{ mode: payRowsState[0]?.mode ?? "cash", amount: total ? String(total) : "" }] : payRowsState;
+  const setPayRows = (next: PayRow[]) => { setPayFollows(false); setPayRowsState(next); };
+  const [roundOff, setRoundOff] = useState(purchase?.roundOff ?? 0);
+  const payments = payRows.map((r) => ({ mode: r.mode, amount: Number(r.amount) || 0 }));
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -157,17 +175,20 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
     const at = purchase?.at ?? new Date(`${purchaseDate}T00:00:00`).getTime();
     if (!Number.isFinite(at) || at > Date.now()) { setError("Enter a valid purchase date, no later than today."); return; }
     if (needsApproval && !reference.trim()) { setError("Enter the supplier's invoice number, so the admin can check the bill."); return; }
+    const payProblem = purchasePayProblem(total, payments, roundOff);
+    if (payProblem) { setError(payProblem); return; }
+    const paid = { payments, ...(roundOff ? { roundOff } : {}) };
     setBusy(true); setError("");
     const items = valid.map((p) => ({ materialId: p.materialId, qty: p.qty ?? 0, ...(p.unitCost !== undefined && p.unitCost !== null ? { unitCost: p.unitCost } : {}) }));
     try {
       if (purchase) {
-        await updatePurchase(purchase.id, { items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}) });
+        await updatePurchase(purchase.id, { items, ...paid, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}) });
         toast.success("Purchase bill updated"); onDone(); return;
       }
-      await recordStockEntry({ type: "purchase", at, items, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) },
+      await recordStockEntry({ type: "purchase", at, items, ...paid, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) },
         needsApproval && user ? { by: user.displayName, ...(user.login ? { login: user.login } : {}) } : undefined, newMaterials);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not record purchase"); return; } finally { setBusy(false); }
-    toast.success(needsApproval ? `Purchase of ${formatINR(total, 0)} sent to the admin for approval` : `Purchase of ${formatINR(total, 0)} recorded`);
+    toast.success(needsApproval ? `Purchase of ${formatINR(total + roundOff, 0)} sent to the admin for approval` : `Purchase of ${formatINR(total + roundOff, 0)} recorded`);
     onDone();
   };
 
@@ -206,7 +227,7 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
       </div>
       <div className="flex gap-2"><Button type="button" size="sm" variant="ghost" onClick={() => setRows([...rows, { key: newUid(), materialId: materials[0]?.id ?? "", qty: "", cost: String(materials[0]?.costPerUnit ?? 0) }])}><Plus />Add line</Button>
       {!purchase ? <Button type="button" size="sm" variant="outline" onClick={() => setRows([...rows.filter((r) => r.materialId || r.qty), { key: newUid(), materialId: newUid(), qty: "", cost: "", newItem: { name: "", unit: "kg", standardPrice: "" } }])}><Plus />New item</Button> : null}</div>
-      <p className="text-right text-sm font-semibold">Total {formatINR(total)}</p>
+      <PurchasePayments total={total} rows={payRows} onRows={setPayRows} roundOff={roundOff} onRoundOff={setRoundOff} />
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
       <div className="flex gap-2">
         <ConfirmButton id="stock-purchase" submit disabled={busy || !valid.length} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={purchase ? "Tap again to save" : "Tap again to record"}>{purchase ? "Save changes" : needsApproval ? "Submit for approval" : "Record purchase"}</ConfirmButton>
@@ -306,10 +327,8 @@ function StockPage() {
   const purchases = entries.filter((e) => e.type === "purchase");
   const history = entries.filter((e) => e.type === "purchase" || e.purchaseId);
   const active = materials.filter((m) => !m.archived).sort((a, b) => a.name.localeCompare(b.name));
-  const [tab, setTab] = useState<Tab>("items");
+  const [tab, setTab] = useState<Tab>(admin ? "spend" : "items");
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const [search, setSearch] = useState("");
-  const [openItem, setOpenItem] = useState<string | null>(null);
   const [openVendor, setOpenVendor] = useState<string | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
   const close = () => setSheet(null);
@@ -326,18 +345,27 @@ function StockPage() {
     listed.push(known ?? ({ id: i.materialId, name: i.name ?? "Unnamed item", unit: i.unit ?? "pcs", costPerUnit: i.unitCost } as Material));
   }
   listed.sort((a, b) => a.name.localeCompare(b.name));
-  const shown = listed.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
   const exportPurchase = () => downloadXlsx(`purchase-${dayKey(Date.now())}`, [
     { name: "Items", title: "Purchase items", columns: [{ header: "Item" }, { header: "Unit" }, { header: "Standard price", format: "inr" }, { header: "Bought (net)", format: "qty" }, { header: "Amount", format: "inr" }, { header: "Bills" }], rows: listed.map((m) => { const t = itemTotals(itemPurchaseLines(m.id, entries, suppliers)); return [m.name, m.unit, m.costPerUnit ?? null, t.qty, t.amount, t.bills]; }) },
     { name: "Vendors", title: "Purchases by vendor and day", columns: [{ header: "Vendor" }, { header: "Day" }, { header: "Amount", format: "inr" }, { header: "Bills" }], rows: vendors.flatMap((v) => v.days.map((d) => [v.name, d.day, d.amount, d.entries.filter((e) => e.type === "purchase").length])) },
-    { name: "History", title: "Purchase and return history", columns: [{ header: "Date", format: "datetime" }, { header: "Type" }, { header: "Vendor" }, { header: "Invoice" }, { header: "Item" }, { header: "Quantity", format: "qty" }, { header: "Unit" }, { header: "Unit price", format: "inr" }, { header: "Amount", format: "inr" }], rows: history.flatMap((e) => e.items.map((i) => [e.at, e.purchaseId ? "Supplier return" : "Purchase", e.supplierName ?? suppliers.find((s) => s.id === e.supplierId)?.name ?? "", e.reference ?? "", lineName(i), Math.abs(i.qty), lineUnit(i), i.unitCost ?? null, (e.purchaseId ? -1 : 1) * Math.abs(i.qty) * (i.unitCost ?? 0)])) },
+    { name: "History", title: "Purchase and return history", columns: [{ header: "Date", format: "datetime" }, { header: "Type" }, { header: "Vendor" }, { header: "Invoice" }, { header: "Item" }, { header: "Quantity", format: "qty" }, { header: "Unit" }, { header: "Unit price", format: "inr" }, { header: "Amount", format: "inr" }, { header: "Paid by", width: 30 }], rows: history.flatMap((e) => e.items.map((i, n) => [e.at, e.purchaseId ? "Supplier return" : "Purchase", e.supplierName ?? suppliers.find((s) => s.id === e.supplierId)?.name ?? "", e.reference ?? "", lineName(i), Math.abs(i.qty), lineUnit(i), i.unitCost ?? null, (e.purchaseId ? -1 : 1) * Math.abs(i.qty) * (i.unitCost ?? 0), e.purchaseId || n > 0 ? "" : `${paymentText(e)}${e.roundOff ? ` (round off ${e.roundOff})` : ""}`])) },
   ], { title: "Purchase" });
 
+  // Items that only exist on purchase lines get their item card created first (same id, so history stays linked), then the editor opens.
+  const editItem = async (m: Material) => {
+    if (!materials.some((x) => x.id === m.id)) {
+      try { await saveMaterial({ id: m.id, name: m.name, unit: m.unit, costPerUnit: m.costPerUnit ?? 0, lowStockLevel: 0 }); }
+      catch (e) { toast.error(e instanceof Error ? e.message : "Could not add the item card"); return; }
+    }
+    setSheet({ kind: "item", material: m });
+  };
+  const thisMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); })();
+  const month = spendSummary(entriesBetween(entries, thisMonth, Date.now() + 1));
   const pending = entries.filter((e) => approvalStatus(e) === "pending").sort((a, b) => (a.approval?.requestedAt ?? a.at) - (b.approval?.requestedAt ?? b.at));
   const billCard = (p: StockEntry) => <li key={p.id} className="py-3 text-sm">
     <div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold">{p.purchaseId ? "Supplier return" : "Purchase"} · {p.supplierName ?? suppliers.find((s) => s.id === p.supplierId)?.name ?? "Supplier not recorded"}<span className="ml-2 font-normal text-muted-foreground">{p.reference ? `Invoice ${p.reference}` : ""}</span><ApprovalChip entry={p} /></div>
       <span className={cn("font-semibold tabular-nums", p.purchaseId && "text-destructive")}>{formatINR(entryAmount(p))}</span></div>
-    <p className="mt-0.5 text-xs text-muted-foreground">{dateText(p.at)}, {timeText(p.at)}{p.by ? ` · ${p.by}` : ""}</p>
+    <p className="mt-0.5 text-xs text-muted-foreground">{dateText(p.at)}, {timeText(p.at)}{p.by ? ` · ${p.by}` : ""}{p.purchaseId ? "" : ` · ${paymentText(p)}`}{p.roundOff ? ` (round off ${p.roundOff > 0 ? "+" : "−"}${formatINR(Math.abs(p.roundOff))})` : ""}</p>
     <table className="mt-2 w-full text-xs"><tbody>{p.items.map((i, index) => <tr key={index} className="border-t border-border/60"><td className="py-1 pr-2">{lineName(i)}</td><td className="py-1 pr-2 text-right tabular-nums">{formatQty(Math.abs(i.qty), lineUnit(i))}</td><td className="py-1 pr-2 text-right tabular-nums">{i.unitCost !== undefined ? `${formatINR(i.unitCost)} / ${lineUnit(i)}` : "—"}</td><td className="py-1 text-right font-semibold tabular-nums">{formatINR(Math.abs(i.qty) * (i.unitCost ?? 0))}</td></tr>)}</tbody></table>
     {(admin ? canReturnPurchase(p) : requester && user ? canRequestReturn(p, { name: user.displayName, login: user.login ?? undefined }) : false) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0) ? <Button size="sm" variant="outline" className="mt-2" onClick={() => setSheet({ kind: "return", purchase: p })}>Return items</Button> : null}
     {admin && approvalStatus(p) === "pending" ? <ApprovePanel entry={p} /> : null}
@@ -350,10 +378,16 @@ function StockPage() {
   </li>;
 
   return <AppShell><div className="mx-auto max-w-6xl p-4 lg:p-6">
-    <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Purchase</h1><p className="text-sm text-muted-foreground">{active.length} items · {purchases.length} purchase bills · {formatINR(vendors.reduce((n, v) => n + v.amount, 0), 0)} purchased</p></div>
+    <header className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Purchase</h1><p className="text-sm text-muted-foreground">Supplier bills, how they were paid, and what each item costs you.</p></div>
       {admin ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSheet({ kind: "item" })}><Plus/>Item</Button><Button variant="outline" onClick={exportPurchase}><Download/>Excel</Button><Button onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase</Button></div>
         : requester ? <Button onClick={() => setSheet({ kind: "purchase" })}><Plus/>Purchase (needs approval)</Button> : null}
     </header>
+    <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Kpi label="Spent this month" value={formatINR(month.spend, 0)} note={`${month.bills} ${month.bills === 1 ? "bill" : "bills"}`} />
+      <Kpi label="Pay later this month" value={formatINR(month.payLater, 0)} note="Owed to vendors" tone={month.payLater ? "warn" : undefined} />
+      <Kpi label="Waiting for approval" value={String(pending.length)} note={pending.length ? "From the bill desk" : "All clear"} tone={pending.length ? "warn" : undefined} />
+      <Kpi label="Purchase items" value={String(active.length)} note={`${purchases.length} bills in all`} />
+    </div>
     {(admin || requester) && pending.length ? (
       <section aria-label="Waiting for approval" className="mb-5 overflow-hidden rounded-2xl border border-gold/60 bg-card">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-gold/10 px-4 py-3">
@@ -365,41 +399,9 @@ function StockPage() {
     ) : null}
     <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={setTab} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
 
-    {tab === "items" ? <div className="mt-4"><input aria-label="Find purchase item" placeholder="Find item" value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"/>
-      {/* On a phone the two reference columns hide and the table fits the screen; forcing 760px there made mobile Chrome zoom the whole app out. */}
-      <div className="overflow-x-auto"><table className="w-full text-left text-sm sm:min-w-[760px]"><thead className="border-b border-border text-xs text-muted-foreground"><tr>
-        <th className="p-3">Item</th><th className="hidden p-3 sm:table-cell">Standard price</th><th className="p-3">Last purchase</th><th className="hidden p-3 text-right sm:table-cell">Bought (net)</th><th className="p-3 text-right">Amount</th>{admin ? <th className="p-3"><span className="sr-only">Edit</span></th> : null}</tr></thead>
-        <tbody className="divide-y divide-border">{shown.map((m) => {
-          const lines = itemPurchaseLines(m.id, entries, suppliers);
-          const totals = itemTotals(lines);
-          const last = lines.find((l) => l.kind === "purchase");
-          const open = openItem === m.id;
-          return <Fragment key={m.id}><tr className={open ? "bg-secondary/50" : undefined}>
-            <td className="p-3"><button type="button" aria-expanded={open} onClick={() => setOpenItem(open ? null : m.id)} className="flex items-center gap-2 text-left font-semibold">
-              <ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />{m.name}</button></td>
-            <td className="hidden p-3 tabular-nums sm:table-cell">{m.costPerUnit !== undefined ? formatINR(m.costPerUnit) : "—"} / {m.unit}</td>
-            <td className="p-3">{last ? <><span className="tabular-nums">{formatQty(last.qty, m.unit)} at {formatINR(last.unitCost)}</span><span className="block text-xs text-muted-foreground">{last.supplier} · {dateText(last.at)}</span></> : <span className="text-muted-foreground">Not bought yet</span>}</td>
-            <td className="hidden p-3 text-right tabular-nums sm:table-cell">{totals.bills ? formatQty(totals.qty, m.unit) : "—"}<span className="block text-xs text-muted-foreground">{totals.bills} {totals.bills === 1 ? "bill" : "bills"}</span></td>
-            <td className="p-3 text-right font-semibold tabular-nums">{totals.bills ? formatINR(totals.amount) : "—"}</td>
-            {admin ? <td className="p-3 text-right"><Button size="sm" variant="outline" aria-label={`Edit ${m.name}`} onClick={async () => {
-              // Items that only exist on purchase lines get their item card created first (same id, so history stays linked), then the editor opens.
-              if (!materials.some((x) => x.id === m.id)) {
-                try { await saveMaterial({ id: m.id, name: m.name, unit: m.unit, costPerUnit: m.costPerUnit ?? 0, lowStockLevel: 0 }); }
-                catch (e) { toast.error(e instanceof Error ? e.message : "Could not add the item card"); return; }
-              }
-              setSheet({ kind: "item", material: m });
-            }}><Pencil />Edit</Button></td> : null}
-          </tr>
-          {open ? <tr className="bg-secondary/30"><td colSpan={admin ? 6 : 5} className="px-3 pb-4 pt-1">
-            {lines.length ? <table className="w-full text-xs"><thead className="text-muted-foreground"><tr><th className="py-1.5 text-left font-medium">Date</th><th className="py-1.5 text-left font-medium">Vendor</th><th className="py-1.5 text-left font-medium">Invoice</th><th className="py-1.5 text-right font-medium">Qty</th><th className="py-1.5 text-right font-medium">Price / {m.unit}</th><th className="py-1.5 text-right font-medium">Amount</th></tr></thead>
-              <tbody>{lines.map((l, i) => <tr key={`${l.entryId}-${i}`} className="border-t border-border/60"><td className="py-1.5">{dateText(l.at)}{l.kind === "return" ? <span className="ml-1.5 rounded bg-destructive/10 px-1.5 py-0.5 font-semibold text-destructive">Return</span> : null}</td><td className="py-1.5">{l.supplier}</td><td className="py-1.5">{l.invoice || "—"}</td>
-                <td className="py-1.5 text-right tabular-nums">{formatQty(l.qty, m.unit)}</td><td className="py-1.5 text-right tabular-nums">{formatINR(l.unitCost)}</td><td className={cn("py-1.5 text-right font-semibold tabular-nums", l.kind === "return" && "text-destructive")}>{formatINR(l.amount)}</td></tr>)}</tbody></table>
-              : <p className="py-2 text-xs text-muted-foreground">No purchases of {m.name} yet.</p>}
-          </td></tr> : null}</Fragment>;
-        })}</tbody></table></div>{!shown.length ? <p className="py-8 text-center text-sm text-muted-foreground">No items found</p> : null}
-    </div> : null}
+    {tab === "items" ? <PurchaseItemsList items={listed} entries={entries} suppliers={suppliers} onEdit={admin ? (m) => void editItem(m) : undefined} /> : null}
 
-    {tab === "spend" && admin ? <PurchaseSpendDashboard entries={entries} suppliers={suppliers} /> : null}
+    {tab === "spend" && admin ? <PurchaseSpendDashboard entries={entries} suppliers={suppliers} materials={materials} /> : null}
     {tab === "purchases" || tab === "history" ? <ul className="mt-4 divide-y divide-border">{(tab === "purchases" ? purchases : history).map(billCard)}{!(tab === "purchases" ? purchases : history).length ? <li className="py-8 text-center text-muted-foreground">No purchase history yet</li> : null}</ul> : null}
 
     {tab === "suppliers" && vendorsOn ? <div className="mt-4 space-y-3">

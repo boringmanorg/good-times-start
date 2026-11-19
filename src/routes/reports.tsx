@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, useEffect, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
-import { Download, Printer, Search, Wallet } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { LiveTotals } from "@/components/LiveTotals";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { AppShell } from "@/components/AppShell";
@@ -20,7 +20,7 @@ import { ReasonPrompt } from "@/components/PaymentDialogs";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { getDb, markDirty } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { formatINR } from "@/lib/billing";
 import { isAdmin, useStaff } from "@/lib/staff";
 import { voidSettledBill } from "@/lib/bill-actions";
@@ -28,16 +28,12 @@ import {
   categorySales, dailySales, untaxedSales, dayKey, expectedCash, gstByRate, hourlySales, inRange, itemSales, paymentLabel,
   presetRange, salesSummary, summaryAt, seriesOf, staffSales, toCsv, type Range,
 } from "@/lib/report-logic";
-import type { DayClose, Order } from "@/lib/types";
+import type { Order } from "@/lib/types";
 import { Dropdown } from "@/components/Dropdown";
 import { Segmented } from "@/components/Segmented";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { cn } from "@/lib/utils";
 import { can } from "@/lib/permissions";
-import { getDeviceId } from "@/lib/terminal-actions";
-import { counterPayments, counterCanClose } from "@/lib/counter-logic";
-import { dateLabel, dayBounds } from "@/lib/orders-history";
-import { useDeviceCode } from "@/lib/use-device-code";
 import { reportOrders } from "@/lib/report-orders";
 import { SummaryInsights } from "@/components/SummaryInsights";
 import { useEntitlements } from "@/lib/use-entitlements";
@@ -54,7 +50,7 @@ export const Route = createFileRoute("/reports")({
 
 const PIE = ["var(--color-primary)", "var(--color-gold)", "var(--color-success)", "var(--color-destructive)", "var(--color-muted-foreground)", "var(--color-ring)"];
 type Preset = "today" | "yesterday" | "7d" | "month" | "custom";
-type Tab = "overview" | "insights" | "summary" | "items" | "gst" | "staff" | "bills" | "close";
+type Tab = "overview" | "insights" | "summary" | "items" | "gst" | "staff" | "bills";
 const ORDER_TYPE_LABEL: Record<string, string> = { "dine-in": "Dine-in", takeaway: "Takeaway", delivery: "Delivery", swiggy: "Swiggy", zomato: "Zomato" };
 
 function download(name: string, csv: string) {
@@ -246,116 +242,27 @@ function Staff({ orders }: { orders: Order[] }) {
   );
 }
 
-function DayCloseTab() {
-  const settings = useRestaurantSettings();
-  const [deviceId, setDeviceId] = useState("");
-  useEffect(() => { void getDeviceId().then(setDeviceId); }, []);
-  const [period, setPeriod] = useState("today");
-  const [customDate, setCustomDate] = useState(dateLabel());
-  const historyDate = period === "custom" ? customDate : dateLabel(period === "yesterday" ? -1 : period === "before" ? -2 : 0);
-  const { user } = useStaff();
-  const today = dayKey(Date.now());
-  const myCode = useDeviceCode();
-  const allOrders = useLiveQuery(async () => [...await reportOrders(presetRange("today")), ...await getDb().orders.where("status").equals("held").toArray()], [], []);
-  const todays = counterPayments(allOrders, presetRange("today"), deviceId, myCode);
-  const closes = useLiveQuery(() => getDb().dayCloses.where("day").equals(historyDate).toArray(), [historyDate], []);
-  const chosen = myCode;
-  const [opening, setOpening] = useState("");
-  const [counted, setCounted] = useState("");
-  const [note, setNote] = useState("");
-  const already = closes.find((c) => c.id === `${today}:${deviceId}`);
-  const openingValue = Number(opening) || 0;
-  const expected = Math.round((openingValue + todays.reduce((n, o) => n + o.payments.filter((p) => p.mode === "cash").reduce((a, p) => a + p.amount, 0), 0)) * 100) / 100;
-  const countedValue = counted.trim() ? Number(counted) : null;
-  const difference = countedValue === null || !Number.isFinite(countedValue) ? null : Math.round((countedValue - expected) * 100) / 100;
-  const mine = todays;
-  const running = allOrders.filter((o) => o.status === "held").length;
-  const canClose = counterCanClose(settings.businessType ?? "restaurant", running);
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (countedValue === null || !Number.isFinite(countedValue) || countedValue < 0) { toast.error("Enter the cash you counted in the drawer."); return; }
-    if (!deviceId || !canClose) { toast.error("This counter cannot close yet."); return; }
-    const record: DayClose = {
-      id: `${today}:${deviceId}`, deviceId, day: today, series: chosen, openingCash: openingValue, expectedCash: expected, countedCash: countedValue,
-      bills: mine.length, net: Math.round(mine.reduce((s, o) => s + o.total, 0) * 100) / 100, at: Date.now(),
-      ...(note.trim() ? { note: note.trim() } : {}), ...(user ? { closedBy: user.displayName } : {}),
-    };
-    await getDb().dayCloses.put(record);
-    await markDirty(["day_close", record.id]);
-    toast.success(`Counter ${chosen} closed for ${today}`);
-    setPeriod("today");
-    setCounted("");
-    setNote("");
-  };
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <form className="card-elevated space-y-3 p-4" onSubmit={(event) => void submit(event)}>
-        <h2 className="text-sm font-semibold">Close today's cash drawer</h2>
-        {running && !canClose ? <p className="rounded-lg bg-gold/20 p-2 text-sm text-warning">{running} running bills remain open.</p> : null}
-        <div className="text-sm"><span className="font-medium">Counter {chosen}</span><span className="ml-2 text-muted-foreground">{deviceId.slice(0, 8).toUpperCase()}</span></div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-medium">Opening float<input inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value)} placeholder="₹0" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" /></label>
-          <label className="block text-sm font-medium">Cash counted now<input inputMode="decimal" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder="₹" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" /></label>
-        </div>
-        <div className="space-y-1 rounded-lg bg-secondary p-3 text-sm">
-          <div className="flex justify-between"><span>{mine.length} bills on {chosen}</span><span>{formatINR(mine.reduce((s, o) => s + o.total, 0), 0)}</span></div>
-          <div className="flex justify-between font-semibold"><span>Cash expected in drawer</span><span>{formatINR(expected)}</span></div>
-          {difference !== null ? <div className={`flex justify-between font-bold ${difference === 0 ? "text-success" : "text-destructive"}`}><span>{difference === 0 ? "Matches" : difference > 0 ? "Extra cash" : "Short"}</span><span>{formatINR(Math.abs(difference))}</span></div> : null}
-        </div>
-        <label className="block text-sm font-medium">Note<input maxLength={160} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Gave ₹500 change float to the night shift…" className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm" /></label>
-        <ConfirmButton id="close-counter" disabled={!deviceId || !canClose} submit className={cn(buttonVariants(), "w-full")} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again to close the counter">{already ? "Close again (replaces earlier close)" : "Close counter"}</ConfirmButton>
-      </form>
-      <div className="card-elevated p-4">
-        <h2 className="mb-2 text-sm font-semibold">Counter history</h2>
-        <Segmented ariaLabel="Counter history dates" value={period} onChange={setPeriod} options={[{ value: "today", label: "Today" }, { value: "yesterday", label: "Yesterday" }, { value: "before", label: "Day before" }, { value: "custom", label: "Custom" }]} />
-        {period === "custom" ? <input type="date" aria-label="Counter history date" value={customDate} onChange={(e) => { if (e.target.value) setCustomDate(e.target.value); }} className="my-3 rounded-md border border-input bg-card p-2" /> : null}
-        {closes.filter((c) => c.deviceId ? c.deviceId === deviceId : c.series === chosen).length ? (
-          <ul className="divide-y divide-border text-sm">
-            {closes.filter((c) => c.deviceId ? c.deviceId === deviceId : c.series === chosen).map((c) => {
-              const diff = Math.round((c.countedCash - c.expectedCash) * 100) / 100;
-              return (
-                <li key={c.id} className="py-2">
-                  <div className="flex justify-between"><span className="font-semibold">{c.day.split("-").reverse().join("/")}, counter {c.series}</span><span>{formatINR(c.net, 0)}</span></div>
-                  <div className="text-xs text-muted-foreground">
-                    Cash counted {formatINR(c.countedCash, 0)}, expected {formatINR(c.expectedCash, 0)}
-                    {diff !== 0 ? <span className="font-semibold text-destructive"> ({diff > 0 ? "+" : "-"}{formatINR(Math.abs(diff))})</span> : null}
-                    {c.closedBy ? `, by ${c.closedBy}` : ""}{c.note ? `. ${c.note}` : ""}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        ) : <p className="text-sm text-muted-foreground">No closes yet.</p>}
-      </div>
-    </div>
-  );
-}
-
 function ReportsPage() {
   const { user } = useStaff();
-  // Sales figures are for the owner and managers; a cashier only closes their counter here.
+  // Sales figures are for the owner and managers; counter logins get a read-only view.
   const full = can(user, "reports.view");
   usePolicy();
-  const pos = !full && (can(user, "counter.close") || can(user, "bill.settle"));
+  const pos = !full && can(user, "bill.settle");
   // Reception sees what Settings → Roles allows: the daily summary and/or the Sales Summary.
   const staffTabs: { v: Tab; l: string }[] = [
     ...(can(user, "reports.summary") ? [{ v: "overview" as const, l: "Overview" }, { v: "summary" as const, l: "Sales Summary" }] : []),
     // Counter (POS) logins get a read-only view of bills, items and settlement — no exports, no voids.
     ...(pos && !can(user, "reports.summary") ? [{ v: "overview" as const, l: "Overview" }] : []),
     ...(pos ? [{ v: "items" as const, l: "Items" }, { v: "bills" as const, l: "Bills" }] : []),
-    ...(can(user, "counter.close") ? [{ v: "close" as const, l: "Cash counter" }] : []),
   ];
   const [preset, setPreset] = useState<Preset>("today");
   const [custom, setCustom] = useState<Range>(() => presetRange("7d"));
-  const [chosenTab, setChosenTab] = useState<Tab>(full ? "overview" : staffTabs[0]?.v ?? "close");
-  const tab: Tab = full ? chosenTab : staffTabs.some((t) => t.v === chosenTab) ? chosenTab : staffTabs[0]?.v ?? "close";
+  const [chosenTab, setChosenTab] = useState<Tab>(full ? "overview" : staffTabs[0]?.v ?? "overview");
+  const tab: Tab = full ? chosenTab : staffTabs.some((t) => t.v === chosenTab) ? chosenTab : staffTabs[0]?.v ?? "overview";
   const setTab = (t: Tab) => {
     if ((t === "summary" || (t === "overview" && !pos)) && !full) void allow(user, "reports.summary", "Open the Sales Summary").then((ok) => { if (ok) setChosenTab(t); });
     else setChosenTab(t);
   };
-  const showDates = full || tab !== "close";
   const range = preset === "custom" ? custom : presetRange(preset);
   const all = useLiveQuery(() => reportOrders(range), [range.from, range.to], []);
   const orders = inRange(all, range);
@@ -364,25 +271,24 @@ function ReportsPage() {
   const insightsOn = featureOn(useEntitlements(), "purchases");
   const exportAll = async () => {
     const db = getDb();
-    const [menu, closes] = await Promise.all([db.menu.toArray(), db.dayCloses.where("day").between(dayKey(range.from), dayKey(range.to), true, true).toArray()]);
-    downloadXlsx(`reports-${file}`, reportsWorkbook(orders, menu, closes, range, restaurant), { title: `${restaurant} reports` });
+    downloadXlsx(`reports-${file}`, reportsWorkbook(orders, await db.menu.toArray(), range, restaurant), { title: `${restaurant} reports` });
   };
   const file = `xtsy-pos-${dayKey(range.from)}${dayKey(range.from) === dayKey(range.to) ? "" : `-to-${dayKey(range.to)}`}`;
   const presets: { v: Preset; l: string }[] = full || can(user, "reports.summary") ? [
     { v: "today", l: "Today" }, { v: "yesterday", l: "Yesterday" }, { v: "7d", l: "Last 7 days" }, { v: "month", l: "This month" }, { v: "custom", l: "Pick dates" },
   ] : [{ v: "today", l: "Today" }, { v: "yesterday", l: "Yesterday" }];
   const tabs: { v: Tab; l: string }[] = full ? [
-    { v: "overview", l: "Overview" }, ...(insightsOn ? [{ v: "insights" as const, l: "Insights" }] : []), { v: "summary", l: "Sales Summary" }, { v: "items", l: "Items" }, { v: "gst", l: "GST" }, { v: "staff", l: "Staff" }, { v: "bills", l: "Bills" }, { v: "close", l: "Cash counter" },
+    { v: "overview", l: "Overview" }, ...(insightsOn ? [{ v: "insights" as const, l: "Insights" }] : []), { v: "summary", l: "Sales Summary" }, { v: "items", l: "Items" }, { v: "gst", l: "GST" }, { v: "staff", l: "Staff" }, { v: "bills", l: "Bills" },
   ] : staffTabs;
 
-  const dateChips = showDates ? (
+  const dateChips = (
     <div role="group" aria-label="Report dates" className="flex flex-wrap items-center gap-1 rounded-xl bg-secondary/70 p-1">
       {presets.map((p) => (
         <button key={p.v} type="button" aria-pressed={preset === p.v} onClick={() => setPreset(p.v)}
           className={cn("rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors", preset === p.v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{p.l}</button>
       ))}
     </div>
-  ) : null;
+  );
 
   return (
     <AppShell>
@@ -391,11 +297,10 @@ function ReportsPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{restaurant || "Restaurant"}</p>
             <h1 className="text-2xl font-bold tracking-tight">Summary</h1>
-            <p className="text-sm text-muted-foreground">{full || pos ? "Bills from every device in the restaurant that has synced." : "Day-end cash for this counter."}</p>
+            <p className="text-sm text-muted-foreground">Bills from every device in the restaurant that has synced.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {full && can(user, "reports.export") && tab !== "close" ? <Button variant="outline" disabled={!orders.length} onClick={() => void exportAll()}><Download />Excel (all reports)</Button> : null}
-            {tab !== "close" && (full || staffTabs.some((t) => t.v === "close")) ? <Button onClick={() => setTab("close")}><Wallet />Cash counter</Button> : null}
+            {full && can(user, "reports.export") ? <Button variant="outline" disabled={!orders.length} onClick={() => void exportAll()}><Download />Excel (all reports)</Button> : null}
           </div>
         </header>
 
@@ -406,8 +311,7 @@ function ReportsPage() {
             {tabs.length > 1 ? <Segmented ariaLabel="Report" value={tab} onChange={setTab} options={tabs.map((t) => ({ value: t.v, label: t.l }))} /> : <span />}
             {dateChips}
           </div>
-          {showDates ? (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>Showing <strong className="font-semibold text-foreground">{presets.find((p) => p.v === preset)?.l ?? "Dates"}</strong> · {rangeLabel(range)}</span>
               {preset === "custom" ? (
                 <span className="flex items-center gap-1.5 text-xs">
@@ -416,20 +320,7 @@ function ReportsPage() {
                   <input type="date" aria-label="To" value={toInputDate(custom.to)} onChange={(e) => { const to = fromInputDate(e.target.value, true); if (to !== null) setCustom({ ...custom, to }); }} className="rounded-lg border border-input bg-card px-2 py-1" />
                 </span>
               ) : null}
-            </div>
-          ) : null}
-        {tab === "close" ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-2">
-            <div className="flex items-center gap-2">
-              <Wallet className="size-4 text-muted-foreground" />
-              <div>
-                <div className="text-sm font-semibold">Cash counter</div>
-                <div className="text-xs text-muted-foreground">Count the cash drawer and close your counter.</div>
-              </div>
-            </div>
-            {full || can(user, "reports.summary") ? <Button size="sm" variant="ghost" onClick={() => setTab("overview")}>Back to summary</Button> : null}
           </div>
-        ) : null}
 
         {tab === "overview" ? <Overview orders={orders} range={range} /> : null}
         {tab === "insights" && full && insightsOn ? <SummaryInsights orders={orders} range={range} /> : null}
@@ -438,7 +329,6 @@ function ReportsPage() {
         {tab === "gst" ? <Gst orders={orders} file={file} /> : null}
         {tab === "staff" ? <Staff orders={orders} /> : null}
         {tab === "bills" ? <BillsList orders={orders} /> : null}
-        {tab === "close" && (full || staffTabs.some((t) => t.v === "close")) ? <DayCloseTab /> : null}
         {!full && !staffTabs.length ? <p className="py-10 text-center text-sm text-muted-foreground">Reports aren't switched on for this login. Ask the admin.</p> : null}
         </section>
       </div>

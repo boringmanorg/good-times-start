@@ -4,7 +4,6 @@ import type { Order } from "@/lib/types";
 const saved: Order[] = [];
 vi.mock("@/lib/bill-amend", () => ({
   saveAmendment: async (o: Order) => { saved.push(o); },
-  cashDayClosed: async () => true,
 }));
 const { AmendBillForm, AmendmentHistory } = await import("./AmendBill");
 
@@ -32,7 +31,6 @@ describe("Correct payment form", () => {
     const saveBtn = screen.getByRole("button", { name: /Save correction · ₹1,163/ });
     expect(saveBtn).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Reason"), { target: { value: "Closed as NC by mistake" } });
-    expect(await screen.findByText(/Cash for this day was already closed/)).toBeInTheDocument();
     await act(async () => { fireEvent.click(saveBtn); });
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ total: 1163, roundOff: -0.4, discountPct: 30, payments: [{ mode: "upi", amount: 663 }, { mode: "cash", amount: 500 }], settledAt });

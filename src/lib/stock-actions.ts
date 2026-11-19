@@ -1,5 +1,6 @@
 import { applyEntryToLevels, getDb, markDirty } from "./db";
 import { validatePurchaseReturn } from "./purchase-logic";
+import { itemsTotal, purchasePayProblem, type PurchasePayment } from "./purchase-pay-logic";
 import { newUid } from "./sync-core";
 import type { CartLine, Material, StockEntry, Supplier } from "./types";
 
@@ -21,6 +22,10 @@ export async function recordStockEntry(entry: Omit<StockEntry, "id" | "at"> & { 
       if (!Number.isFinite(saved.at) || saved.at > now) throw new Error("Enter a valid purchase date, no later than today.");
       if (!saved.items.length || saved.items.some((i) => !Number.isFinite(i.qty) || i.qty <= 0 || !Number.isFinite(i.unitCost) || (i.unitCost ?? -1) < 0)) {
         throw new Error("Each purchase item needs a positive quantity and a valid unit price.");
+      }
+      if (saved.payments) {
+        const problem = purchasePayProblem(itemsTotal(saved.items), saved.payments, saved.roundOff ?? 0);
+        if (problem) throw new Error(problem);
       }
       for (const material of newMaterials) {
         if (!saved.items.some((i) => i.materialId === material.id) || !material.name.trim() || !Number.isFinite(material.costPerUnit) || (material.costPerUnit ?? -1) < 0) throw new Error("Each new item needs a name and a valid standard price.");
@@ -110,7 +115,7 @@ async function assertEditablePurchase(id: string): Promise<StockEntry> {
 }
 
 /** Owners/managers correct a saved purchase bill (supplier, invoice, lines). Bills with returns stay locked. */
-export async function updatePurchase(id: string, change: Pick<StockEntry, "items"> & { supplierId?: string; supplierName?: string; reference?: string }): Promise<StockEntry> {
+export async function updatePurchase(id: string, change: Pick<StockEntry, "items"> & { supplierId?: string; supplierName?: string; reference?: string; payments?: PurchasePayment[]; roundOff?: number }): Promise<StockEntry> {
   const db = getDb();
   let saved!: StockEntry;
   await db.transaction("rw", db.stockEntries, db.materialLevels, db.materials, async () => {
@@ -118,8 +123,16 @@ export async function updatePurchase(id: string, change: Pick<StockEntry, "items
     const items = change.items.filter((i) => i.qty !== 0);
     if (!items.length || items.some((i) => !Number.isFinite(i.qty) || i.qty <= 0 || !Number.isFinite(i.unitCost) || (i.unitCost ?? -1) < 0)) throw new Error("Each purchase item needs a positive quantity and a valid unit price.");
     const materials = new Map((await db.materials.toArray()).map((m) => [m.id, m]));
-    const { supplierId: _s, supplierName: _n, reference: _r, ...base } = prior;
+    // Whichever payments the bill ends up with (new, or kept from before) must still add up to it.
+    const payments = change.payments ?? prior.payments;
+    const roundOff = change.payments ? change.roundOff ?? 0 : prior.roundOff ?? 0;
+    if (payments) {
+      const problem = purchasePayProblem(itemsTotal(items), payments, roundOff);
+      if (problem) throw new Error(problem);
+    }
+    const { supplierId: _s, supplierName: _n, reference: _r, payments: _p, roundOff: _ro, ...base } = prior;
     saved = { ...base, ...(change.supplierId ? { supplierId: change.supplierId } : {}), ...(change.supplierName ? { supplierName: change.supplierName } : {}), ...(change.reference ? { reference: change.reference } : {}),
+      ...(payments ? { payments, ...(roundOff ? { roundOff } : {}) } : {}),
       items: items.map((i) => { const m = materials.get(i.materialId); const old = prior.items.find((p) => p.materialId === i.materialId);
         return { ...i, ...(m ? { name: m.name, unit: m.unit } : old?.name ? { name: old.name, unit: old.unit } : {}) } as StockEntry["items"][number]; }) };
     await applyEntryToLevels(db, id, saved);

@@ -1,5 +1,5 @@
 import { summaryAt, categorySales, gstByRate, itemSales, paymentLabel, salesSummary, staffSales, untaxedSales, type Range } from "./report-logic";
-import type { Customer, DayClose, MenuItem, Order } from "./types";
+import type { Customer, MenuItem, Order } from "./types";
 import type { CustomerStats } from "./customer-logic";
 import type { SheetSpec } from "./xlsx";
 
@@ -13,7 +13,7 @@ export function rangeLabel(range: Range): string {
 }
 
 /** Every report for a period as one workbook. */
-export function reportsWorkbook(orders: Order[], menu: MenuItem[], closes: DayClose[], range: Range, restaurant: string): SheetSpec[] {
+export function reportsWorkbook(orders: Order[], menu: MenuItem[], range: Range, restaurant: string): SheetSpec[] {
   const when = rangeLabel(range);
   const s = salesSummary(orders);
   const untaxed = untaxedSales(orders);
@@ -88,11 +88,6 @@ export function reportsWorkbook(orders: Order[], menu: MenuItem[], closes: DayCl
       name: "Staff", title: "Bills by staff", subtitle: when, totals: true,
       columns: [{ header: "Settled by", width: 24 }, { header: "Bills", format: "int", total: true }, { header: "Sales", format: "inr", total: true }, { header: "Voids", format: "int", total: true }],
       rows: staffSales(orders).map((x) => [x.name, x.bills, x.net, x.voids]),
-    },
-    {
-      name: "Day closes", title: "Cash drawer closes", subtitle: when,
-      columns: [{ header: "Day" }, { header: "Counter" }, { header: "Bills", format: "int" }, { header: "Sales", format: "inr" }, { header: "Opening float", format: "inr" }, { header: "Cash expected", format: "inr" }, { header: "Cash counted", format: "inr" }, { header: "Difference", format: "inr" }, { header: "Closed by" }, { header: "Note", width: 30 }],
-      rows: [...closes].sort((a, b) => a.day.localeCompare(b.day) || a.series.localeCompare(b.series)).map((c) => [c.day, c.series, c.bills, c.net, c.openingCash, c.expectedCash, c.countedCash, r2(c.countedCash - c.expectedCash), c.closedBy ?? "", c.note ?? ""]),
     },
   ];
 }

@@ -16,7 +16,6 @@ export type PolicyAction =
 
 export const POLICY_ACTIONS: { id: PolicyAction; label: string; hint: string; roles: PolicyRole[]; group: "Access" | "Bill" | "KOT and printing" }[] = [
   { id: "dashboard", label: "Dashboard", hint: "Sales and live status", roles: ["cashier"], group: "Access" },
-  { id: "dailySummary", label: "Daily summary", hint: "Close the day and count the cash", roles: ["cashier"], group: "Access" },
   { id: "salesSummary", label: "Sales Summary report", hint: "Every bill with totals, filters and Excel", roles: ["cashier"], group: "Access" },
   { id: "configuration", label: "Settings screen", hint: "This device's printer and series (restaurant settings stay admin-only)", roles: ["cashier"], group: "Access" },
   { id: "discount", label: "Discount", hint: "Up to the staff discount limit", roles: ["cashier"], group: "Bill" },

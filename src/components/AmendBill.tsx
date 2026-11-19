@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { formatINR } from "@/lib/billing";
 import { PAYMENT_MODES, roundOffOffer } from "@/lib/payment-logic";
 import { AMEND_MODES, REASON_MAX, amendDeadline, amendTotals, amendedBill, paymentsText } from "@/lib/bill-amend-logic";
-import { cashDayClosed, saveAmendment } from "@/lib/bill-amend";
+import { saveAmendment } from "@/lib/bill-amend";
 import type { Order, PaymentMode } from "@/lib/types";
 
 const label = (m: PaymentMode) => PAYMENT_MODES.find((p) => p.v === m)?.l ?? m;
@@ -42,8 +42,6 @@ export function AmendBillForm({ order, by, onDone }: { order: Order; by: string;
   const [payTotal, setPayTotal] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const [dayClosed, setDayClosed] = useState(false);
-  useEffect(() => { void cashDayClosed(order).then(setDayClosed); }, [order]);
   useEffect(() => { setPayTotal(null); }, [fresh.total]);
 
   const payments = rows.map((r) => ({ mode: r.mode, amount: Number(r.amount) || 0 }));
@@ -110,10 +108,6 @@ export function AmendBillForm({ order, by, onDone }: { order: Order; by: string;
         <span className="mb-1 block">Reason <span className="text-muted-foreground">(required)</span></span>
         <textarea aria-label="Reason" maxLength={REASON_MAX} rows={2} className={`${field} w-full`} value={reason} placeholder="e.g. Guest paid by GPay, settled as cash by mistake" onChange={(e) => setReason(e.target.value)} />
       </label>
-
-      {dayClosed && order.payments.concat(payments).some((p) => p.mode === "cash") ? (
-        <p className="rounded-lg bg-gold/15 p-2 text-xs text-warning">Cash for this day was already closed. The closed cash count won't change; check the drawer difference by hand.</p>
-      ) : null}
 
       <Button className="w-full" disabled={busy || diff !== 0 || reason.trim().length < 3} onClick={() => void save()}>
         {busy ? "Saving…" : `Save correction · ${formatINR(total)}`}

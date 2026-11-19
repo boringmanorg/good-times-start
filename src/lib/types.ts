@@ -288,6 +288,10 @@ export interface StockEntry {
   approvedAt?: number;
   /** Purchases and returns recorded by the bill desk wait for an admin's approval; none = recorded by an admin (approved). */
   approval?: PurchaseApproval;
+  /** How a purchase was paid (split allowed). Older purchases have none: "payment not recorded". */
+  payments?: import("./purchase-pay-logic").PurchasePayment[];
+  /** Paid total minus the items total, within ±₹100 (₹1,248.60 paid as ₹1,249 → +0.40). */
+  roundOff?: number;
 }
 
 export interface PurchaseApproval {

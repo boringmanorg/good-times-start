@@ -19,15 +19,3 @@ export async function saveAmendment(amended: Order): Promise<void> {
   // Queued after the write commits, so the push always carries the corrected bill.
   await markDirty(["order", amended.uid]);
 }
-
-/** The day this bill was settled, as YYYY-MM-DD in local time. */
-function dayOf(ms: number): string {
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** True when cash for the bill's settlement day has already been closed and counted. */
-export async function cashDayClosed(order: Pick<Order, "settledAt">): Promise<boolean> {
-  if (!order.settledAt) return false;
-  return (await getDb().dayCloses.where("day").equals(dayOf(order.settledAt)).count()) > 0;
-}

@@ -79,7 +79,7 @@
 - KOT slips print the quantity first ("4 x Tawa Roti"), Date and Time on separate lines when they don't fit, and "Total Qty: N" left-aligned: some kitchen printers clip the right edge, which hid right-aligned quantities (KOT/0049, 10 Nov). Keep KOT essentials left-aligned.
 - Slips fit the paper by themselves (no printer layout settings for staff): slipLayoutOf(config) = paper + SAFE_MARGIN_MM (1.5 mm); SlipView sizes its font so cols × 0.6 em (Courier New, the widest common monospace) fits between the margins — a fixed font with margins cut bill amounts on Macs/PCs without Consolas (10 Nov). Our counters use XP-C230H (58 mm paper, 48 mm printable, ESC/POS, USB + Bluetooth). fitLines wraps any line still too wide; ESC/POS sends GS L for the margin.
 - Orders lists read newest first: KOTs by time sent, Settled/NC/Cancelled by settle or cancel time (historyBills), each row showing that time. Running bills show how long they've been open ("Open 2 h 15 min", openFor; amber after 3 h), longest-open first.
-- Sales Summary is sales only: settled (including NC) and cancelled bills (salesBills); running bills show only in the "Today · live" card. Summary page: header with Excel + Cash counter, "Today · live" card (settled, Cash/UPI/Card split bar, running bills), then report tabs with the date chips beside them and a "Showing … · dates" line.
+- Sales Summary is sales only: settled (including NC) and cancelled bills (salesBills); running bills show only in the "Today · live" card. Summary page: header with Excel, "Today · live" card (settled, Cash/UPI/Card split bar, running bills), then report tabs with the date chips beside them and a "Showing … · dates" line.
 - After a KOT is sent, the shared-bill merge (linesAfterSharedChange) counts what this device just sent (ownSentRef, set before the save) as sent; otherwise its own save arrived before screen state caught up and the sent items reappeared under "New items" (D2, KOT/0069, 12 Nov).
 - Purchase approval: the bill desk (cashier, "stock.request") records purchases (invoice no. required) and supplier returns as approval.status "pending"; owners/managers approve after ticking "Supplier bill checked", or reject with a reason (decidePurchase). Only approved entries count in totals, item history and vendor amounts (counts()). The bill desk returns only purchases it recorded (canRequestReturn; cloud checks restaurant_audit_log "created" by auth.uid()). PurchaseAlerts (mounted in LiveSync) chimes both ways: admins on new requests, the sender and the other admins on decisions. Cloud rule: docs/migrations/2026-11-12-purchase-approval.sql (applied 13 Nov).
 
@@ -380,12 +380,45 @@ Rules are pure and tested in `bill-amend-logic.ts`; `bill-amend.ts` saves (needs
   and tax rules (`amendTotals`), never typed in.
 - Gift-card and loyalty-point bills can't be corrected here, and neither mode can be added:
   both are tied to balances elsewhere.
-- If that day's cash was already closed, the form warns that the closed count won't change.
 - Cloud: `guard_settled_bill_amendment` enforces all of the above by the cloud's clock (a money
   change on a settled bill without a new amendment entry is refused — so "Keep my changes" on a
   stale settled copy can't silently rewrite payments). `resync_bill_payments_after_amendment`
   drops ledger rows that no longer match, and the push re-inserts the new ones. Maintenance
   edits with no signed-in user pass. Migration:
-  `docs/migrations/2026-11-19-settled-bill-correction.sql` — tested on a local Postgres 16 with
+  `docs/migrations/2026-11-19-settled-bill-correction.sql` — **applied 19 Nov 2026**; tested on a local Postgres 16 with
   stand-in auth (15 cases: admin within/after 48 h, blank reason, edited history, items/bill
   no./time changes, gift card, cashier, maintenance, feedback-only).
+
+## Cash counter removed (19 Nov 2026)
+
+The day-end Cash counter (Summary → Cash counter, `DayCloseTab`, `counter-logic.ts`) is gone at
+the owner's request: settlement and the dashboard already show cash. The Roles switch "Daily
+summary" (`dailySummary`) is no longer offered, and Excel exports no "Day closes" sheet. Kept on
+purpose: the `DayClose` type, the `dayCloses` table and `day_close` sync, so closes recorded
+before still sync and stay in the audit log. Don't build anything new on them.
+
+## Purchase: how it was paid, Spend dashboard, item list (19 Nov 2026)
+
+- **Payment on every purchase** (`purchase-pay-logic.ts`, tested): `payments` (Cash, UPI, Card,
+  Bank transfer, Pay later = vendor credit) — split allowed — plus `roundOff` held to ±₹100.
+  No bank accounts, only the method. Payments must equal items total + round-off;
+  `recordStockEntry` and `updatePurchase` refuse anything else, including an edit that changes
+  items under old payments. The form (`PurchasePayments`) keeps one line following the total
+  until an amount is typed or the payment is split, and offers the round-off when what was
+  paid differs by ≤ ₹100. Older purchases read "Payment not recorded".
+- `entryAmount` includes a purchase's round-off, so spend, vendor totals and the Brand P&L
+  count what was actually paid. The cloud (`protect_purchase_ledger`) only checks lines, so no
+  migration was needed; payments are client-checked.
+- **Spend dashboard** (`PurchaseSpendDashboard`, admin): period Daily/Weekly/Monthly drives
+  everything — spend with change vs the previous equal window, bills and average bill, pay
+  later, returns; "How it was paid" split bar; spend per vendor chart; top vendors with share;
+  top items with the latest price change. Figures from `spendSummary`, `topItems`,
+  `itemInsight`, `entriesBetween` in purchase-logic.ts (tested in purchase-insights.test.ts).
+- **Items tab** (`PurchaseItemsList`): search, sort (Most spent / Recent / A–Z), one card per
+  item with latest price and its change from the previous purchase (red up, green down),
+  average price, quantity, bills, amount; opens to its purchase lines. Phones show a short date
+  with the vendor under it and the unit price under the quantity, so the amount never scrolls
+  off.
+- Purchase header: four KPI cards (spent this month, pay later this month, waiting for
+  approval, items). Admins land on Spend. Bill cards and the Excel History sheet show "Paid by".
+- Not yet: settling "Pay later" (marking vendor credit paid) — the dashboard shows it as owed.
