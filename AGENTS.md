@@ -362,3 +362,30 @@ rounded up or exact — none down.
 - Dialogs: DialogContent is `grid-cols-[minmax(0,1fr)]`. Without it the single grid column grew
   to its widest child (the payment dialog's Whole bill / Split switch) and the dialog's right
   edge, amounts included, was cut off on 360px phones.
+
+## Correcting a settled bill (19 Nov 2026)
+
+Owners/managers can correct a settled or NC bill's **payments, discount and round-off** with a
+required reason, **within 48 hours of the first settlement** — for a payment found in the wrong
+mode or amount. Orders → History → open the bill → **Correct payment** (`AmendBill.tsx`).
+Rules are pure and tested in `bill-amend-logic.ts`; `bill-amend.ts` saves (needs the internet).
+
+- Items, bill number, opening time and **settlement time never change**. The first settlement
+  time is kept as `originalSettledAt`, so a second correction can't restart the 48 hours.
+- Every correction appends one entry to `order.amendments` (`at`, `by`, `reason`, `from`, `to`
+  snapshots of payments and totals). Earlier entries can't be edited. They show under the
+  receipt in Orders.
+- Payments must add up to the new total exactly; a guest's small short/over payment is taken as
+  round-off (±₹100 total, same as the counter). Totals are recomputed from the bill's own lines
+  and tax rules (`amendTotals`), never typed in.
+- Gift-card and loyalty-point bills can't be corrected here, and neither mode can be added:
+  both are tied to balances elsewhere.
+- If that day's cash was already closed, the form warns that the closed count won't change.
+- Cloud: `guard_settled_bill_amendment` enforces all of the above by the cloud's clock (a money
+  change on a settled bill without a new amendment entry is refused — so "Keep my changes" on a
+  stale settled copy can't silently rewrite payments). `resync_bill_payments_after_amendment`
+  drops ledger rows that no longer match, and the push re-inserts the new ones. Maintenance
+  edits with no signed-in user pass. Migration:
+  `docs/migrations/2026-11-19-settled-bill-correction.sql` — tested on a local Postgres 16 with
+  stand-in auth (15 cases: admin within/after 48 h, blank reason, edited history, items/bill
+  no./time changes, gift card, cashier, maintenance, feedback-only).

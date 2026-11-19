@@ -76,6 +76,10 @@ export interface Order {
   tableSection?: string | undefined;
   settledAt?: number;
   settledDeviceId?: string;
+  /** First settlement time, kept when an admin corrects the bill; the 48-hour window runs from it. */
+  originalSettledAt?: number | undefined;
+  /** Admin corrections after settlement: who, when, why, and the payments/totals before and after. */
+  amendments?: import("./bill-amend-logic").Amendment[];
   lines: CartLine[];
   subtotal: number;
   discountPct: number;

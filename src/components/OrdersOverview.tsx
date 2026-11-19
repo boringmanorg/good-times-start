@@ -20,7 +20,9 @@ import { activeReservations } from "@/lib/reservations";
 import { ChevronDown, Printer, X } from "lucide-react";
 import { toast } from "sonner";
 import { printKots } from "@/lib/print-jobs";
-import { useStaff } from "@/lib/staff";
+import { isAdmin, useStaff } from "@/lib/staff";
+import { amendBlocked } from "@/lib/bill-amend-logic";
+import { AmendBillForm, AmendmentHistory } from "./AmendBill";
 import { can } from "@/lib/permissions";
 import { allow } from "@/lib/pin-gate";
 import { useAppMode } from "@/lib/app-mode";
@@ -54,6 +56,7 @@ export function OrdersOverview({ onClose }: OrdersOverviewProps) {
   const { user } = useStaff();
   const app = useAppMode(user);
   const [printing, setPrinting] = useState<string | null>(null);
+  const [amending, setAmending] = useState<string | null>(null);
   const canPrint = thermalDestination(app) !== "blocked" && can(user, "kot.reprint");
   const reprint = async (tickets: Kot[], id: string) => {
     if (printing || !canPrint) return;
@@ -79,9 +82,13 @@ export function OrdersOverview({ onClose }: OrdersOverviewProps) {
     <section aria-label={`Preview ${"tickets" in record ? record.first.kotNo ?? record.first.billNo : record.billNo}`} className="border-t border-border bg-secondary/40 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">{"tickets" in record ? record.first.kotNo ?? record.first.billNo : billLabel(record)}</span>
-        {!("tickets" in record) ? <BillPrintButton order={record} className="ml-auto" /> : null}
+        {!("tickets" in record) && record.status === "settled" && isAdmin(user) && !amendBlocked(record, true, now) && amending !== recordKey(record)
+          ? <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAmending(recordKey(record))}>Correct payment</Button> : null}
+        {!("tickets" in record) ? <BillPrintButton order={record} className={record.status === "settled" && isAdmin(user) && !amendBlocked(record, true, now) && amending !== recordKey(record) ? "" : "ml-auto"} /> : null}
         <Button variant="ghost" size="icon" aria-label="Close details" title="Close details" onClick={() => setDetail(null)}><X className="size-4" /></Button>
       </div>
+      {!("tickets" in record) ? <AmendmentHistory order={record} /> : null}
+      {!("tickets" in record) && amending === recordKey(record) ? <AmendBillForm order={record} by={user?.displayName ?? "Admin"} onDone={() => setAmending(null)} /> : null}
       <div className="max-w-full overflow-x-auto [scrollbar-gutter:stable]">
         <div className="mx-auto w-fit">
           {"tickets" in record ? record.tickets.map((ticket, index) => (
