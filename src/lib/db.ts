@@ -165,7 +165,23 @@ class RestroDB extends Dexie {
     this.version(8).stores({
       orders: "++id, billNo, status, createdAt, settledAt, tableId, uid, customerId, [tableId+status]",
     });
+    // Durability: a bill's tickets and a KOT's sibling stations by index, not by scanning every
+    // KOT the counter has ever printed (settling, printing and table moves did, ~1 in 3 actions).
+    this.version(9).stores({
+      kots: "++id, orderId, status, createdAt, uid, orderUid, submissionId",
+    });
   }
+}
+
+/** A bill's kitchen tickets, by its uid and/or local id (indexed; older tickets may carry only one). */
+export async function kotsForBill(orderUid: string | undefined, orderId?: number | undefined): Promise<Kot[]> {
+  const db = getDb();
+  const [byUid, byId] = await Promise.all([
+    orderUid ? db.kots.where("orderUid").equals(orderUid).toArray() : Promise.resolve([] as Kot[]),
+    orderId !== undefined ? db.kots.where("orderId").equals(orderId).toArray() : Promise.resolve([] as Kot[]),
+  ]);
+  const seen = new Set<number | string>();
+  return [...byUid, ...byId].filter((k) => { const key = k.id ?? k.uid ?? ""; if (seen.has(key)) return false; seen.add(key); return true; });
 }
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;

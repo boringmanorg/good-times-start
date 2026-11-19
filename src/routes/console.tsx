@@ -7,7 +7,8 @@ import { passwordProblem } from "@/lib/staff-login-logic";
 import { Button } from "@/components/ui/button";
 import { whoami } from "@/lib/console-api";
 import { ConsoleOverview } from "@/components/console/ConsoleOverview";
-import { ConsoleRestaurants } from "@/components/console/ConsoleRestaurants";
+import { ConsoleProducts } from "@/components/console/ConsoleProducts";
+import { consoleHash, parseConsoleHash, type ConsoleRoute, type ConsoleTab } from "@/lib/products";
 import { ConsolePlans } from "@/components/console/ConsolePlans";
 import { ConsoleInfra } from "@/components/console/ConsoleInfra";
 import { ConsoleSeo } from "@/components/console/ConsoleSeo";
@@ -24,10 +25,10 @@ export const Route = createFileRoute("/console")({
   component: ConsolePage,
 });
 
-type Tab = "overview" | "restaurants" | "plans" | "infra" | "seo";
+type Tab = ConsoleTab;
 const TABS: { v: Tab; l: string; icon: typeof Activity }[] = [
   { v: "overview", l: "Overview", icon: Gauge },
-  { v: "restaurants", l: "Restaurants", icon: Building2 },
+  { v: "products", l: "Products", icon: Building2 },
   { v: "plans", l: "Plans", icon: Layers },
   { v: "infra", l: "Infra & backend", icon: Activity },
   { v: "seo", l: "SEO insights", icon: Search },
@@ -174,12 +175,21 @@ function ConsoleGate() {
 
 function ConsoleShell({ email, onSignOut }: { email: string; onSignOut: () => Promise<void> }) {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>(() => {
-    if (typeof window === "undefined") return "overview";
-    const h = window.location.hash.slice(1) as Tab;
-    return TABS.some((t) => t.v === h) ? h : "overview";
-  });
-  const choose = (t: Tab) => { setTab(t); try { window.history.replaceState(null, "", `#${t}`); } catch { /* ignore */ } };
+  // Products → outlet → section live in the address, so each level can be bookmarked and Back works.
+  const [route, setRoute] = useState<ConsoleRoute>(() => (typeof window === "undefined" ? { tab: "overview" } : parseConsoleHash(window.location.hash)));
+  useEffect(() => {
+    const onHash = () => setRoute(parseConsoleHash(window.location.hash));
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const go = (next: ConsoleRoute) => {
+    const hash = consoleHash(next);
+    if (hash !== window.location.hash) { try { window.history.pushState(null, "", hash); } catch { /* ignore */ } }
+    setRoute(next);
+    window.scrollTo({ top: 0 });
+  };
+  const tab = route.tab;
+  const choose = (t: Tab) => go({ tab: t });
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="glass-dark sticky top-0 z-20 border-b border-border px-4 pt-[max(0.625rem,env(safe-area-inset-top))] lg:px-8">
@@ -205,7 +215,7 @@ function ConsoleShell({ email, onSignOut }: { email: string; onSignOut: () => Pr
       </header>
       <main className="mx-auto max-w-7xl p-4 lg:p-8">
         {tab === "overview" ? <ConsoleOverview /> : null}
-        {tab === "restaurants" ? <ConsoleRestaurants /> : null}
+        {tab === "products" ? <ConsoleProducts route={route} go={go} /> : null}
         {tab === "plans" ? <ConsolePlans /> : null}
         {tab === "infra" ? <ConsoleInfra /> : null}
         {tab === "seo" ? <ConsoleSeo /> : null}

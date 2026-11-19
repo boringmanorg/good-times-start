@@ -35,7 +35,8 @@ export interface GuestOrder {
   pickup_at: string | null;
   lines: GuestLine[];
   subtotal: number;
-  payment: "counter" | "upi";
+  /** "platform": paid on Swiggy/Zomato, settled to the restaurant by the platform. */
+  payment: "counter" | "upi" | "platform";
   upi_ref: string;
   status: GuestStatus;
   reason: string;
@@ -57,6 +58,11 @@ export interface GuestOrder {
   pay_proof?: string | null;
   paid_at?: string | null;
   confirmed_at?: string | null;
+  /** Swiggy/Zomato orders (aggregator-logic.ts); null for the restaurant's own QR/online orders. */
+  platform?: "swiggy" | "zomato" | null;
+  external_id?: string | null;
+  /** A sandbox test order sent from the XTSY console. */
+  is_test?: boolean | null;
 }
 
 /** What a guest can order from the public QR. */
@@ -177,7 +183,7 @@ export function guestOrderPayload(cart: GuestCartLine[]) {
  * restaurant's source of truth). A dish no longer on the menu keeps the
  * guest's line so nothing they ordered is lost; it is reported back.
  */
-export function cartLinesFromGuest(lines: GuestLine[], menu: MenuItem[], channel: GuestChannel, publicType?: PublicOrderType | null): { lines: CartLine[]; missing: string[] } {
+export function cartLinesFromGuest(lines: GuestLine[], menu: MenuItem[], channel: GuestChannel, publicType?: PublicOrderType | null, billAs?: OrderType): { lines: CartLine[]; missing: string[] } {
   const byId = new Map(menu.map((m) => [m.id, m]));
   const out: CartLine[] = [];
   const missing: string[] = [];
@@ -187,7 +193,7 @@ export function cartLinesFromGuest(lines: GuestLine[], menu: MenuItem[], channel
     const variantOk = !item?.variants?.length || item.variants.some((v) => v.id === g.variantId);
     let line: CartLine;
     if (item && variantOk) {
-      line = { ...buildLine(item, orderTypeFor(channel, publicType), g.variantId, g.addonIds ?? []), qty: g.qty };
+      line = { ...buildLine(item, billAs ?? orderTypeFor(channel, publicType), g.variantId, g.addonIds ?? []), qty: g.qty };
     } else {
       missing.push(g.name);
       line = { itemId: `guest:${g.itemId}:${g.variantId ?? ""}:${(g.addonIds ?? []).join(",")}`, menuItemId: g.itemId, name: g.name, price: g.price, qty: g.qty, veg: g.veg ?? false, gstRate: 5, station: fallbackStation };

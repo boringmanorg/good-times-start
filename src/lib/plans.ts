@@ -13,13 +13,13 @@ export type Feature =
   | "insights" | "purchases" | "vendors" | "loyalty" | "bookings" | "admin_approval"
   | "waiter_app" | "qr_ordering" | "online_ordering" | "marketing"
   | "recipes" | "gift_cards" | "feedback" | "kds" | "accounting"
-  | "audit_log" | "multi_outlet";
+  | "audit_log" | "multi_outlet" | "aggregators";
 export type SeatApp = "manager" | "pos" | "waiter";
 
 /** Every feature switch, in the order plans list them. Prices are per outlet. */
 export const FEATURES: Feature[] = [
   "billing", "menu", "gst_reports", "manager_app", "insights",
-  "purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval",
+  "purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval", "aggregators",
   "waiter_app", "qr_ordering", "online_ordering", "marketing", "gift_cards", "feedback",
   "kds", "accounting", "audit_log", "multi_outlet",
 ];
@@ -45,6 +45,7 @@ export const FEATURE_NAMES: Record<Feature, string> = {
   kds: "Kitchen display screen",
   accounting: "Accounting and restaurant bookkeeping",
   audit_log: "Audit logs and full reports",
+  aggregators: "Swiggy and Zomato orders on the POS",
   multi_outlet: "Several outlets under one brand",  // the Brand screen: sales together, add an outlet, push the menu
 };
 
@@ -60,7 +61,8 @@ export const FEATURE_NAMES: Record<Feature, string> = {
  * multi_outlet is listed: the Brand screen makes it real (sales across outlets, add an outlet,
  * push the menu), so it is the headline reason to take Enterprise / Brand.
  */
-const NOT_ON_PRICE_CARDS: Feature[] = ["online_ordering", "kds", "accounting"];
+// aggregators: only the sandbox exists until Swiggy/Zomato partner keys are in place, so it is not sold yet.
+const NOT_ON_PRICE_CARDS: Feature[] = ["online_ordering", "kds", "accounting", "aggregators"];
 export const PUBLIC_FEATURES: Feature[] = FEATURES.filter((f) => !NOT_ON_PRICE_CARDS.includes(f));
 
 export const SEAT_NAMES: Record<SeatApp, string> = { manager: "Admin / Manager", pos: "Billdesk", waiter: "Waiter" };
@@ -78,7 +80,7 @@ export interface PublicPlan {
 }
 
 const BASIC: Feature[] = ["billing", "menu", "gst_reports", "manager_app", "insights"];
-const PRO_LITE: Feature[] = [...BASIC, "purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval"];
+const PRO_LITE: Feature[] = [...BASIC, "purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval", "aggregators"];
 const PRO: Feature[] = [...PRO_LITE, "waiter_app", "qr_ordering", "online_ordering", "marketing", "gift_cards", "feedback"];
 
 /**

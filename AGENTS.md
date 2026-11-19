@@ -485,3 +485,41 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
   Returns), grouped by day with sticky headings "Today", "Yesterday", "Sun, 15 Nov 2026" and the
   day's net total (`billsByDay`: approved only, returns subtract, round-off in). Two columns
   from `lg`. Tested in purchase-bills.test.ts.
+
+## Super admin console: products, Sign in as, Swiggy/Zomato sandbox (19 Nov 2026)
+
+- **Products** replaces the Restaurants tab: Products (Restaurant POS live; Hotel, Resort,
+  Hostel and Tourism POS "coming soon") → a product's outlets (search, Live/Stopped/Trial/
+  Payment due filters, onboarding) → one outlet with sections Overview, Plan & billing, Users,
+  Devices, Swiggy & Zomato. Address is the hash (`products.ts`: `#products/restaurant_pos/<id>/users`);
+  `#restaurants` still opens Restaurant POS. An outlet's product is `restaurants.branding.product`
+  (none = restaurant_pos; onboarding now writes it). The old RestaurantCard is split into
+  `RestaurantInfo`, `SubscriptionSection`, `DevicesSection`, `SeatsSummary` in ConsoleRestaurants.tsx.
+- **Sign in as** (Users → per login, `support-logic.ts`, tested): required reason (8–200 chars);
+  `platformSupportSignIn` checks the super admin, membership, sign-in on, not a super admin
+  account; makes a magic link and verifies it on the server with a THROWAWAY client (never the
+  shared admin client) and logs `account_events` kind `support_sign_in` (who, whom, why). The
+  session goes to a new tab through localStorage `xtsy-support-handoff` (read once, 2 min) —
+  never in the URL. `/support` refuses when this browser holds another outlet's unsynced work or
+  running bill (`prepareOutletSwitch`), else clears it, sets the session and opens the user's
+  own app (`supportAppFor`). During support: `SupportBanner` (fixed, End support signs out and
+  clears local data only once the outbox is empty), no terminal registration (`touchTerminal`),
+  no app/device rule or first-login approval in AppShell, and writes carry device id
+  `xtsy-support-…` (meta `supportDeviceId`) so the restaurant's audit log shows them as support.
+  The console lists recent support sign-ins under Users. No password is read, set or entered.
+- **Swiggy / Zomato** (`aggregator-logic.ts`, tested): plan feature `aggregators` on Pro Lite, Pro,
+  Enterprise / Brand, never Basic; kept OFF the price cards until partner keys exist.
+  `restaurant_integrations` (restaurant × platform: off | sandbox | live, store id), set only by
+  `platform_set_integration` (refuses Basic and refuses `live` until partner API keys exist).
+  `platform_send_test_order` drops a test order (code SW-/ZO-, channel online, delivery,
+  `payment='platform'`, `pay_state='paid'`, `is_test`, `source='sandbox'`, no QR number) into ONE
+  restaurant's inbox; the console composes it from the outlet's own dishes
+  (`platform_menu_dishes`, platform price → portion → price). On the POS it rings like any QR
+  order (Bookings shows for platforms even without QR ordering — `useIntegrations`), shows a
+  Swiggy/Zomato · sandbox test badge and "Paid on Swiggy · settle by Wallet", and accepting bills
+  it as order type swiggy/zomato (`platformOrderType`, `cartLinesFromGuest(..., billAs)`), so the
+  platform's prices and the section 9(5) GST rule apply. `guard_guest_order_origin` stops staff
+  changing platform / external id / is_test / payment. Migration:
+  `docs/migrations/2026-11-19-aggregators-sandbox.sql` (tested on local Postgres 16: 11 cases).
+- Durability: Dexie v9 indexes `kots.orderUid` and `kots.submissionId`; `kotsForBill` replaces
+  full KOT scans at settlement/print numbering, sync renumbering and table moves.

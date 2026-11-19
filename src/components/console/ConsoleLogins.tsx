@@ -1,10 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { KeyRound, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { ExternalLink, KeyRound, LifeBuoy, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ago, loadStaff, type StaffLogin } from "@/lib/console-api";
 import { createPlatformLogin, updatePlatformLogin } from "@/lib/platform-logins.functions";
+import { platformSupportHistory, platformSupportSignIn } from "@/lib/platform-support.functions";
+import { APPS } from "@/lib/staff-login-logic";
+import { HANDOFF_KEY, supportAppFor, supportReasonProblem } from "@/lib/support-logic";
 import { consoleToken } from "@/lib/console-client";
 import { STAFF_ROLES, emailProblem, restaurantDomain, suggestEmail, type StaffRole } from "@/lib/platform-login-logic";
 import { passwordProblem } from "@/lib/staff-login-logic";
@@ -25,6 +28,7 @@ export function ConsoleLogins({ restaurantId, restaurantName }: { restaurantId: 
   const staff = useQuery({ queryKey: ["console", "staff", restaurantId], queryFn: () => loadStaff(restaurantId) });
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["console"] });
   const list = staff.data ?? [];
   const domain = restaurantDomain(list.map((s) => s.email));
@@ -48,10 +52,72 @@ export function ConsoleLogins({ restaurantId, restaurantName }: { restaurantId: 
                 <p className="text-xs text-muted-foreground">{s.displayName} · {roleName(s.role)}{s.internal ? " · built-in login" : ""} · {s.devices} device{s.devices === 1 ? "" : "s"} · last sign-in {ago(s.lastSignIn)}</p>
               </div>
               <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", s.signInOff ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success")}>{s.signInOff ? "Sign-in off" : "Can sign in"}</span>
+              <Button size="sm" variant="outline" disabled={s.signInOff} title={s.signInOff ? "Sign-in is off for this login" : `Open ${APPS[supportAppFor(s.email, s.role)].name} as this user`} onClick={() => setOpening(opening === s.userId ? null : s.userId)}><LifeBuoy />Sign in as</Button>
               <Button size="sm" variant="ghost" onClick={() => setEditing(s.userId)}><Pencil />Edit</Button>
+              {opening === s.userId ? <SignInAs restaurantId={restaurantId} login={s} onDone={() => { setOpening(null); void queryClient.invalidateQueries({ queryKey: ["console", "support", restaurantId] }); }} /> : null}
             </li>
           ))}
         {!staff.isLoading && !list.length && !staff.error ? <li className="p-3 text-sm text-muted-foreground">No logins yet.</li> : null}
+      </ul>
+      <SupportHistory restaurantId={restaurantId} />
+    </div>
+  );
+}
+
+/**
+ * "Sign in as": opens this user's own app in a new tab (support-logic.ts). The reason is
+ * required and kept in the restaurant's history; the tab shows a support banner throughout.
+ */
+function SignInAs({ restaurantId, login, onDone }: { restaurantId: string; login: StaffLogin; onDone: () => void }) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const problem = supportReasonProblem(reason);
+  const app = APPS[supportAppFor(login.email, login.role)].name;
+  const open = async () => {
+    // Open the tab now, inside the click, so the browser doesn't block it as a pop-up.
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    setBusy(true);
+    try {
+      const s = await platformSupportSignIn({ data: { token: await consoleToken(), restaurantId, userId: login.userId, reason } });
+      window.localStorage.setItem(HANDOFF_KEY, JSON.stringify({ ...s, at: Date.now() }));
+      if (tab) tab.location.href = "/support"; else window.open("/support", "_blank");
+      toast.success(`Opening ${app} as ${login.email}`);
+      onDone();
+    } catch (e) { tab?.close(); toast.error(message(e)); } finally { setBusy(false); }
+  };
+  return (
+    <div className="w-full rounded-xl border border-primary/40 bg-primary-tint/40 p-3">
+      <p className="text-sm font-semibold">Open {app} as {login.displayName || login.email}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">Opens in a new tab with a support banner. That tab's browser storage switches to this restaurant, so if you also use this browser as a POS terminal, sync it first — or use a separate browser profile for support. Every sign-in is logged with your reason.</p>
+      <label className="mt-2 block text-sm font-medium">Reason
+        <input value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Owner asked to check a sync error on POS/0102" className={field} />
+      </label>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button size="sm" disabled={busy || Boolean(problem)} onClick={() => void open()}><ExternalLink />{busy ? "Opening…" : `Open ${app}`}</Button>
+        <Button size="sm" variant="ghost" onClick={onDone}><X />Cancel</Button>
+        {problem && reason ? <span className="text-xs text-muted-foreground">{problem}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function SupportHistory({ restaurantId }: { restaurantId: string }) {
+  const history = useQuery({ queryKey: ["console", "support", restaurantId], queryFn: async () => platformSupportHistory({ data: { token: await consoleToken(), restaurantId } }) });
+  const rows = history.data ?? [];
+  return (
+    <div className="mt-5">
+      <h3 className="text-sm font-semibold">Support sign-ins <span className="font-normal text-muted-foreground">· who opened which login, and why</span></h3>
+      <ul className="mt-2 divide-y divide-border rounded-xl border border-border text-sm">
+        {history.isLoading ? <li className="p-3 text-muted-foreground">Loading…</li> : null}
+        {rows.map((h) => (
+          <li key={h.at} className="flex flex-wrap gap-x-3 gap-y-0.5 p-3">
+            <span className="font-mono">{h.email}</span>
+            <span className="text-muted-foreground">{roleName(h.role)} · by {h.by || "super admin"} · {new Date(h.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span>
+            <span className="w-full text-xs text-muted-foreground">“{h.reason}”</span>
+          </li>
+        ))}
+        {!history.isLoading && !rows.length ? <li className="p-3 text-muted-foreground">No support sign-ins yet.</li> : null}
       </ul>
     </div>
   );

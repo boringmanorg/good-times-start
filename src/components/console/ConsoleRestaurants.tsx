@@ -1,42 +1,19 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Ban, Check, History, IndianRupee, MapPin, Save, Trash2 } from "lucide-react";
+import { Ban, Check, History, IndianRupee, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ago, loadPayments, loadPlans, loadRestaurants, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
+import { ago, loadPayments, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
 import { FEATURES, FEATURE_NAMES, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
-import { Failed, Loading, Panel, field } from "./ConsoleBits";
-import { ConsoleOnboard } from "./ConsoleOnboard";
-import { consoleToken } from "@/lib/console-client";
-import { platformRestaurantModels } from "@/lib/platform-restaurants.functions";
-import { modelLabel } from "@/lib/platform-restaurant-logic";
-import { ConsoleLogins } from "./ConsoleLogins";
+import { field } from "./ConsoleBits";
 
 const STATUSES = [
   { v: "active", l: "Active" }, { v: "trialing", l: "Trial" }, { v: "past_due", l: "Payment due" }, { v: "suspended", l: "Paused" }, { v: "cancelled", l: "Ended" },
 ];
 
-export function ConsoleRestaurants() {
-  const rows = useQuery({ queryKey: ["console", "restaurants"], queryFn: loadRestaurants, refetchInterval: 60_000 });
-  const plans = useQuery({ queryKey: ["console", "plans"], queryFn: loadPlans });
-  const models = useQuery({ queryKey: ["console", "models"], queryFn: async () => platformRestaurantModels({ data: { token: await consoleToken() } }) });
-  if (rows.isLoading || plans.isLoading) return <Loading what="restaurants" />;
-  if (rows.error || !rows.data) return <Failed error={rows.error} />;
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-brand text-3xl">Restaurants</h1>
-        <p className="text-sm text-muted-foreground">Plans, subscriptions, feature switches, logins and devices. Payments happen outside the software: record renewals here.</p>
-      </div>
-      <ConsoleOnboard plans={plans.data ?? []} />
-      {rows.data.map((r) => <RestaurantCard key={r.id} r={r} plans={plans.data ?? []} model={models.data?.[r.id] ?? ""} />)}
-    </div>
-  );
-}
-
 /** Restaurant info is edited only here (exclusive to the super admin): name, QR address, city, billing contacts. */
-function RestaurantInfo({ r }: { r: RestaurantRow }) {
+export function RestaurantInfo({ r }: { r: RestaurantRow }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(r.name);
   const [slug, setSlug] = useState(r.slug ?? "");
@@ -156,7 +133,22 @@ function Renewal({ r, price }: { r: RestaurantRow; price: number }) {
   );
 }
 
-function RestaurantCard({ r, plans, model }: { r: RestaurantRow; plans: PlanRow[]; model: string }) {
+/** Device seats in use per app, from the plan (or its overrides). */
+export function SeatsSummary({ r }: { r: RestaurantRow }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {(["pos", "waiter", "manager"] as SeatApp[]).map((app) => {
+        const s = r.seats[app];
+        const full = s.limit !== null && s.used >= s.limit && s.limit > 0;
+        return <div key={app} className="rounded-xl bg-secondary p-3"><p className="text-xs text-muted-foreground">{SEAT_APPS[app]} devices</p>
+          <p className={cn("text-xl font-bold tabular-nums", full && "text-warning")}>{s.limit === 0 ? "Not in plan" : seatUseText(s)}</p></div>;
+      })}
+    </div>
+  );
+}
+
+/** Plan, status, paid-until, seat and feature overrides, then renewal and payments. */
+export function SubscriptionSection({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
   const queryClient = useQueryClient();
   const a = r.account;
   const [plan, setPlan] = useState(a?.planId ?? "basic");
@@ -168,9 +160,9 @@ function RestaurantCard({ r, plans, model }: { r: RestaurantRow; plans: PlanRow[
   const [notes, setNotes] = useState(a?.notes ?? "");
   const [busy, setBusy] = useState(false);
   const planRow = plans.find((p) => p.id === plan);
+  if (!a) return <p className="text-sm text-warning">This restaurant has no subscription account yet.</p>;
 
   const save = async () => {
-    if (!a) return;
     setBusy(true);
     try {
       const seatNums = Object.fromEntries(Object.entries(seats).filter(([, v]) => v !== undefined && v !== "" && /^\d{1,4}$/.test(v)).map(([k, v]) => [k, Number(v)]));
@@ -180,94 +172,79 @@ function RestaurantCard({ r, plans, model }: { r: RestaurantRow; plans: PlanRow[
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save"); }
     finally { setBusy(false); }
   };
+  return (
+    <div className="grid gap-5 lg:grid-cols-2">
+      <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm font-medium">Plan
+            <select value={plan} onChange={(e) => setPlan(e.target.value)} className={field}>
+              {plans.filter((p) => p.active || p.id === a.planId).map((p) => <option key={p.id} value={p.id}>{p.name}{p.quote ? " (quote)" : ` · ₹${p.monthly_price}`}</option>)}
+            </select>
+          </label>
+          <label className="text-sm font-medium">Status
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className={field}>{STATUSES.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}</select>
+          </label>
+          <label className="text-sm font-medium">Paid until <span className="font-normal text-muted-foreground">(blank = no end)</span>
+            <input type="date" value={paidUntil} onChange={(e) => setPaidUntil(e.target.value)} className={field} />
+          </label>
+          <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium">
+            <input type="checkbox" checked={complimentary} onChange={(e) => setComplimentary(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />Complimentary (not billed)
+          </label>
+        </div>
+        <fieldset>
+          <legend className="text-sm font-medium">Device seats <span className="font-normal text-muted-foreground">(blank = plan's)</span></legend>
+          <div className="mt-1 grid grid-cols-3 gap-2">
+            {(["pos", "waiter", "manager"] as SeatApp[]).map((app) => {
+              const planSeats = app === "pos" ? planRow?.billdesk_seats : app === "waiter" ? planRow?.waiter_seats : planRow?.admin_seats;
+              return <label key={app} className="text-xs text-muted-foreground">{SEAT_APPS[app]}
+                <input inputMode="numeric" value={seats[app] ?? ""} placeholder={planSeats === null || planSeats === undefined ? "any" : String(planSeats)}
+                  onChange={(e) => setSeats((s) => ({ ...s, [app]: e.target.value.replace(/\D/g, "").slice(0, 4) }))} className={field} /></label>;
+            })}
+          </div>
+        </fieldset>
+        <label className="block text-sm font-medium">Notes
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} className={field} />
+        </label>
+      </div>
+      <fieldset>
+        <legend className="text-sm font-medium">Features <span className="font-normal text-muted-foreground">(Plan follows the plan; On/Off overrides it)</span></legend>
+        <ul className="mt-2 space-y-1.5">
+          {FEATURES.map((f) => {
+            const fromPlan = planRow?.features[f] === true;
+            const v = features[f];
+            const set = (next: boolean | undefined) => setFeatures((cur) => { const c = { ...cur }; if (next === undefined) delete c[f]; else c[f] = next; return c; });
+            return (
+              <li key={f} className="flex items-center justify-between gap-2 text-sm">
+                <span className={cn((v ?? fromPlan) ? "" : "text-muted-foreground")}>{FEATURE_NAMES[f]}</span>
+                <span className="inline-flex shrink-0 overflow-hidden rounded-lg border border-border text-xs font-semibold">
+                  {([["Plan", undefined], ["On", true], ["Off", false]] as const).map(([l, val]) => (
+                    <button key={l} type="button" onClick={() => set(val)} className={cn("px-2.5 py-1", v === val ? "bg-primary text-primary-foreground" : "hover:bg-secondary")}>
+                      {l === "Plan" ? `Plan (${fromPlan ? "on" : "off"})` : l}
+                    </button>
+                  ))}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
+      <div className="lg:col-span-2"><Button disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save subscription"}</Button></div>
+      <div className="lg:col-span-2"><Renewal r={r} price={planRow?.monthly_price ?? 0} /></div>
+    </div>
+  );
+}
+
+/** The restaurant's devices: activate, block or release each one. */
+export function DevicesSection({ r }: { r: RestaurantRow }) {
+  const queryClient = useQueryClient();
   const device = async (id: string, action: "active" | "blocked" | "release") => {
     try { await setTerminal(r.id, id, action); toast.success(action === "release" ? "Device released" : action === "blocked" ? "Device blocked" : "Device activated"); await queryClient.invalidateQueries({ queryKey: ["console"] }); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't change the device"); }
   };
-
   return (
-    <Panel title={r.name} action={<span className={cn("rounded-full px-2.5 py-1 text-xs font-bold", a?.live ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive")}>{a?.live ? "Live" : "Not live"}</span>}>
-      <p className="-mt-2 mb-4 text-xs text-muted-foreground">
-        {modelLabel(model) ? <>{modelLabel(model)} · </> : null}{r.city ? <><MapPin className="mr-0.5 inline size-3" />{r.city} · </> : null}{r.slug ? `/${r.slug} · ` : ""}joined {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-        {" · "}last activity {ago(r.lastActivity)} · {r.bills30d} bill changes in 30 days · {r.guestOrders7d} QR orders in 7 days
-      </p>
-
-      <RestaurantInfo r={r} />
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        {(["pos", "waiter", "manager"] as SeatApp[]).map((app) => {
-          const s = r.seats[app];
-          const full = s.limit !== null && s.used >= s.limit && s.limit > 0;
-          return <div key={app} className="rounded-xl bg-secondary p-3"><p className="text-xs text-muted-foreground">{SEAT_APPS[app]} devices</p>
-            <p className={cn("text-xl font-bold tabular-nums", full && "text-warning")}>{s.limit === 0 ? "Not in plan" : seatUseText(s)}</p></div>;
-        })}
-      </div>
-
-      {a ? (
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-sm font-medium">Plan
-                <select value={plan} onChange={(e) => setPlan(e.target.value)} className={field}>
-                  {plans.filter((p) => p.active || p.id === a.planId).map((p) => <option key={p.id} value={p.id}>{p.name}{p.quote ? " (quote)" : ` · ₹${p.monthly_price}`}</option>)}
-                </select>
-              </label>
-              <label className="text-sm font-medium">Status
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className={field}>{STATUSES.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}</select>
-              </label>
-              <label className="text-sm font-medium">Paid until <span className="font-normal text-muted-foreground">(blank = no end)</span>
-                <input type="date" value={paidUntil} onChange={(e) => setPaidUntil(e.target.value)} className={field} />
-              </label>
-              <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium">
-                <input type="checkbox" checked={complimentary} onChange={(e) => setComplimentary(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />Complimentary (not billed)
-              </label>
-            </div>
-            <fieldset>
-              <legend className="text-sm font-medium">Device seats <span className="font-normal text-muted-foreground">(blank = plan's)</span></legend>
-              <div className="mt-1 grid grid-cols-3 gap-2">
-                {(["pos", "waiter", "manager"] as SeatApp[]).map((app) => {
-                  const planSeats = app === "pos" ? planRow?.billdesk_seats : app === "waiter" ? planRow?.waiter_seats : planRow?.admin_seats;
-                  return <label key={app} className="text-xs text-muted-foreground">{SEAT_APPS[app]}
-                    <input inputMode="numeric" value={seats[app] ?? ""} placeholder={planSeats === null || planSeats === undefined ? "any" : String(planSeats)}
-                      onChange={(e) => setSeats((s) => ({ ...s, [app]: e.target.value.replace(/\D/g, "").slice(0, 4) }))} className={field} /></label>;
-                })}
-              </div>
-            </fieldset>
-            <label className="block text-sm font-medium">Notes
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} className={field} />
-            </label>
-          </div>
-          <fieldset>
-            <legend className="text-sm font-medium">Features <span className="font-normal text-muted-foreground">(Plan follows the plan; On/Off overrides it)</span></legend>
-            <ul className="mt-2 space-y-1.5">
-              {FEATURES.map((f) => {
-                const fromPlan = planRow?.features[f] === true;
-                const v = features[f];
-                const set = (next: boolean | undefined) => setFeatures((cur) => { const c = { ...cur }; if (next === undefined) delete c[f]; else c[f] = next; return c; });
-                return (
-                  <li key={f} className="flex items-center justify-between gap-2 text-sm">
-                    <span className={cn((v ?? fromPlan) ? "" : "text-muted-foreground")}>{FEATURE_NAMES[f]}</span>
-                    <span className="inline-flex shrink-0 overflow-hidden rounded-lg border border-border text-xs font-semibold">
-                      {([["Plan", undefined], ["On", true], ["Off", false]] as const).map(([l, val]) => (
-                        <button key={l} type="button" onClick={() => set(val)} className={cn("px-2.5 py-1", v === val ? "bg-primary text-primary-foreground" : "hover:bg-secondary")}>
-                          {l === "Plan" ? `Plan (${fromPlan ? "on" : "off"})` : l}
-                        </button>
-                      ))}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </fieldset>
-          <div className="lg:col-span-2"><Button disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save subscription"}</Button></div>
-          <div className="lg:col-span-2"><Renewal r={r} price={planRow?.monthly_price ?? 0} /></div>
-        </div>
-      ) : <p className="mt-4 text-sm text-warning">This restaurant has no subscription account yet.</p>}
-
-      <ConsoleLogins restaurantId={r.id} restaurantName={r.name} />
-
-      <h3 className="mt-6 text-sm font-semibold">Devices</h3>
-      <div className="mt-2 overflow-x-auto">
+    <div className="space-y-4">
+      <SeatsSummary r={r} />
+      <div className="overflow-x-auto rounded-xl border border-border px-3">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="text-xs text-muted-foreground"><tr><th className="py-2 pr-3">Device</th><th className="pr-3">App</th><th className="pr-3">Login</th><th className="pr-3">Last seen</th><th className="pr-3">Status</th><th /></tr></thead>
           <tbody className="divide-y divide-border">
@@ -290,6 +267,6 @@ function RestaurantCard({ r, plans, model }: { r: RestaurantRow; plans: PlanRow[
           </tbody>
         </table>
       </div>
-    </Panel>
+    </div>
   );
 }

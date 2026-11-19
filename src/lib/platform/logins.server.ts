@@ -21,6 +21,12 @@ export async function superAdminFromToken(token: string): Promise<string> {
   return user.id;
 }
 
+/** The super admin's own email, for the support log. */
+export async function superAdminEmail(userId: string): Promise<string> {
+  const { data } = await admin().auth.admin.getUserById(userId);
+  return (data?.user?.email as string | undefined) ?? "";
+}
+
 interface Member { user_id: string; role: string; display_name: string; email: string }
 
 async function members(restaurantId: string): Promise<(Member & { signInOff: boolean })[]> {

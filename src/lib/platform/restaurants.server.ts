@@ -61,7 +61,7 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
     slug: slug || null,
     city: input.city.trim().slice(0, 80),
     account_id: accountId,
-    branding: { model },
+    branding: { model, product: "restaurant_pos" },
   }).select("id").single();
   if (rErr || !rest) {
     await admin().from("accounts").delete().eq("id", accountId);
@@ -95,12 +95,15 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
   return { restaurantId, accountId, ownerUserId: owner.userId, ownerEmail: owner.email };
 }
 
-/** restaurant id → business model, for the console list (platform_restaurants predates the model). */
-export async function restaurantModels(): Promise<Record<string, string>> {
+/**
+ * restaurant id → business model and XTSY product, for the console (platform_restaurants predates
+ * both). Both live in restaurants.branding; no product means Restaurant POS (see products.ts).
+ */
+export async function restaurantModels(): Promise<Record<string, { model: string; product: string }>> {
   const { data } = await admin().from("restaurants").select("id, branding");
-  const out: Record<string, string> = {};
-  for (const r of (data ?? []) as { id: string; branding: { model?: string } | null }[]) {
-    if (r.branding?.model) out[r.id] = r.branding.model;
+  const out: Record<string, { model: string; product: string }> = {};
+  for (const r of (data ?? []) as { id: string; branding: { model?: string; product?: string } | null }[]) {
+    out[r.id] = { model: r.branding?.model ?? "", product: r.branding?.product ?? "" };
   }
   return out;
 }

@@ -27,7 +27,7 @@ async function retargetKots(
 ): Promise<[RecordKind, string][]> {
   if (!orderUid) return [];
   const db = getDb();
-  const kots = await db.kots.filter((k) => k.orderUid === orderUid).toArray();
+  const kots = await db.kots.where("orderUid").equals(orderUid).toArray();
   for (const kot of kots) {
     if (kot.id === undefined) continue;
     await db.kots.update(kot.id, {

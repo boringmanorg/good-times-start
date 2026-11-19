@@ -1,5 +1,6 @@
 import { consoleClient } from "./console-client";
 import type { Feature, SeatApp } from "./plans";
+import type { IntegrationLink, IntegrationMode, Platform, SandboxDish, SandboxLine, SandboxOrderRow } from "./aggregator-logic";
 
 /* Super admin console: thin wrappers over the platform_* cloud functions (super admin only). */
 
@@ -76,3 +77,12 @@ export const ago = (iso: string | null, now = Date.now()) => {
   if (m < 48 * 60) return `${Math.round(m / 60)} h ago`;
   return `${Math.round(m / 1440)} days ago`;
 };
+
+/* Swiggy / Zomato (aggregator-logic.ts): per-restaurant sandbox, set only by the super admin. */
+export const loadIntegrations = (restaurant: string) =>
+  rpc<{ links: IntegrationLink[]; tests: SandboxOrderRow[] }>("platform_integrations", { _restaurant: restaurant });
+export const setIntegration = (restaurant: string, platform: Platform, mode: IntegrationMode, storeId: string) =>
+  rpc<void>("platform_set_integration", { _restaurant: restaurant, _platform: platform, _mode: mode, _store_id: storeId });
+export const loadSandboxMenu = (restaurant: string) => rpc<SandboxDish[]>("platform_menu_dishes", { _restaurant: restaurant });
+export const sendTestOrder = (restaurant: string, platform: Platform, lines: SandboxLine[], customer: string) =>
+  rpc<{ code: string; id: string; subtotal: number }>("platform_send_test_order", { _restaurant: restaurant, _platform: platform, _lines: lines, _customer: customer });

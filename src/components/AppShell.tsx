@@ -24,6 +24,8 @@ import { OutletSwitcher } from "@/components/OutletSwitcher";
 import { currentDevice, setAppMode, syncAppModeFromUrl, useAppMode } from "@/lib/app-mode";
 import { touchTerminal, useTerminalStatus } from "@/lib/terminal-actions";
 import { isLovablePreview } from "@/lib/preview-host";
+import { isSupportSession } from "@/lib/support-session";
+import { SupportBanner } from "./SupportBanner";
 import { APP_DEVICES, APPS, APP_LINKS, accessProblem, appsFor, type AppKind } from "@/lib/staff-login-logic";
 import { isTestBrowser } from "@/lib/test-browser";
 import { SyncConflictAlert } from "@/components/SyncConflictAlert";
@@ -341,7 +343,9 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
     return <AccessBlocked problem={`Waiter Pro isn't part of the ${plan?.planName ?? "current"} plan. It comes with Pro and Enterprise / Brand: contact XTSY to upgrade.`} own={appsFor(user.login, user.role).find((a) => a !== "waiter") ?? null} />;
   }
   // Each login keeps to its own app and devices, as the admin set them.
-  const problem = staffApp && user && (user.login || user.role !== "unknown")
+  // XTSY support sees the user's app on whatever computer it uses: no app/device rule, no approval.
+  const support = isSupportSession();
+  const problem = staffApp && user && !support && (user.login || user.role !== "unknown")
     ? accessProblem({ login: user.login, role: user.role === "unknown" ? null : user.role, row: user.loginRow, app: pathname.startsWith("/waiter") ? "waiter" : app, device: currentDevice() })
     : null;
   if (problem && user) {
@@ -351,10 +355,10 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
     return <AccessBlocked problem={problem} own={other} />;
   }
   // A device seen for the first time waits for the admin to approve and name it (admin devices are approved at once).
-  if (staffApp && user && rid && terminal === "pending" && !isTestBrowser() && !isLovablePreview()) {
+  if (staffApp && user && rid && terminal === "pending" && !support && !isTestBrowser() && !isLovablePreview()) {
     return <TerminalWaiting restaurantId={rid} app={pathname.startsWith("/waiter") ? "waiter" : app} device={currentDevice()} />;
   }
-  const gates = staffApp ? <><PolicySync /><PinGate /></> : null;
+  const gates = staffApp ? <><SupportBanner /><PolicySync /><PinGate /></> : null;
   if (!framed) return <>{gates}{children}</>;
   return <FrameContext.Provider value={setTone}>{gates}<Frame tone={tone}>{children}</Frame></FrameContext.Provider>;
 }

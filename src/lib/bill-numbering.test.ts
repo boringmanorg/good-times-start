@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./restaurant-numbering", () => ({ allocateRestaurantNumber: mocks.allocate, allocatedNumberRequestId: mocks.requestId }));
 vi.mock("./db", () => ({
   markDirty: mocks.dirty,
+  kotsForBill: async (uid: string | undefined, id: number | undefined) => mocks.kots.filter((k) => (!!uid && k.orderUid === uid) || (id !== undefined && k.orderId === id)),
   getDb: () => ({
     kots: {
       filter: (fn: (k: (typeof mocks.kots)[number]) => boolean) => ({ toArray: async () => mocks.kots.filter(fn) }),

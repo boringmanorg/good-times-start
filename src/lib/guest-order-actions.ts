@@ -11,6 +11,7 @@ import { setWhatsappConsent } from "./marketing-actions";
 import { billWithGuestLines, cartLinesFromGuest, needsTableOnAccept, orderTypeFor, publicOrderNote, qrSeriesLabel, splitMapPin, type GuestOrder, type GuestStatus } from "./guest-order-logic";
 import { orderingSaveError } from "./qr-ordering";
 import { syncCloudData } from "./cloud-sync";
+import { platformOrderType } from "./aggregator-logic";
 
 const ACTIVE: GuestStatus[] = ["new", "accepted", "ready"];
 
@@ -75,8 +76,9 @@ async function ensureReadyForBilling(restaurantId: string): Promise<void> {
 async function openBillFor(guest: GuestOrder, seatAt?: string): Promise<{ order: Order; kots: Kot[]; missing: string[] }> {
   const db = getDb();
   const [menu, settings] = await Promise.all([db.menu.toArray(), getSettings()]);
-  const orderType = orderTypeFor(guest.channel, guest.order_type);
-  const { lines, missing } = cartLinesFromGuest(guest.lines, menu, guest.channel, guest.order_type);
+  // Swiggy/Zomato orders are billed as such: the platform's prices and its GST rule (section 9(5)).
+  const orderType = platformOrderType(guest, orderTypeFor(guest.channel, guest.order_type));
+  const { lines, missing } = cartLinesFromGuest(guest.lines, menu, guest.channel, guest.order_type, orderType);
   const now = Date.now();
   // Table/room QR: its own table. Public dine-in: the table staff chose when accepting.
   const tableId = guest.channel === "table" ? guest.table_id ?? undefined : needsTableOnAccept(guest) ? seatAt : undefined;

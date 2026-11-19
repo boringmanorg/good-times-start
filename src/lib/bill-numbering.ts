@@ -1,5 +1,5 @@
 import type { Order } from "./types";
-import { getDb, markDirty } from "./db";
+import { getDb, kotsForBill, markDirty } from "./db";
 import { allocateRestaurantNumber, allocatedNumberRequestId } from "./restaurant-numbering";
 import type { RecordKind } from "./sync-core";
 
@@ -39,7 +39,7 @@ export async function withBillNumber<T extends Order>(order: T): Promise<T> {
 export async function stampKotsWithBillNo(order: Order): Promise<[RecordKind, string][]> {
   if (!hasBillNumber(order)) return [];
   const db = getDb();
-  const tickets = await db.kots.filter((k) => (!!order.uid && k.orderUid === order.uid) || (order.id !== undefined && k.orderId === order.id)).toArray();
+  const tickets = await kotsForBill(order.uid || undefined, order.id);
   const changed: [RecordKind, string][] = [];
   for (const k of tickets) {
     if (k.id === undefined || k.billNo === order.billNo) continue;

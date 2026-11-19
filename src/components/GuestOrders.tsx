@@ -23,6 +23,8 @@ import { sortGuestOrders, splitMapPin, type GuestOrder, guestOrderClosing, needs
 import { Segmented } from "@/components/Segmented";
 import { fillTemplate, waLink } from "@/lib/marketing-logic";
 import { useRestaurantSettings } from "@/lib/use-settings";
+import { guestPlatform, platformBadge, PLATFORM_NAMES } from "@/lib/aggregator-logic";
+import { useIntegrations } from "@/lib/use-integrations";
 import { cn } from "@/lib/utils";
 import { guestPaymentProofLink } from "@/lib/guest-payment.functions";
 import { acceptBlockedReason, canConfirmForPayment, isPayState, payLabel, type PayState } from "@/lib/guest-payment-logic";
@@ -97,7 +99,9 @@ export function GuestOrdersButton() {
   const plan = useEntitlements();
   const account = useAccount().data;
   const ordering = account?.outlet.ordering ?? {};
-  const enabled = !!user?.restaurantId && user.role !== "kitchen" && (!!ordering.table || !!ordering.online);
+  // Swiggy/Zomato orders (sandbox or live) arrive in the same inbox, even with QR ordering off.
+  const platformsOn = (useIntegrations(user?.restaurantId).data ?? []).length > 0;
+  const enabled = !!user?.restaurantId && user.role !== "kitchen" && (!!ordering.table || !!ordering.online || platformsOn);
   const orders: GuestOrder[] = useGuestOrders(user?.restaurantId ?? null, enabled).data ?? [];
   const waiting = orders.filter((o) => o.status === "new");
   const bookings = useReservations();
@@ -133,7 +137,8 @@ export function GuestOrdersButton() {
       const fresh = waiting.filter((o) => !seen.current?.has(o.id));
       if (fresh.length) {
         if (audio.current) { void audio.current.resume(); chime(audio.current); }
-        toast(`New ${fresh[0]?.channel === "table" ? `table order from ${fresh[0]?.table_label ?? "a table"}` : "pickup order"}`, { action: { label: "Open", onClick: () => { setBookingView("qr"); setBookingOpen(true); } } });
+        const p = fresh[0] ? guestPlatform(fresh[0]) : null;
+        toast(p ? `New ${PLATFORM_NAMES[p]} order${fresh[0]?.is_test ? " (sandbox test)" : ""}` : `New ${fresh[0]?.channel === "table" ? `table order from ${fresh[0]?.table_label ?? "a table"}` : "pickup order"}`, { action: { label: "Open", onClick: () => { setBookingView("qr"); setBookingOpen(true); } } });
       }
     }
     seen.current = ids;
@@ -142,7 +147,7 @@ export function GuestOrdersButton() {
   if (!user?.restaurantId || user.role === "kitchen") return null;
   // Plan: QR orders come with Pro and up, table reservations with Pro Lite and up. Anything already
   // waiting still shows, so nothing gets stuck when a plan changes.
-  const showQr = featureOn(plan, "qr_ordering") || requestCount > 0;
+  const showQr = featureOn(plan, "qr_ordering") || platformsOn || requestCount > 0;
   const showTables = featureOn(plan, "bookings") || bookingRequests.length > 0;
   const view = !showQr ? "tables" : !showTables ? "qr" : bookingView;
   return (
@@ -256,6 +261,7 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
   const seats = useMemo(() => seatingChoices(floor ?? []), [floor]);
   const [seatAt, setSeatAt] = useState("");
   const delivery = order.channel === "online" && order.order_type === "delivery";
+  const platform = guestPlatform(order);
   const publicDineIn = order.channel === "online" && order.order_type === "dine-in";
   // Prepaid orders: the guest pays only after we confirm, and the kitchen waits for the money.
   const pay: PayState = isPayState(order.pay_state) ? order.pay_state : "none";
@@ -300,6 +306,7 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
         <div>
           <div className="flex items-center gap-2">
             <span className="text-lg font-extrabold">{order.code}</span>
+            {platform ? <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", platform === "swiggy" ? "bg-[#fc8019] text-black" : "bg-[#e23744] text-white")}>{platformBadge(order)}</span> : null}
             <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">
               {order.channel === "table" ? <><UtensilsCrossed className="size-3" />{placeName(order.table_label ?? "")}</>
                 : delivery ? <><Truck className="size-3" />Delivery</>
@@ -337,6 +344,11 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
           </select>
         </label>
       ) : null}
+      {platform ? (
+        <p className="mt-2 inline-flex flex-wrap items-center gap-1 text-xs font-semibold text-success">
+          <Check className="size-3.5" />Paid on {PLATFORM_NAMES[platform]} · settle the bill by Wallet{order.is_test ? " · test order, not real" : ""}
+        </p>
+      ) : null}
       {order.payment === "upi" ? (
         <p className={cn("mt-2 inline-flex flex-wrap items-center gap-1 text-xs font-semibold", pay === "paid" ? "text-success" : pay === "none" ? "text-primary" : "text-warning")}>
           <Smartphone className="size-3.5" />{payLabel(pay, order.payment)}{order.upi_ref ? ` · ref ${order.upi_ref}` : ""}
@@ -360,7 +372,7 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
             <Button variant="ghost" className="text-destructive" disabled={busy} onClick={() => setRejecting(true)}><X />Reject</Button>
             {payBlocked && !canConfirmForPayment(order.status, pay) ? <p className="w-full text-xs text-muted-foreground">{payBlocked}</p> : null}
           </> : null}
-          {order.status === "accepted" && order.channel === "online" && !publicDineIn ? <ConfirmButton id={`ready-${order.id}`} disabled={busy} onConfirm={markReady} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={delivery ? "Tap again: tell guest it's on the way" : "Tap again: tell guest it's ready"}>{delivery ? <Truck /> : <Check />}{delivery ? "Out for delivery" : "Ready for pickup"}</ConfirmButton> : null}
+          {order.status === "accepted" && order.channel === "online" && !publicDineIn ? <ConfirmButton id={`ready-${order.id}`} disabled={busy} onConfirm={markReady} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={platform ? "Tap again: rider picked it up" : delivery ? "Tap again: tell guest it's on the way" : "Tap again: tell guest it's ready"}>{delivery ? <Truck /> : <Check />}{platform ? `Handed to ${PLATFORM_NAMES[platform]} rider` : delivery ? "Out for delivery" : "Ready for pickup"}</ConfirmButton> : null}
           {order.status === "ready" && order.customer_phone ? <Button variant="outline" asChild><a href={waLink(order.customer_phone, readyText)} target="_blank" rel="noreferrer"><Send />WhatsApp guest</a></Button> : null}
           {order.status === "accepted" && (order.channel === "table" || publicDineIn) ? <ConfirmButton id={`served-${order.id}`} disabled={busy} onConfirm={() => status("completed")} className={buttonVariants({ variant: "secondary" })} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again"><Check />Served</ConfirmButton> : null}
           {order.status === "ready" ? <ConfirmButton id={`picked-${order.id}`} disabled={busy} onConfirm={() => status("completed")} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm="Tap again"><Check />{delivery ? "Delivered" : "Picked up"}</ConfirmButton> : null}

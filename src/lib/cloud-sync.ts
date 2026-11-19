@@ -4,7 +4,7 @@ import { flushOfflineClaims, freshRestaurantNumber } from "@/lib/restaurant-numb
 import { SyncScheduler } from "./sync-scheduler";
 import { startTerminalSignals } from "./terminal-signal";
 import type { Json } from "@/integrations/supabase/types";
-import { applyEntryToLevels, getDb, getSettings, markDirty, onLocalChange, type OutboxEntry } from "@/lib/db";
+import { applyEntryToLevels, getDb, kotsForBill, getSettings, markDirty, onLocalChange, type OutboxEntry } from "@/lib/db";
 import { deductInventory } from "@/lib/inventory";
 import { withCustomerId } from "@/lib/customer-logic";
 import { recordSaleConsumption } from "@/lib/stock-actions";
@@ -153,7 +153,7 @@ async function renumberStuckRecord(row: PushRow, message: string | undefined): P
       if (!local || local.id === undefined) return false;
       const { number, requestId } = await freshRestaurantNumber("POS");
       await db.orders.put({ ...local, billNo: number, numberRequestId: requestId, ...(local.billNo !== number ? { printedBillNo: local.printedBillNo ?? local.billNo } : {}), synced: false });
-      const tickets = await db.kots.filter((k) => k.orderUid === local.uid || (local.id !== undefined && k.orderId === local.id)).toArray();
+      const tickets = await kotsForBill(local.uid, local.id);
       for (const k of tickets) if (k.id !== undefined) await db.kots.put({ ...k, billNo: number });
       await markDirty(["order", row.record_id], ...tickets.map((k): [RecordKind, string] => ["kot", k.uid ?? ""]));
       return true;
@@ -163,7 +163,7 @@ async function renumberStuckRecord(row: PushRow, message: string | undefined): P
     const submissionId = local.submissionId && /^[0-9a-f-]{36}$/i.test(local.submissionId) ? local.submissionId : crypto.randomUUID();
     const { number: kotNo, requestId: numberRequestId } = await freshRestaurantNumber("KOT");
     const siblings = local.submissionId
-      ? await db.kots.filter((k) => k.submissionId === local.submissionId).toArray()
+      ? await db.kots.where("submissionId").equals(local.submissionId).toArray()
       : [local];
     for (const k of siblings) {
       if (k.id === undefined) continue;

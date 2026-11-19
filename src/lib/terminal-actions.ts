@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isLovablePreview } from "./preview-host";
+import { isSupportSession } from "./support-session";
 import { getDb, getDeviceCode } from "./db";
 import type { AppKind, DeviceKind } from "./staff-login-logic";
 
@@ -21,11 +22,13 @@ const db = () => supabase as unknown as { from: (t: string) => any; rpc: (f: str
 
 export async function getDeviceId(): Promise<string> {
   const meta = getDb().meta;
+  // XTSY support works under its own device id, so the restaurant's audit log shows its changes as support's.
+  const key = isSupportSession() ? "supportDeviceId" : "deviceId";
   return getDb().transaction("rw", meta, async () => {
-    const stored = (await meta.get("deviceId"))?.value;
+    const stored = (await meta.get(key))?.value;
     if (typeof stored === "string" && /^[a-z0-9-]{8,64}$/.test(stored)) return stored;
-    const id = crypto.randomUUID().toLowerCase();
-    await meta.put({ key: "deviceId", value: id });
+    const id = key === "supportDeviceId" ? `xtsy-support-${crypto.randomUUID().slice(0, 18)}` : crypto.randomUUID().toLowerCase();
+    await meta.put({ key, value: id });
     return id;
   });
 }
@@ -51,6 +54,8 @@ export async function touchTerminal(restaurantId: string, app: AppKind, kind: De
   // Lovable's editor preview is XTSY's workbench, never a restaurant terminal: it doesn't
   // register, take a seat, or go through first-login approval.
   if (isLovablePreview()) { setTerminalStatus("active"); return; }
+  // An XTSY support session is not a restaurant terminal either: no seat, no approval.
+  if (isSupportSession()) { setTerminalStatus("active"); return; }
   try {
     const [device, series] = await Promise.all([getDeviceId(), getDeviceCode()]);
     const { data, error } = await db().rpc("touch_terminal", { _restaurant: restaurantId, _device: device, _series: series, _app: app, _kind: kind });

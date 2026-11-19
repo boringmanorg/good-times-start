@@ -26,6 +26,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StockRouteImport } from './routes/stock'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as TablesRouteImport } from './routes/tables'
 import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
@@ -117,6 +118,11 @@ const StockRoute = StockRouteImport.update({
   path: '/stock',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TablesRoute = TablesRouteImport.update({
   id: '/tables',
   path: '/tables',
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
+  '/support': typeof SupportRoute
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
+  '/support': typeof SupportRoute
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
+  '/support': typeof SupportRoute
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/sitemap.xml'
     | '/stock'
+    | '/support'
     | '/tables'
     | '/waiter'
     | '/xtsy-pos'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/sitemap.xml'
     | '/stock'
+    | '/support'
     | '/tables'
     | '/waiter'
     | '/xtsy-pos'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/sitemap.xml'
     | '/stock'
+    | '/support'
     | '/tables'
     | '/waiter'
     | '/xtsy-pos'
@@ -309,6 +321,7 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StockRoute: typeof StockRoute
+  SupportRoute: typeof SupportRoute
   TablesRoute: typeof TablesRoute
   WaiterRoute: typeof WaiterRoute
   XtsyPosRoute: typeof XtsyPosRoute
@@ -437,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tables': {
       id: '/tables'
       path: '/tables'
@@ -493,6 +513,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StockRoute: StockRoute,
+  SupportRoute: SupportRoute,
   TablesRoute: TablesRoute,
   WaiterRoute: WaiterRoute,
   XtsyPosRoute: XtsyPosRoute,
