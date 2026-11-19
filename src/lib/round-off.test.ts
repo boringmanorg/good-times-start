@@ -37,3 +37,45 @@ describe('round-off never blocks a settled bill', () => {
     expect(settledValueProblem({ total: 1163, taxable: 1163.41, roundOff: 0 })).toMatch(/more than/);
   });
 });
+
+import { roundOffOffer, withManualRoundOff, paymentSummary } from './payment-logic';
+
+describe('the cashier rounds the bill to what the guest paid', () => {
+  const bill = computeTotals([line(1662, 1)], 30, 0, { exempt: true, roundToRupee: true }); // ₹1163, auto −0.40
+
+  it('guest pays ₹1162 on ₹1163: offered, settles at ₹1162 with −₹1.40 round-off, and the cloud rule passes', () => {
+    const entries = [{ mode: 'upi' as const, amount: 662 }, { mode: 'cash' as const, amount: 500 }];
+    expect(roundOffOffer(entries, bill.total, bill.roundOff)).toEqual({ payTotal: 1162, adjust: -1 });
+    const t = withManualRoundOff(bill, 1163, 1162);
+    if (typeof t === 'string') throw new Error(t);
+    expect(t.total).toBe(1162);
+    expect(t.roundOff).toBe(-1.4);
+    expect(t.taxable).toBe(1163.4); // tax and GST figures are untouched
+    expect(settledValueProblem(t)).toBeNull();
+    expect(paymentSummary(entries, t.total).complete).toBe(true);
+    expect(settledPayments(entries, t.total).reduce((s, p) => s + p.amount, 0)).toBe(1162);
+  });
+
+  it('UPI of ₹1165 on ₹1163 with no cash: round up +₹2 instead of refusing', () => {
+    expect(roundOffOffer([{ mode: 'upi', amount: 1165 }], 1163, -0.4)).toEqual({ payTotal: 1165, adjust: 2 });
+  });
+
+  it('cash over is change, not round-off', () => {
+    expect(roundOffOffer([{ mode: 'cash', amount: 1200 }], 1163, -0.4)).toBeNull();
+  });
+
+  it('nothing to offer when the payment is exact or nothing is entered', () => {
+    expect(roundOffOffer([{ mode: 'cash', amount: 1163 }], 1163, -0.4)).toBeNull();
+    expect(roundOffOffer([{ mode: 'cash', amount: 0 }], 1163, -0.4)).toBeNull();
+  });
+
+  it('the whole round-off stays within ±₹100', () => {
+    expect(roundOffOffer([{ mode: 'cash', amount: 1063.4 }], 1163, -0.4)).toEqual({ payTotal: 1063.4, adjust: -99.6 });
+    expect(roundOffOffer([{ mode: 'cash', amount: 1063 }], 1163, -0.4)).toBeNull();
+    expect(withManualRoundOff(bill, 1163, 1062)).toMatch(/can't be more than ₹100/);
+  });
+
+  it('refuses if the bill changed on another device after payment was entered', () => {
+    expect(withManualRoundOff(bill, 1100, 1099)).toMatch(/This bill is now 1,163/);
+  });
+});

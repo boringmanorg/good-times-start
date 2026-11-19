@@ -208,9 +208,9 @@ function PosPage() {
     if (mode === "upi" && settings.upiVpa) { setUpiOpen(true); return; }
     done(await cart.settle(mode, closedBy, settleOptions));
   };
-  const payWith = async (payments: Payment[]) => done(await cart.settle(payments, closedBy, settleOptions));
-  const payPart = async (quantities: Record<string, number>, payments: Payment[]) => {
-    const o = await cart.settlePart(quantities, payments, closedBy);
+  const payWith = async (payments: Payment[], roundTo?: { seen: number; pay: number }) => done(await cart.settle(payments, closedBy, roundTo ? { ...settleOptions, roundTo } : settleOptions));
+  const payPart = async (quantities: Record<string, number>, payments: Payment[], roundTo?: { seen: number; pay: number }) => {
+    const o = await cart.settlePart(quantities, payments, closedBy, roundTo);
     if (o) { setReceipt(o); setPayOpen(false); }
   };
 

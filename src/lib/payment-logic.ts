@@ -1,3 +1,4 @@
+import { MAX_ROUND_OFF } from "./billing";
 import type { Order, PaymentMode } from "./types";
 
 export const PAYMENT_MODES: { v: PaymentMode; l: string }[] = [
@@ -56,4 +57,33 @@ export function repairedSettlementPayments(order: Pick<Order, "status" | "total"
 /** Highest discount a role may give without an owner or manager. */
 export function maxDiscountFor(role: string, staffLimit: number): number {
   return role === "owner" || role === "manager" || role === "unknown" ? 100 : Math.max(0, staffLimit);
+}
+
+/**
+ * The round-off the counter can offer: settle at what the guest actually paid.
+ * Offered when they paid a little less (₹1162 on ₹1163), or more by UPI/card with
+ * no cash to give change from. The bill's whole round-off stays within ±₹100.
+ */
+export function roundOffOffer(entries: Payment[], total: number, autoRoundOff: number): { payTotal: number; adjust: number } | null {
+  const s = paymentSummary(entries, total);
+  if (s.tendered <= 0) return null;
+  const cash = r2(entries.filter((p) => p.mode === "cash").reduce((sum, p) => sum + Math.max(0, p.amount), 0));
+  const target = s.remaining > 0 ? s.tendered : s.tendered > total && cash === 0 ? s.tendered : null;
+  if (target === null) return null;
+  const adjust = r2(target - total);
+  if (adjust === 0 || Math.abs(r2(autoRoundOff + adjust)) > MAX_ROUND_OFF) return null;
+  return { payTotal: target, adjust };
+}
+
+/**
+ * Apply a round-off the cashier chose. `seenTotal` is the total the payment screen
+ * showed: if the bill changed since (another device added items), refuse rather
+ * than quietly rounding the new items away.
+ */
+export function withManualRoundOff<T extends { total: number; roundOff: number }>(t: T, seenTotal: number, payTotal: number): T | string {
+  if (Math.abs(t.total - seenTotal) > 0.005) return `This bill is now ${t.total.toLocaleString("en-IN")}. Take payment again.`;
+  if (!Number.isFinite(payTotal) || payTotal <= 0) return "Enter what the guest paid";
+  const roundOff = r2(t.roundOff + payTotal - t.total);
+  if (Math.abs(roundOff) > MAX_ROUND_OFF) return `Round-off can't be more than ₹${MAX_ROUND_OFF} either way`;
+  return { ...t, total: r2(payTotal), roundOff };
 }

@@ -11,7 +11,7 @@ import { mergeSentLines, newUid, sameLines, type RecordKind } from "./sync-core"
 import { applyLocalStockSale } from "./cloud-sync";
 import { buildLine, priceFor } from "./menu-logic";
 import { latestHeldOrder } from "./table-actions";
-import { settledPayments, type Payment } from "./payment-logic";
+import { settledPayments, withManualRoundOff, type Payment } from "./payment-logic";
 import { splitLines } from "./bill-splitting";
 import { rememberCustomer } from "./customer-actions";
 import { withCustomerId } from "./customer-logic";
@@ -501,7 +501,7 @@ export function useCart(initialTableId?: string) {
   const settle = useCallback(async (
     payment: PaymentMode | Payment[],
     closedBy?: string,
-    options: { autoKot?: boolean; onKots?: (kots: Kot[]) => void } = {},
+    options: { autoKot?: boolean; onKots?: (kots: Kot[]) => void; roundTo?: { seen: number; pay: number } } = {},
   ): Promise<Order | null> => {
     if (!lines.length) return null;
     if (Array.isArray(payment) && giftPaymentProblem(payment)) { toast.error(giftPaymentProblem(payment)); return null; }
@@ -522,7 +522,12 @@ export function useCart(initialTableId?: string) {
       if (checked === false) return null;
       latest = checked;
     }
-    const t = computeTotals(billLines, discountPct, serviceChargePct, tax);
+    let t = computeTotals(billLines, discountPct, serviceChargePct, tax);
+    if (options.roundTo) {
+      const rounded = withManualRoundOff(t, options.roundTo.seen, options.roundTo.pay);
+      if (typeof rounded === "string") { toast.error(rounded); return null; }
+      t = rounded;
+    }
     const payments = settledPayments(Array.isArray(payment) ? payment : [{ mode: payment, amount: t.total }], t.total);
     const received = payments.reduce((sum, p) => sum + p.amount, 0);
     if (received + 0.01 < t.total) {
@@ -577,20 +582,25 @@ export function useCart(initialTableId?: string) {
    * Settle part of a running bill now (guests paying separately). The chosen
    * quantities become their own settled bill; the rest stays on the table.
    */
-  const settlePart = useCallback(async (quantities: Record<string, number>, payment: Payment[], closedBy?: string): Promise<Order | null> => {
+  const settlePart = useCallback(async (quantities: Record<string, number>, payment: Payment[], closedBy?: string, roundTo?: { seen: number; pay: number }): Promise<Order | null> => {
     if (payment.some(p => p.mode === 'gift_card')) { toast.error('Use Whole bill with a gift card; the remaining amount can be paid by Cash, UPI or Card'); return null; }
     const latest = await checkStillOpen();
     if (latest === false) return null;
     if (!latest) { toast.error("This running bill is no longer available. Refresh the table before splitting payment."); return null; }
     const { split, remaining } = splitLines(lines, quantities);
     if (!split.length) { toast.error("Choose at least one item to split off"); return null; }
-    if (!remaining.length) return settle(payment, closedBy);
+    if (!remaining.length) return settle(payment, closedBy, roundTo ? { roundTo } : {});
 
     const db = getDb();
     const latestKots = latest.id === undefined ? [] : await kotsForOrder(latest.id, latest.uid);
     const latestRawSubmitted = latestKots.length ? submittedQuantitiesFromKots(latestKots) : undefined;
     const now = Date.now();
-    const t = computeTotals(split, discountPct, serviceChargePct, tax);
+    let t = computeTotals(split, discountPct, serviceChargePct, tax);
+    if (roundTo) {
+      const rounded = withManualRoundOff(t, roundTo.seen, roundTo.pay);
+      if (typeof rounded === "string") { toast.error(rounded); return null; }
+      t = rounded;
+    }
     const valueProblem = settledValueProblem(t);
     if (valueProblem) { toast.error(valueProblem); return null; }
     const label = latest?.tableLabel ?? await tableLabelOf(tableId);

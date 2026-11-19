@@ -200,7 +200,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
           tabIndex={-1}
           data-state="open"
           className={cn(
-            "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 outline-none animate-in fade-in-0 zoom-in-95 sm:rounded-lg",
+            "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg grid-cols-[minmax(0,1fr)] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 outline-none animate-in fade-in-0 zoom-in-95 sm:rounded-lg",
             className,
           )}
           {...props}

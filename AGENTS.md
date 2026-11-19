@@ -352,3 +352,13 @@ rounded up or exact — none down.
 - `round-off.test.ts` runs every discount 0–100% × service charge × tax setup through
   `computeTotals` and the rule. Run it whenever the bill maths or the guard changes.
 - Migration: `docs/migrations/2026-11-19-round-off-allowance.sql`.
+- **Cashier's round-off**: the payment dialog offers "Round off −₹1 · settle at ₹1,162" when the
+  guest paid a little less, or paid more by UPI/card with no cash to give change from (cash over
+  is change, never round-off). One tap settles at what was received; the difference joins the
+  bill's `roundOff`, so tax figures never change. `roundOffOffer` / `withManualRoundOff` in
+  payment-logic.ts keep the whole round-off within ±₹100, and settlement passes the total the
+  screen showed (`roundTo.seen`): if another device changed the bill meanwhile it is refused,
+  so new items are never rounded away. Editing a payment drops the round-off. No admin code.
+- Dialogs: DialogContent is `grid-cols-[minmax(0,1fr)]`. Without it the single grid column grew
+  to its widest child (the payment dialog's Whole bill / Split switch) and the dialog's right
+  edge, amounts included, was cut off on 360px phones.

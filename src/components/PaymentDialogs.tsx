@@ -6,7 +6,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { DialogTitle } from "@/components/ui/dialog";
 import { computeTotals, formatINR, upiLink, type TaxOptions } from "@/lib/billing";
 import { splitLines } from "@/lib/bill-splitting";
-import { PAYMENT_MODES, paymentSummary, type Payment } from "@/lib/payment-logic";
+import { PAYMENT_MODES, paymentSummary, roundOffOffer, type Payment } from "@/lib/payment-logic";
 import type { CartLine, PaymentMode } from "@/lib/types";
 import { Dropdown } from "@/components/Dropdown";
 import { Segmented } from "@/components/Segmented";
@@ -43,10 +43,17 @@ function paymentRuleError(entries: Payment[], pointsAvailable: number, hasCustom
   return "";
 }
 
-function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer, allowedModes, restaurantId }: {
+/** ₹1,162 for whole rupees, ₹1,162.40 otherwise. */
+const rupees = (n: number) => formatINR(n, Number.isInteger(n) ? 0 : 2);
+
+function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer, allowedModes, restaurantId, billTotal, autoRoundOff, payTotal, setPayTotal }: {
   total: number; entries: Payment[]; setEntries: (next: Payment[]) => void; pointsAvailable: number; hasCustomer: boolean; allowedModes?: PaymentMode[] | undefined;
   restaurantId?: string | null | undefined;
+  /** The bill before any round-off the cashier chose, and its automatic round-off. */
+  billTotal: number; autoRoundOff: number;
+  payTotal: number | null; setPayTotal: (n: number | null) => void;
 }) {
+  const offer = payTotal === null ? roundOffOffer(entries, billTotal, autoRoundOff) : null;
   const summary = paymentSummary(entries, total);
   const ruleError = paymentRuleError(entries, pointsAvailable, hasCustomer);
   const modes = PAYMENT_MODES.filter((m) => (!allowedModes || allowedModes.includes(m.v) || entries.some((e) => e.mode === m.v))
@@ -69,12 +76,24 @@ function PaymentRows({ total, entries, setEntries, pointsAvailable, hasCustomer,
           </div>
         ))}
       </div>
-      {summary.remaining > 0 ? (
-        <Button type="button" size="sm" variant="ghost" className="mt-1" onClick={() => setEntries([...entries, { mode: entries.some((e) => e.mode === "cash") ? "upi" : "cash", amount: summary.remaining }])}>
-          <Plus />Add {formatINR(summary.remaining)} by another mode
-        </Button>
+      {summary.remaining > 0 || offer ? (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {summary.remaining > 0 ? (
+            <Button type="button" size="sm" variant="ghost" className="h-auto min-h-8 whitespace-normal text-left" onClick={() => setEntries([...entries, { mode: entries.some((e) => e.mode === "cash") ? "upi" : "cash", amount: summary.remaining }])}>
+              <Plus />Add {formatINR(summary.remaining)} by another mode
+            </Button>
+          ) : null}
+          {offer ? (
+            <Button type="button" size="sm" variant="outline" className="h-auto min-h-8 whitespace-normal text-left" onClick={() => setPayTotal(offer.payTotal)}>
+              Round off {offer.adjust > 0 ? "+" : "−"}{rupees(Math.abs(offer.adjust))} · settle at {rupees(offer.payTotal)}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
       <div className="mt-3 space-y-1 rounded-lg bg-secondary p-3 text-sm">
+        {payTotal !== null ? (
+          <div className="flex justify-between text-muted-foreground"><span>Round off <button type="button" className="inline-control ml-1 inline-flex items-center underline pointer-coarse:min-h-11 pointer-coarse:px-2" onClick={() => setPayTotal(null)}>Undo</button></span><span>{total - billTotal < 0 ? "−" : "+"}{formatINR(Math.abs(total - billTotal))}</span></div>
+        ) : null}
         <div className="flex justify-between"><span>Bill</span><span className="font-semibold">{formatINR(total)}</span></div>
         <div className="flex justify-between"><span>Received</span><span>{formatINR(summary.tendered)}</span></div>
         {summary.remaining > 0 ? <div className="flex justify-between font-semibold text-destructive"><span>Still due</span><span>{formatINR(summary.remaining)}</span></div> : null}
@@ -101,19 +120,28 @@ export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, c
   hasCustomer?: boolean;
   initialGiftCard?: boolean;
   restaurantId?: string | null | undefined;
-  onSettle: (payments: Payment[]) => void;
-  onSettlePart: (quantities: Record<string, number>, payments: Payment[]) => void;
+  /** roundTo: the cashier rounded the bill to what the guest paid (seen = the total on screen). */
+  onSettle: (payments: Payment[], roundTo?: { seen: number; pay: number }) => void | Promise<void>;
+  onSettlePart: (quantities: Record<string, number>, payments: Payment[], roundTo?: { seen: number; pay: number }) => void | Promise<void>;
 }) {
   const [tab, setTab] = useState<"pay" | "split">("pay");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const splitTotal = useMemo(() => {
     const { split } = splitLines(lines, quantities);
-    return { count: split.reduce((s, l) => s + l.qty, 0), total: computeTotals(split, discountPct, serviceChargePct, tax).total };
+    const t = computeTotals(split, discountPct, serviceChargePct, tax);
+    return { count: split.reduce((s, l) => s + l.qty, 0), total: t.total, roundOff: t.roundOff };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- tax rules are fixed for an open bill
   }, [discountPct, lines, quantities, serviceChargePct]);
-  const total = tab === "pay" ? computeTotals(lines, discountPct, serviceChargePct, tax).total : splitTotal.total;
-  const [entries, setEntries] = useState<Payment[]>([{ mode: initialGiftCard ? 'gift_card' : 'cash', amount: total }]);
-  useEffect(() => { setEntries([{ mode: initialGiftCard ? 'gift_card' : 'cash', amount: total }]); }, [total, initialGiftCard]);
+  const whole = computeTotals(lines, discountPct, serviceChargePct, tax);
+  const billTotal = tab === "pay" ? whole.total : splitTotal.total;
+  const autoRoundOff = tab === "pay" ? whole.roundOff : splitTotal.roundOff;
+  const [entries, setEntriesRaw] = useState<Payment[]>([{ mode: initialGiftCard ? 'gift_card' : 'cash', amount: billTotal }]);
+  // A round-off belongs to the amounts it was offered for: editing a payment drops it.
+  const [payTotal, setPayTotal] = useState<number | null>(null);
+  const setEntries = (next: Payment[]) => { setPayTotal(null); setEntriesRaw(next); };
+  useEffect(() => { setPayTotal(null); setEntriesRaw([{ mode: initialGiftCard ? 'gift_card' : 'cash', amount: billTotal }]); }, [billTotal, initialGiftCard]);
+  const total = payTotal ?? billTotal;
+  const roundTo = payTotal !== null ? { seen: billTotal, pay: payTotal } : undefined;
   const [busy, setBusy] = useState(false);
   const summary = paymentSummary(entries, total);
 
@@ -148,12 +176,12 @@ export function PaymentPanel({ lines, discountPct, serviceChargePct, tax = {}, c
       <div className="mt-4">
         {tab === "split" && splitTotal.count === 0
           ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">Pick items above to see this guest's share.</p>
-          : <PaymentRows total={total} entries={entries} setEntries={setEntries} pointsAvailable={pointsAvailable} hasCustomer={hasCustomer} restaurantId={restaurantId} allowedModes={tab === 'split' ? (allowedModes ?? PAYMENT_MODES.map(m => m.v)).filter(m => m !== 'gift_card') : allowedModes} />}
+          : <PaymentRows total={total} entries={entries} setEntries={setEntries} pointsAvailable={pointsAvailable} hasCustomer={hasCustomer} restaurantId={restaurantId} billTotal={billTotal} autoRoundOff={autoRoundOff} payTotal={payTotal} setPayTotal={setPayTotal} allowedModes={tab === 'split' ? (allowedModes ?? PAYMENT_MODES.map(m => m.v)).filter(m => m !== 'gift_card') : allowedModes} />}
       </div>
 
       <ConfirmButton id="settle-panel" className={cn(buttonVariants(), "mt-4 h-11 w-full")} armedClassName="!bg-gold !text-gold-foreground"
         disabled={busy || !summary.complete || !!paymentRuleError(entries, pointsAvailable, hasCustomer) || (tab === "split" && splitTotal.count === 0)}
-        onConfirm={async () => { setBusy(true); try { await (tab === 'pay' ? onSettle(entries) : onSettlePart(quantities, entries)); } finally { setBusy(false); } }}
+        onConfirm={async () => { setBusy(true); try { await (tab === 'pay' ? onSettle(entries, roundTo) : onSettlePart(quantities, entries, roundTo)); } finally { setBusy(false); } }}
         confirm={`Tap again to settle ${formatINR(total, 0)}`}>
         {tab === "pay" ? `Settle ${formatINR(total, 0)}` : `Settle ${splitTotal.count} item${splitTotal.count === 1 ? "" : "s"}, ${formatINR(total, 0)}`}
       </ConfirmButton>
