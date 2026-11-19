@@ -366,11 +366,11 @@ function StockPage() {
   const month = spendSummary(entriesBetween(entries, thisMonth, Date.now() + 1));
   const pending = entries.filter((e) => approvalStatus(e) === "pending").sort((a, b) => (a.approval?.requestedAt ?? a.at) - (b.approval?.requestedAt ?? b.at));
   const vendorOf = (p: StockEntry) => p.supplierName ?? suppliers.find((x) => x.id === p.supplierId)?.name ?? "Supplier not recorded";
-  const billCard = (p: StockEntry) => {
+  const billCard = (p: StockEntry, opts: { showDate?: boolean } = {}) => {
     const canReturn = (admin ? canReturnPurchase(p) : requester && user ? canRequestReturn(p, { name: user.displayName, login: user.login ?? undefined }) : false) && p.items.some((i) => remainingPurchaseQty(p, entries, i.materialId) > 0);
     const canEdit = admin && !p.purchaseId && approvalStatus(p) !== "rejected" && !entries.some((e) => e.purchaseId === p.id);
     const original = p.purchaseId ? entries.find((e) => e.id === p.purchaseId) : undefined;
-    return <PurchaseBillCard key={p.id} entry={p} vendor={vendorOf(p)} lineName={lineName} lineUnit={lineUnit} status={<ApprovalChip entry={p} />}
+    return <PurchaseBillCard key={p.id} entry={p} vendor={vendorOf(p)} showDate={opts.showDate ?? true} defaultOpen={approvalStatus(p) === "pending"} lineName={lineName} lineUnit={lineUnit} status={<ApprovalChip entry={p} />}
       against={p.purchaseId ? (original?.reference ? `#${original.reference}` : "without invoice no.") : undefined}
       actions={canReturn || canEdit ? <>
         {canReturn ? <Button size="sm" variant="outline" onClick={() => setSheet({ kind: "return", purchase: p })}><Undo2 />Return items</Button> : null}
@@ -411,7 +411,7 @@ function StockPage() {
           <h2 className="flex items-center gap-2 text-base font-bold"><Clock className="size-4" />Waiting for admin approval <span className="rounded-full bg-gold px-2 text-xs text-gold-foreground">{pending.length}</span></h2>
           <p className="text-xs text-muted-foreground">{admin ? "Check each supplier bill, then approve or reject. Nothing here counts in purchases until approved." : "The admin checks the supplier bill and approves it. You'll hear a chime when they do."}</p>
         </div>
-        <div className="grid items-start gap-3 p-3 lg:grid-cols-2">{pending.map(billCard)}</div>
+        <div className="divide-y divide-border">{pending.map((p) => billCard(p))}</div>
       </section>
     ) : null}
     <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={(t) => { setTab(t); setBillFilter("all"); }} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
@@ -434,7 +434,7 @@ function StockPage() {
           <h2 className="text-sm font-semibold">{d.label}<span className="ml-2 text-xs font-normal text-muted-foreground">{d.entries.length} {d.entries.length === 1 ? "bill" : "bills"}</span></h2>
           <span className="text-sm font-semibold tabular-nums">{formatINR(d.total, 0)}</span>
         </div>
-        <div className="grid items-start gap-3 lg:grid-cols-2">{d.entries.map(billCard)}</div>
+        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">{d.entries.map((p) => billCard(p, { showDate: false }))}</div>
       </section>)}
       {!billDays.length ? <p className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">{listFor.length ? "No bills match" : "No purchase bills yet"}</p> : null}
     </div> : null}
@@ -463,7 +463,7 @@ function StockPage() {
                 <span className="flex-1 font-medium">{dateText(d.at)}<span className="ml-2 text-xs font-normal text-muted-foreground">{d.entries.length} {d.entries.length === 1 ? "entry" : "entries"}</span></span>
                 <span className="font-semibold tabular-nums">{formatINR(d.amount)}</span>
               </button>
-              {dayOpen ? <ul className="divide-y divide-border bg-card px-4">{d.entries.map(billCard)}</ul> : null}
+              {dayOpen ? <div className="divide-y divide-border border-t border-border bg-card">{d.entries.map((p) => billCard(p, { showDate: false }))}</div> : null}
             </div>;
           })}</div> : null}
         </section>;

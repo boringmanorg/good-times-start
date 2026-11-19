@@ -452,7 +452,7 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
 - Priority and discount are admin-only: Guest settings on the profile; cloud
   `guard_customer_points_adjustment` quietly keeps non-admin changes to `pointsAdjustment`,
   `discountPct` and `priority` from landing (docs/migrations/2026-11-19-guest-discount-admin-only.sql,
-  tested on local Postgres).
+  tested on local Postgres) — **applied 19 Nov 2026**.
 - After settlement, a guest with a mobile and bill messages on gets a 20 s toast "Send POS/… on
   WhatsApp?" opening `waLink` with `billMessage` (customer-logic.ts). One-tap (wa.me), not the
   Business API: automatic sending still needs WHATSAPP_ACCESS_TOKEN / PHONE_NUMBER_ID and an
@@ -470,6 +470,11 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
 
 ## Purchase → Purchases and History as itemized bill cards (19 Nov 2026)
 
+- **List view (owner's request, 19 Nov):** each bill is a compact row in one list per day
+  (`divide-y` container): chevron, icon, vendor + status, "#invoice · time · by · N items",
+  how it was paid (md+), total. Click opens the itemized receipt below the row. Bills waiting
+  for approval start open (approve panel). Under a day heading rows show the time only
+  (`showDate={false}`). The Vendors tab's day lists use the same rows.
 - `PurchaseBillCard`: receipt-style card per bill — icon tile, vendor, invoice `#`, date/time,
   who recorded it, approval chip, total and item count; payment chips (Pay later in red,
   "Payment not recorded" dashed) and round-off; dashed item rows "qty × price" with the line

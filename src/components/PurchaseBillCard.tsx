@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown, ReceiptText, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ReceiptText, Undo2 } from "lucide-react";
 import { formatINR } from "@/lib/billing";
 import { formatQty } from "@/lib/stock-logic";
 import { approvalStatus, entryAmount } from "@/lib/purchase-logic";
@@ -9,13 +9,15 @@ import { cn } from "@/lib/utils";
 
 const SHOW = 5;
 const MODE_DOT: Record<string, string> = { cash: "bg-success", upi: "bg-primary", card: "bg-gold", bank: "bg-accent-foreground", credit: "bg-destructive" };
-const when = (at: number) => `${new Date(at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}, ${new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`;
+const time = (at: number) => new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+const when = (at: number) => `${new Date(at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}, ${time(at)}`;
 
 /**
- * One supplier bill (or return) as an itemized receipt card: vendor, invoice, date and total on
- * top; how it was paid; every item with quantity × price and amount; actions at the foot.
+ * One supplier bill (or return) as a list row: vendor, invoice, time, how it was paid and the
+ * total. Click to open the itemized receipt — every item with quantity × price and amount —
+ * and the actions. Rows sit in a list container (`divide-y`), so the row has no border of its own.
  */
-export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, status, actions, children }: {
+export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, status, actions, children, defaultOpen = false, showDate = true }: {
   entry: StockEntry;
   vendor: string;
   lineName: (i: StockEntry["items"][number]) => string;
@@ -26,7 +28,12 @@ export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, s
   status?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
+  /** Start opened (bills waiting for approval, so the approve panel shows). */
+  defaultOpen?: boolean;
+  /** Under a day heading the date is already said: show the time only. */
+  showDate?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [all, setAll] = useState(false);
   const isReturn = entry.type === "return";
   const rejected = approvalStatus(entry) === "rejected";
@@ -34,33 +41,36 @@ export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, s
   const amount = entryAmount(entry);
   const qtyTotal = entry.items.length;
 
+  const paidBy = entry.payments?.length ? [...new Set(entry.payments.map((pay) => PURCHASE_PAY_MODES.find((m) => m.v === pay.mode)?.short ?? pay.mode))].join(" + ") : "Payment not recorded";
+
   return (
     <article aria-label={`${isReturn ? "Supplier return" : "Purchase"} from ${vendor}`}
-      className={cn("overflow-hidden rounded-2xl border bg-card", isReturn ? "border-destructive/40" : "border-border", rejected && "opacity-70")}>
-      <header className="flex items-start gap-3 p-4 pb-3">
-        <span aria-hidden className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", isReturn ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary")}>
-          {isReturn ? <Undo2 className="size-5" /> : <ReceiptText className="size-5" />}
+      className={cn("relative", isReturn && "before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-destructive", open && "bg-secondary/30", rejected && "opacity-70")}>
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-secondary/50 sm:px-4">
+        <ChevronRight aria-hidden className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
+        <span aria-hidden className={cn("hidden size-9 shrink-0 items-center justify-center rounded-lg sm:flex", isReturn ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary")}>
+          {isReturn ? <Undo2 className="size-4" /> : <ReceiptText className="size-4" />}
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className="truncate text-base font-semibold">{vendor}</h3>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="truncate font-semibold">{vendor}</span>
             {isReturn ? <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive">Return</span> : null}
             {status}
-          </div>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {entry.reference ? <span className="font-medium text-foreground">#{entry.reference}</span> : <span>No invoice no.</span>}
-            {" · "}{when(entry.at)}{entry.by ? ` · ${entry.by}` : ""}
-          </p>
-          {isReturn && against ? <p className="mt-0.5 text-xs text-muted-foreground">Against purchase {against}</p> : null}
-        </div>
-        <div className="shrink-0 text-right">
-          <p className={cn("text-lg font-bold tabular-nums", isReturn && "text-destructive", rejected && "line-through")}>{isReturn ? "−" : ""}{formatINR(Math.abs(amount))}</p>
-          <p className="text-[11px] text-muted-foreground">{qtyTotal} {qtyTotal === 1 ? "item" : "items"}</p>
-        </div>
-      </header>
+          </span>
+          <span className="mt-0.5 block text-xs text-muted-foreground sm:truncate">
+            {entry.reference ? <span className="font-medium text-foreground">#{entry.reference}</span> : "No invoice no."}
+            {" · "}{showDate ? when(entry.at) : time(entry.at)}{entry.by ? ` · ${entry.by}` : ""}{" · "}{qtyTotal} {qtyTotal === 1 ? "item" : "items"}
+          </span>
+        </span>
+        <span className="hidden w-40 shrink-0 truncate text-right text-xs text-muted-foreground md:block">{isReturn ? (against ? `Against ${against}` : "") : paidBy}</span>
+        <span className={cn("w-24 shrink-0 text-right font-bold tabular-nums sm:w-28", isReturn && "text-destructive", rejected && "line-through")}>{isReturn ? "−" : ""}{formatINR(Math.abs(amount))}</span>
+      </button>
 
+      {open ? <div className="pb-3 pl-3 pr-3 sm:pl-14 sm:pr-4">
+      {isReturn && against ? <p className="pb-2 text-xs text-muted-foreground">Against purchase {against}</p> : null}
       {!isReturn ? (
-        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+        <div className="flex flex-wrap items-center gap-1.5 pb-3">
           {entry.payments?.length ? entry.payments.map((pay, i) => (
             <span key={i} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
               pay.mode === "credit" ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-secondary")}>
@@ -73,7 +83,7 @@ export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, s
         </div>
       ) : null}
 
-      <ul className="border-t border-border bg-secondary/30 px-4">
+      <ul className="rounded-xl border border-border bg-card px-3">
         {lines.map((i, index) => {
           const qty = Math.abs(i.qty);
           return (
@@ -95,8 +105,9 @@ export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, s
         ) : null}
       </ul>
 
-      {children ? <div className="border-t border-border px-4 pb-3">{children}</div> : null}
-      {actions ? <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-2.5">{actions}</footer> : null}
+      {children ? <div className="pt-1">{children}</div> : null}
+      {actions ? <footer className="flex flex-wrap items-center justify-end gap-2 pt-3">{actions}</footer> : null}
+      </div> : null}
     </article>
   );
 }
