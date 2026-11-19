@@ -22,7 +22,7 @@ import { useStaff } from "./staff";
 import { getDeviceId } from "./terminal-actions";
 import { heldTable, holdByOther, withoutHold, type HeldBy } from "./table-hold";
 import { queueBillBookingCancellation } from "./booking-cancellation";
-import { commitGiftCardBill } from './gift-card-checkout';
+import { commitGiftCardBill, giftCardCheckBeforeNumbering } from './gift-card-checkout';
 import { giftPaymentProblem } from './gift-card-checkout-logic';
 
 function kotGroups(lines: CartLine[]) {
@@ -544,6 +544,8 @@ export function useCart(initialTableId?: string) {
       customer, guestCount, reservationId: latest?.reservationId ?? reservationId,
       ...(closedBy ? { closedBy } : {}),
     });
+    const giftProblem = await giftCardCheckBeforeNumbering(payments, user?.restaurantId);
+    if (giftProblem) { toast.error(giftProblem); return null; }
     let numbered: Order;
     try {
       numbered = await withBillNumber(order);

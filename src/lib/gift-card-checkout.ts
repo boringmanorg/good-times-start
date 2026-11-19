@@ -6,7 +6,7 @@ import { baseKey, parseBase, isPushResults } from './record-versions';
 import { toSharedPayload } from './sync-core';
 import { getDeviceId } from './terminal-actions';
 import { giftPaymentProblem } from './gift-card-checkout-logic';
-import { normaliseCode, type GiftCard } from './gift-card-logic';
+import { normaliseCode, redeemProblem, type GiftCard } from './gift-card-logic';
 import type { Order } from './types';
 
 export async function lookupCheckoutCard(restaurantId: string, code: string): Promise<GiftCard> {
@@ -17,6 +17,25 @@ export async function lookupCheckoutCard(restaurantId: string, code: string): Pr
   if (error) throw new Error('Could not check the gift card balance. Try again');
   if (!data) throw new Error('No gift card with that code in this brand');
   return data as GiftCard;
+}
+
+/**
+ * Check the card before the bill takes a number. A counter bill gets a new id on
+ * every attempt, so a card refused after numbering would leave a gap in the
+ * bill series. Returns the reason the card can't pay, or null.
+ */
+export async function giftCardCheckBeforeNumbering(payments: Order['payments'], restaurantId: string | null | undefined): Promise<string | null> {
+  const gift = payments.find(p => p.mode === 'gift_card');
+  if (!gift) return null;
+  const problem = giftPaymentProblem(payments);
+  if (problem) return problem;
+  if (!restaurantId) return 'Sign in to use a gift card';
+  try {
+    const card = await lookupCheckoutCard(restaurantId, gift.giftCardCode ?? '');
+    return redeemProblem(card, String(gift.amount), new Date().toLocaleDateString('en-CA'));
+  } catch (e) {
+    return e instanceof Error ? e.message : 'Could not check this gift card';
+  }
 }
 
 /** No local financial closure until Cloud has committed the bill and debit together. */
