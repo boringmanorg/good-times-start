@@ -158,7 +158,7 @@ function Overview() {
                 <Row label="Discounts" value={money(o?.discounts.total ?? 0)} sub={[["Billing", money(o?.discounts.pos ?? 0)], ["Guest orders", money(o?.discounts.guest ?? 0)]]} />
                 <Row label="GST collected" value={formatINR(o?.taxes.total ?? 0)} sub={[["CGST", formatINR(o?.taxes.cgst ?? 0)], ["SGST", formatINR(o?.taxes.sgst ?? 0)]]} />
               </dl>
-              <Link to="/reports" className="mt-3 inline-block text-sm font-semibold text-primary">GST report and GSTR-1</Link>
+              <Link to="/reports" className="mt-3 inline-flex items-center text-sm font-semibold text-primary pointer-coarse:min-h-11">GST report and GSTR-1</Link>
             </Card>
           </div>
         </div>

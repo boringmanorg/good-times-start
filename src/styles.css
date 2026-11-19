@@ -264,3 +264,39 @@ html:not(.theme-xtsy) header.glass-dark {
 /* Native date/time pickers and scrollbars follow the black theme. */
 html:not(.theme-xtsy) ::-webkit-scrollbar-thumb { background: #3b3b41; border-radius: 9999px; }
 html:not(.theme-xtsy) ::-webkit-scrollbar-track { background: transparent; }
+
+/*
+ * Finger targets. A counter is worked by hand, often quickly and not always with dry fingers,
+ * so on touch screens every control is lifted to the 44px WCAG 2.5.5 asks for. Mouse-driven
+ * desktops keep the tighter 32-36px sizes, which read better with a pointer.
+ *
+ * Scoped to real controls, and `min-height` only, so nothing is forced wider and no layout
+ * is pushed sideways. Controls that sit inside a line of text (a link in a sentence) are left
+ * alone: stretching those would break the paragraph.
+ */
+@media (pointer: coarse) {
+  [data-slot="button"],
+  button:not(.inline-control),
+  select,
+  [role="tab"],
+  [role="switch"],
+  summary,
+  /* Links drawn as buttons or banners: a block-level link with its own padding is a target,
+     unlike a link inside a sentence, which must keep the line height of its paragraph. */
+  a[href][class*="rounded-"],
+  a[href][class*="px-"]:not([class*="inline "]) {
+    min-height: 44px;
+  }
+
+  /* Width too, or an icon button stays a thin strip. Text buttons are already wider than this,
+     so the rule only ever bites on the icon-sized ones (including an icon with a count badge). */
+  [data-slot="button"] {
+    min-width: 44px;
+  }
+
+  /* A checkbox is drawn small by the browser; the label around it carries the target. */
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    min-height: 44px;
+  }
+}
