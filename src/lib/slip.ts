@@ -7,6 +7,7 @@
  */
 import { gstModeOf, exemptionNote } from "./billing-config";
 import type { Kot, Order, RestaurantSettings } from "./types";
+import { paymentLine } from "./payment-logic";
 
 export type Paper = 58 | 80;
 export const columnsFor = (paper: Paper) => (paper === 58 ? 30 : 45);
@@ -167,7 +168,7 @@ export function billSlip(order: Order, settings: RestaurantSettings, layout: Pap
   L.push(rule(cols));
   L.push(pair("TOTAL", money(order.total), cols / 2, { bold: true, size: "big" }));
   L.push(rule(cols));
-  for (const p of order.payments) L.push(pair(p.mode === "credit" ? "Due" : `Paid by ${PAY[p.mode] ?? p.mode}`, money(p.amount), cols));
+  for (const p of order.payments) L.push(pair(paymentLine(p.mode, order.orderType, PAY[p.mode] ?? p.mode), money(p.amount), cols));
   const note = exempt ? exemptionNote(settings, order.orderType) : "";
   if (note) for (const t of wrap(note, cols)) L.push({ text: t, align: "center" });
   const due = order.status === "held" ? order.total : order.payments.filter((p) => p.mode === "credit").reduce((s, p) => s + p.amount, 0);

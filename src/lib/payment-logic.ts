@@ -1,6 +1,13 @@
 import { MAX_ROUND_OFF } from "./billing";
 import type { Order, PaymentMode } from "./types";
 
+/** A payment line in plain words: Swiggy/Zomato bills settle as "wallet" and read "Paid on Swiggy". */
+export function paymentLine(mode: string, orderType: string | undefined, label: string): string {
+  if (mode === "credit") return "Due";
+  if (mode === "wallet" && (orderType === "swiggy" || orderType === "zomato")) return `Paid on ${orderType === "swiggy" ? "Swiggy" : "Zomato"}`;
+  return `Paid by ${label}`;
+}
+
 export const PAYMENT_MODES: { v: PaymentMode; l: string }[] = [
   { v: "cash", l: "Cash" },
   { v: "upi", l: "UPI" },

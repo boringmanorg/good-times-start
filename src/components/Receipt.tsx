@@ -4,6 +4,7 @@ import { placeName } from "@/lib/table-logic";
 import QRCode from "qrcode";
 import type { Kot, Order } from "@/lib/types";
 import { formatINR, upiLink } from "@/lib/billing";
+import { paymentLine } from "@/lib/payment-logic";
 import { exemptionNote, gstModeOf } from "@/lib/billing-config";
 import { useRestaurantSettings } from "@/lib/use-settings";
 
@@ -87,7 +88,7 @@ export function Receipt({ order }: { order: Order }) {
       {note ? <div className="mt-1 text-[10px]">{note}</div> : null}
       {order.payments.length ? <>
         <Rule />
-        {order.payments.map((p, i) => <div key={i} className="flex justify-between"><span>{p.mode === "credit" ? "Due" : `Paid by ${PAY_LABEL[p.mode] ?? p.mode}`}</span><span>{formatINR(p.amount)}</span></div>)}
+        {order.payments.map((p, i) => <div key={i} className="flex justify-between"><span>{paymentLine(p.mode, order.orderType, PAY_LABEL[p.mode] ?? p.mode)}</span><span>{formatINR(p.amount)}</span></div>)}
       </> : null}
       {showQr && qr ? (
         <div className="mt-3 text-center">

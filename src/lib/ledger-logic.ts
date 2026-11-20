@@ -25,7 +25,7 @@ export const INCOME_CATEGORIES: { v: string; l: string }[] = [
 ];
 export const categoryLabel = (v: string | undefined) =>
   [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].find((c) => c.v === v)?.l ?? (v ? v.replace(/_/g, " ") : "");
-export const modeLabel = (m: string) => LEDGER_MODES.find((x) => x.v === m)?.l ?? (m === "credit" ? "Pay later" : m === "wallet" ? "Wallet" : m);
+export const modeLabel = (m: string) => LEDGER_MODES.find((x) => x.v === m)?.l ?? (m === "credit" ? "Pay later" : m === "wallet" ? "Wallet, Swiggy & Zomato" : m);
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 export const isLive = (e: LedgerEntry) => !e.void;

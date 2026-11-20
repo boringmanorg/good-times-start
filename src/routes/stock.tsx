@@ -171,7 +171,8 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
     const newMaterials: Material[] = [];
     for (const row of rows) {
       if (!row.newItem) continue;
-      const price = num(row.newItem.standardPrice);
+      // Left blank, the standard price is what this bill paid per unit.
+      const price = row.newItem.standardPrice.trim() ? num(row.newItem.standardPrice) : num(row.cost);
       if (!row.newItem.name.trim() || price === null || price < 0) { setError("Enter each new item's name and standard price, 0 or more."); return; }
       newMaterials.push({ id: row.materialId, name: row.newItem.name.trim(), unit: row.newItem.unit, costPerUnit: price, lowStockLevel: 0 });
     }
@@ -215,7 +216,7 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
               {row.newItem ? <div className="mb-2 grid grid-cols-2 gap-2">
                 <label className="col-span-2 block text-sm font-medium">New item name<input required maxLength={60} value={row.newItem.name} onChange={(e) => update({ newItem: { name: e.target.value, unit: row.newItem?.unit ?? "kg", standardPrice: row.newItem?.standardPrice ?? "" } })} className={inputClass} /></label>
                 <label className="block text-sm font-medium">Unit<Dropdown ariaLabel="New item unit" className="mt-1" value={row.newItem.unit} onChange={(unit) => update({ newItem: { name: row.newItem?.name ?? "", standardPrice: row.newItem?.standardPrice ?? "", unit } })} options={STOCK_UNITS.map((u) => ({ value: u.v, label: u.l }))} /></label>
-                <label className="block text-sm font-medium">Standard price / {unit}<input required aria-label="New item standard price" inputMode="decimal" value={row.newItem.standardPrice} onChange={(e) => update({ newItem: { name: row.newItem?.name ?? "", unit: row.newItem?.unit ?? "kg", standardPrice: e.target.value } })} className={inputClass} /></label>
+                <label className="block text-sm font-medium">Standard price / {unit}<input aria-label="New item standard price" placeholder="Same as unit price" inputMode="decimal" value={row.newItem.standardPrice} onChange={(e) => update({ newItem: { name: row.newItem?.name ?? "", unit: row.newItem?.unit ?? "kg", standardPrice: e.target.value } })} className={inputClass} /></label>
               </div> : null}
               <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_6rem_auto]">
               {!row.newItem ? <label className="col-span-3 block min-w-0 text-sm font-medium sm:col-span-1">Item<Dropdown ariaLabel="Item" className="mt-1" value={row.materialId} onChange={(materialId) => update({ materialId, cost: String(materials.find((m) => m.id === materialId)?.costPerUnit ?? 0) })} placeholder="Choose item"

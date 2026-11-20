@@ -229,7 +229,7 @@ export function SubscriptionSection({ r, plans }: { r: RestaurantRow; plans: Pla
         </ul>
       </fieldset>
       <div className="lg:col-span-2"><Button disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save subscription"}</Button></div>
-      <div className="lg:col-span-2"><Renewal r={r} price={planRow?.monthly_price ?? 0} /></div>
+      <div className="lg:col-span-2"><Renewal key={planRow?.monthly_price ?? 0} r={r} price={planRow?.monthly_price ?? 0} /></div>
     </div>
   );
 }

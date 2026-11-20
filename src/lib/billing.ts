@@ -2,6 +2,7 @@ import type { CartLine } from "./types";
 
 /** Indian number format: ₹1,23,456.00 */
 export function formatINR(n: number, decimals = 2): string {
+  if (Math.abs(n) < 0.5 / 10 ** decimals) n = 0; // never "₹-0"
   return (
     "₹" +
     n.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
