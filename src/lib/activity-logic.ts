@@ -143,7 +143,7 @@ export function describeActivity(e: ActivityEvent, plans: Record<string, string>
       return { area: "devices", tone: action === "blocked" ? "warn" : "normal", title: `Device ${verb}: ${str(d["device"])}`, details: [] };
     }
     case "integration_changed":
-      return { area: "integrations", tone: "normal", title: `${PLATFORM[str(d["platform"])] ?? str(d["platform"])} ${MODE[str(d["mode"])] ?? str(d["mode"])}`, details: str(d["store_id"]) ? [`Store id ${str(d["store_id"])}`] : [] };
+      return { area: "integrations", tone: "normal", title: `${PLATFORM[str(d["platform"])] ?? str(d["platform"])} ${d["mode"] === "off" ? "switched off" : `${MODE[str(d["mode"])] ?? str(d["mode"])} switched on`}`, details: str(d["store_id"]) ? [`Store id ${str(d["store_id"])}`] : [] };
     case "sandbox_order":
       return { area: "integrations", tone: "normal", title: `${PLATFORM[str(d["platform"])] ?? ""} test order ${str(d["code"])} sent · ${rupees(d["subtotal"])}`, details: [] };
     default:

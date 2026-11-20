@@ -560,3 +560,13 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
   returns at what was paid, expenses by category, other income — owner's capital is not income);
   money in/out by mode (Pay later, points, gift cards move no money); Expenses (add, void);
   Pay later; Day book; Excel with all three sheets.
+- Both 20 Nov migrations **applied 20 Nov 2026**.
+- **Plan test drive (20 Nov, no browser):** cloud rules checked on production inside a DO block
+  that ends with RAISE EXCEPTION (everything rolled back; verified nothing kept): per plan the
+  features from account_feature, seats from plan_seats, the seat trigger (Basic: 2nd Billdesk and
+  any waiter → over_plan and blocked; Pro Lite: 4th Billdesk; Pro/Enterprise fine), grace
+  (3 days past paid-until live), lapse (8 days → not live, every terminal blocked), renewal,
+  trial running/over, paused, complimentary with no end; plan edit logging; sandbox order row;
+  ledger guard. Screens per plan driven locally (shots-tool/plans.mjs) in POS Manager (desktop +
+  phone) and POS Billdesk: every nav screen opens, no sideways scroll, and screens outside the plan
+  show "isn't part of the … plan" when opened directly (Accounts and Brand only on Enterprise).

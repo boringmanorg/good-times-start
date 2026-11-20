@@ -25,7 +25,7 @@ describe("activity log in plain words", () => {
     expect(describeActivity(ev("login_changed", { action: "changed", email: "billdesk@xtsy.pos", password: "reset", signIn: "off" }))?.details).toEqual(["Password reset", "Sign-in switched off"]);
     expect(describeActivity(ev("support_sign_in", { email: "billdesk@xtsy.pos", role: "cashier", reason: "Sync check" }))?.title).toBe("Signed in as billdesk@xtsy.pos (Billdesk)");
     expect(describeActivity(ev("device_changed", { action: "blocked", device: "Counter 1" }))?.title).toBe("Device blocked: Counter 1");
-    expect(describeActivity(ev("integration_changed", { platform: "swiggy", mode: "sandbox", store_id: "" }))?.title).toBe("Swiggy sandbox");
+    expect(describeActivity(ev("integration_changed", { platform: "swiggy", mode: "sandbox", store_id: "" }))?.title).toBe("Swiggy sandbox switched on");
     expect(describeActivity(ev("sandbox_order", { platform: "zomato", code: "ZO-0001", subtotal: 420 }))?.title).toBe("Zomato test order ZO-0001 sent · ₹420");
   });
   it("hides info saves with no change and warns on a QR address change", () => {
