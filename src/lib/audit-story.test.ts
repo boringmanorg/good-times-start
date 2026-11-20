@@ -43,3 +43,18 @@ describe("audit log in plain words", () => {
     expect(storyOf(e({ kind: "stock_entry", label: "#INV9", changes: [{ field: "approval", from: { status: "pending" }, to: { status: "approved" } }] })).title).toBe("Purchase approved: #INV9");
   });
 });
+
+describe("plain words seen on the live test outlet", () => {
+  const base = { id: "1", at: "2026-11-20T13:13:00Z", user_id: null, user_email: "a@b", device_id: null } as const;
+  it("a purchase reads vendor, total and payment, never its id", () => {
+    const st = storyOf({ ...base, kind: "stock_entry", record_id: "x", action: "created", label: "da2921f4-b68d-4697-b497-b34f2562fbea",
+      changes: [{ field: "*", from: null, to: { type: "purchase", supplierName: "ZZ Test Vendor", items: [{ name: "Test Paneer", qty: 4, unit: "kg", unitCost: 300 }], payments: [{ mode: "credit", amount: 1200 }] } }] } as never);
+    expect(st.title).toBe("Purchase from ZZ Test Vendor · ₹1,200");
+    expect(st.details.join(" ")).toContain("Test Paneer 4 kg");
+    expect(st.details.join(" ")).not.toContain("da2921f4");
+  });
+  it("a Swiggy order and the first settings save read plainly", () => {
+    expect(storyOf({ ...base, kind: "order", record_id: "o", action: "created", label: null, changes: [{ field: "*", from: null, to: { orderType: "swiggy", lines: [] } }] } as never).title).toBe("Swiggy order opened");
+    expect(storyOf({ ...base, kind: "settings", record_id: "s", action: "created", label: null, changes: [{ field: "*", from: null, to: "details" }] } as never).title).toBe("Restaurant details saved for the first time");
+  });
+});

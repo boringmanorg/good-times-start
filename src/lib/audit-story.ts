@@ -7,6 +7,7 @@
  * settled · ₹340 · UPI ₹340") and marks the routine ones, which the screen hides unless asked.
  * Secrets (the admin code key, old PIN) are never shown.
  */
+import { PURCHASE_PAY_MODES } from "./purchase-pay-logic";
 import { kindLabel, lineChanges, valueText, fieldLabel, type AuditEntry } from "./audit-log";
 
 export type StoryTone = "add" | "change" | "remove" | "money" | "warn";
@@ -16,7 +17,7 @@ type D = Record<string, unknown>;
 const obj = (v: unknown): D => (v && typeof v === "object" && !Array.isArray(v) ? (v as D) : {});
 const s = (v: unknown) => (v === null || v === undefined ? "" : String(v));
 const rupees = (v: unknown) => `₹${Number(v ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
-const PAY: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet", credit: "Due", points: "Points", gift_card: "Gift card", bank: "Bank", other: "Other" };
+const PAY: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", wallet: "Wallet / Swiggy / Zomato", credit: "Due", points: "Points", gift_card: "Gift card", bank: "Bank", other: "Other" };
 
 const SECRET = /(code|pin|token|secret|key|password)$/i;
 /** Fields that only keep the system's own books; a change to only these is routine. */
@@ -38,7 +39,9 @@ const itemsText = (lines: unknown, max = 3): string => {
   const shown = list.slice(0, max).map((l) => `${s(l["name"]) || "item"} ×${s(l["qty"] ?? 1)}`);
   return list.length > max ? `${shown.join(", ")} +${list.length - max} more` : shown.join(", ");
 };
-const place = (p: D) => s(p["tableLabel"]) || s(p["tableId"]) || (s(p["orderType"]) && s(p["orderType"]) !== "dine-in" ? s(p["orderType"]) : "");
+const ORDER_TYPE: Record<string, string> = { takeaway: "Takeaway", delivery: "Delivery", swiggy: "Swiggy", zomato: "Zomato" };
+const place = (p: D) => s(p["tableLabel"]) || s(p["tableId"]) || ORDER_TYPE[s(p["orderType"])] || "";
+const UID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 
 /** Readable "Field: a → b" lines for ordinary fields, secrets masked, routine fields dropped. */
 function fieldLines(entry: AuditEntry, skip: Set<string>): string[] {
@@ -71,7 +74,8 @@ function orderStory(e: AuditEntry): Story {
     const p = created(e);
     const where = place(p);
     const guest = s(obj(p["customer"])["name"]);
-    return { title: `Bill opened${where ? ` · ${where}` : ""}`, details: [itemsText(p["lines"]), guest ? `Guest ${guest}` : ""].filter(Boolean), tone: "add", routine: false };
+    const platform = s(p["orderType"]) === "swiggy" || s(p["orderType"]) === "zomato";
+    return { title: platform ? `${where} order opened` : `Bill opened${where ? ` · ${where}` : ""}`, details: [itemsText(p["lines"]), guest ? `Guest ${guest}` : ""].filter(Boolean), tone: "add", routine: false };
   }
   if (e.action === "deleted") return { title: `Bill removed: ${name}`, details: [], tone: "remove", routine: false };
   if (e.action === "restored") return { title: `Bill restored: ${name}`, details: [], tone: "warn", routine: false };
@@ -114,6 +118,7 @@ function tableStory(e: AuditEntry): Story {
 }
 
 function settingsStory(e: AuditEntry): Story {
+  if (e.action === "created") return { title: "Restaurant details saved for the first time", details: [], tone: "add", routine: false };
   const known: Record<string, string> = {
     adminCode: "Admin code key renewed (all older codes stop working)", adminPin: "Old admin PIN changed", rolePolicy: "Role permissions changed",
     paymentModes: "Payment modes changed", marketingDevices: "Marketing terminals changed",
@@ -126,9 +131,26 @@ function settingsStory(e: AuditEntry): Story {
   return { title: "Settings changed", details, tone: details.some((d) => d.startsWith("Admin code") || d.startsWith("Role")) ? "warn" : "change", routine: !details.length };
 }
 
+function purchaseStory(e: AuditEntry): Story {
+  const p = created(e);
+  const items = Array.isArray(p["items"]) ? (p["items"] as D[]) : [];
+  const total = items.reduce((t, i) => t + Math.abs(Number(i["qty"] ?? 0)) * Number(i["unitCost"] ?? 0), 0);
+  const pays = (Array.isArray(p["payments"]) ? (p["payments"] as D[]) : [])
+    .map((x) => `${PURCHASE_PAY_MODES.find((m) => m.v === s(x["mode"]))?.short ?? s(x["mode"])} ${rupees(x["amount"])}`).join(" + ");
+  const vendor = s(p["supplierName"]);
+  const ret = s(p["type"]) === "return" || !!s(p["purchaseId"]);
+  const names = items.slice(0, 3).map((i) => `${s(i["name"]) || "item"} ${Math.abs(Number(i["qty"] ?? 0))}${s(i["unit"]) ? ` ${s(i["unit"])}` : ""}`).join(", ");
+  return {
+    title: `${ret ? "Returned to" : "Purchase from"} ${vendor || "a vendor"} · ${rupees(total)}`,
+    details: [names + (items.length > 3 ? ` +${items.length - 3} more` : ""), pays, s(p["reference"]) ? `Invoice ${s(p["reference"])}` : ""].filter(Boolean),
+    tone: ret ? "remove" : "money", routine: false,
+  };
+}
+
 function generic(e: AuditEntry): Story {
   const what = kindLabel(e.kind);
-  const name = e.label ? `: ${e.label}` : "";
+  if (e.kind === "stock_entry" && e.action === "created" && ["purchase", "return"].includes(s(created(e)["type"]))) return purchaseStory(e);
+  const name = e.label && !UID.test(e.label) ? `: ${e.label}` : "";
   if (e.action === "created") {
     const p = created(e);
     const extra = e.kind === "menu" ? [s(p["price"]) ? rupees(p["price"]) : ""] : e.kind === "stock_entry" ? [s(p["supplierName"]), s(p["reference"]) ? `#${s(p["reference"])}` : ""] : e.kind === "customer" ? [s(p["phone"])] : [];
