@@ -570,3 +570,9 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
   ledger guard. Screens per plan driven locally (shots-tool/plans.mjs) in POS Manager (desktop +
   phone) and POS Billdesk: every nav screen opens, no sideways scroll, and screens outside the plan
   show "isn't part of the … plan" when opened directly (Accounts and Brand only on Enterprise).
+
+## Live test on ZZ Test Kitchen (20 Nov 2026)
+- Swiggy sandbox order SW-1380 → accepted → settled with "Paid on Swiggy" (POS/0001, ₹560).
+- Vendor + ₹1,200 Pay later purchase → ₹700 UPI payment → ₹500 owed; Accounts on Enterprise shows P&L, money by mode, Pay later.
+- Fixed from it: /accounts and /brand were outside the persistent frame (no support banner, PIN lock or plan/device gates) — framed-paths.test.ts now checks every nav screen; receipts say "Paid on Swiggy/Zomato"; audit log purchases read "Purchase from vendor · ₹total" (no ids); renewal amount follows plan; new item standard price defaults to unit price; no "₹-0".
+- Test outlet left on Enterprise (trial) with Swiggy + Zomato sandbox on. TAB Bistro still has Zomato sandbox on.
