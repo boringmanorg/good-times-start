@@ -346,7 +346,7 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
       ) : null}
       {platform ? (
         <p className="mt-2 inline-flex flex-wrap items-center gap-1 text-xs font-semibold text-success">
-          <Check className="size-3.5" />Paid on {PLATFORM_NAMES[platform]} · settle the bill by Wallet{order.is_test ? " · test order, not real" : ""}
+          <Check className="size-3.5" />Paid on {PLATFORM_NAMES[platform]} · settle with "Paid on {PLATFORM_NAMES[platform]}"{order.is_test ? " · test order, not real" : ""}
         </p>
       ) : null}
       {order.payment === "upi" ? (

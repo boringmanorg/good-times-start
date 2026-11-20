@@ -96,8 +96,12 @@ export function removeCancelled(lines: CartLine[], cancelled: CartLine[]): CartL
 }
 
 
-/** Guest identity and party size are required before a bill can be sent to the kitchen or settled. */
-export function guestDetailsError(customer: { name?: string; phone?: string }, guestCount?: number, tableCapacity?: number): string | null {
+/**
+ * Guest identity and party size are required before a bill can be sent to the kitchen or settled.
+ * Not for Swiggy/Zomato orders: the platform owns the guest, and gives no mobile or party size.
+ */
+export function guestDetailsError(customer: { name?: string; phone?: string }, guestCount?: number, tableCapacity?: number, orderType?: string): string | null {
+  if (orderType === "swiggy" || orderType === "zomato") return null;
   if (!customer.name?.trim()) return "Enter the guest name.";
   const mobile = (customer.phone ?? "").replace(/\D/g, "");
   if (mobile.length !== 10) return "Enter a valid 10-digit mobile number.";

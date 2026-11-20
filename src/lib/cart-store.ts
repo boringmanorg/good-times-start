@@ -364,7 +364,7 @@ export function useCart(initialTableId?: string) {
   /** Send unsent items (and cancellations) to the kitchen; returns the tickets and the saved running bill. */
   const sendKitchenWithOrder = useCallback(async (): Promise<{ kots: Kot[]; order: Order } | null> => {
     if (!pendingKitchenLines.length && !pendingCancelLines.length) return null;
-    const detailsError = guestDetailsError(customer, guestCount, await tableCapacityOf(tableId));
+    const detailsError = guestDetailsError(customer, guestCount, await tableCapacityOf(tableId), orderType);
     if (detailsError) { toast.error(detailsError); return null; }
     const db = getDb();
     const now = Date.now();
@@ -471,7 +471,7 @@ export function useCart(initialTableId?: string) {
 
   /** Re-read the shared order before closing it, in case another device already did. */
   const checkStillOpen = useCallback(async (): Promise<Order | null | false> => {
-    const detailsError = guestDetailsError(customer, guestCount, await tableCapacityOf(tableId));
+    const detailsError = guestDetailsError(customer, guestCount, await tableCapacityOf(tableId), orderType);
     if (detailsError) { toast.error(detailsError); return false; }
     const latest = activeOrder?.uid ? await orderByUid(activeOrder.uid) : null;
     if (activeOrder?.uid && !latest) {
@@ -505,7 +505,7 @@ export function useCart(initialTableId?: string) {
   ): Promise<Order | null> => {
     if (!lines.length) return null;
     if (Array.isArray(payment) && giftPaymentProblem(payment)) { toast.error(giftPaymentProblem(payment)); return null; }
-    const detailsError = guestDetailsError(customer, guestCount, await tableCapacityOf(tableId));
+    const detailsError = guestDetailsError(customer, guestCount, await tableCapacityOf(tableId), orderType);
     if (detailsError) { toast.error(detailsError); return null; }
     let latest: Order | null;
     let billLines = lines;

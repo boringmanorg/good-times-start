@@ -238,7 +238,7 @@ function PosPage() {
   };
 
   const sendToKitchen = async () => {
-    const detailsError = guestDetailsError(cart.customer, cart.guestCount);
+    const detailsError = guestDetailsError(cart.customer, cart.guestCount, undefined, cart.orderType);
     if (detailsError) { toast.error(detailsError); return; }
     if (!(await allow(user, "kot.send", "Send the KOT"))) return;
     const tickets = await cart.sendKitchen();
@@ -269,7 +269,7 @@ function PosPage() {
     return () => window.removeEventListener("keydown", h);
   });
 
-  const guestDetailsIssue = guestDetailsError(cart.customer, cart.guestCount, cart.orderType === "dine-in" ? tables.find((t) => t.id === cart.tableId)?.seats : undefined);
+  const guestDetailsIssue = guestDetailsError(cart.customer, cart.guestCount, cart.orderType === "dine-in" ? tables.find((t) => t.id === cart.tableId)?.seats : undefined, cart.orderType);
   const count = cart.lines.reduce((s, l) => s + l.qty, 0);
   const unsentCount = cart.pendingKitchenLines.reduce((sum, line) => sum + line.qty, 0);
   const cancelCount = cart.pendingCancelLines.reduce((sum, line) => sum + line.qty, 0);
@@ -443,6 +443,15 @@ function PosPage() {
               className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl bg-primary-tint text-xs font-semibold text-primary transition-[background,transform] hover:bg-accent active:scale-[0.97] disabled:opacity-40">
               <Wallet className="size-4" />Split
             </button>
+            {cart.orderType === "swiggy" || cart.orderType === "zomato" ? (
+              // A platform order was paid on the platform: one tap settles it as Wallet (online), never cash.
+              <ConfirmButton id="settle-platform" disabled={blocked} onConfirm={() => pay("wallet")}
+                className="col-span-4 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-success text-sm font-semibold text-black disabled:opacity-40"
+                armedClassName="ring-2 ring-success ring-offset-2 ring-offset-card"
+                confirm={<><Check className="size-4" />Settle {formatINR(cart.totals.total, 0)} as paid on {cart.orderType === "swiggy" ? "Swiggy" : "Zomato"}?</>}>
+                <Check className="size-4" />Paid on {cart.orderType === "swiggy" ? "Swiggy" : "Zomato"} · settle
+              </ConfirmButton>
+            ) : null}
             {giftCardsOn ? <Button variant="outline" className="col-span-4 min-h-11" disabled={blocked} onClick={() => void allow(user, 'bill.settle', 'Pay with a gift card').then(ok => { if (ok) { setGiftCheckout(true); setPayOpen(true); } })}>Gift card</Button> : null}
           </div>
         ) : <p className="mt-2 rounded-lg bg-secondary p-2.5 text-center text-xs text-muted-foreground">The cashier settles this bill.</p>}

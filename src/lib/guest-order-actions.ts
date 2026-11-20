@@ -70,7 +70,13 @@ async function ensureReadyForBilling(restaurantId: string): Promise<void> {
   const ready = async () => (await getSettings()).name.trim() !== "" && (await getDb().menu.count()) > 0;
   if (await ready()) return;
   try { await syncCloudData(restaurantId); } catch { /* reported below */ }
-  if (!(await ready())) throw new Error("This device is still loading the menu and tax settings. Wait a moment and accept again.");
+  if (await ready()) return;
+  // A brand-new outlet whose Set up was never saved has no name or GST settings to bill with:
+  // say so, rather than "still loading" for ever.
+  if ((await getDb().menu.count()) > 0 && (await getSettings()).name.trim() === "") {
+    throw new Error("Save the restaurant's details in Set up (name and GST) before accepting orders, so the bill carries them.");
+  }
+  throw new Error("This device is still loading the menu and tax settings. Wait a moment and accept again.");
 }
 
 async function openBillFor(guest: GuestOrder, seatAt?: string): Promise<{ order: Order; kots: Kot[]; missing: string[] }> {

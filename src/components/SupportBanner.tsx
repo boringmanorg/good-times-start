@@ -31,9 +31,9 @@ export function SupportBanner() {
     } finally { setBusy(false); }
   };
   return (
-    <div role="status" className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-2xl border-2 border-black bg-[#e9b949] px-3 py-1.5 text-center text-xs font-semibold text-black shadow-lg">
+    <div role="status" className="fixed left-2 top-[max(0.5rem,env(safe-area-inset-top))] z-[60] flex max-w-[min(26rem,calc(100vw-1rem))] flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl border-2 border-black bg-[#e9b949] px-2.5 py-1 text-[11px] font-semibold text-black shadow-lg">
       <span className="inline-flex items-center gap-1.5"><LifeBuoy className="size-3.5" />{supportBannerText(session)}</span>
-      <span className="font-normal">Reason: {session.reason}</span>
+      <span className="w-full truncate font-normal" title={session.reason}>Reason: {session.reason}</span>
       <button type="button" disabled={busy} onClick={() => void end()} className="inline-flex items-center gap-1 rounded-full bg-black px-2.5 py-0.5 text-[11px] text-[#e9b949] hover:opacity-90">
         <LogOut className="size-3" />{busy ? "Ending…" : "End support"}
       </button>
