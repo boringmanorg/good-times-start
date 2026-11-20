@@ -12,6 +12,7 @@ import { Failed, Loading, Stat } from "./ConsoleBits";
 import { ConsoleOnboard } from "./ConsoleOnboard";
 import { ConsoleLogins } from "./ConsoleLogins";
 import { ConsoleIntegrations } from "./ConsoleIntegrations";
+import { ConsoleActivity } from "./ConsoleActivity";
 import { DevicesSection, RestaurantInfo, SeatsSummary, SubscriptionSection } from "./ConsoleRestaurants";
 
 /**
@@ -214,6 +215,7 @@ function RestaurantDetail({ r, plans, model, route, go }: { r: RestaurantRow; pl
         {section === "users" ? <ConsoleLogins restaurantId={r.id} restaurantName={r.name} /> : null}
         {section === "devices" ? <DevicesSection r={r} /> : null}
         {section === "integrations" ? <ConsoleIntegrations r={r} plan={plan} /> : null}
+        {section === "activity" ? <ConsoleActivity restaurantId={r.id} /> : null}
       </div>
     </div>
   );

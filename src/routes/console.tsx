@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Activity, BarChart3, Building2, Gauge, Layers, LogOut, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { Activity, BarChart3, History, Building2, Gauge, Layers, LogOut, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { consoleClient } from "@/lib/console-client";
 import { passwordProblem } from "@/lib/staff-login-logic";
 import { Button } from "@/components/ui/button";
 import { whoami } from "@/lib/console-api";
 import { ConsoleOverview } from "@/components/console/ConsoleOverview";
 import { ConsoleProducts } from "@/components/console/ConsoleProducts";
+import { CatalogueDriftBanner, ConsoleActivity } from "@/components/console/ConsoleActivity";
 import { consoleHash, parseConsoleHash, type ConsoleRoute, type ConsoleTab } from "@/lib/products";
 import { ConsolePlans } from "@/components/console/ConsolePlans";
 import { ConsoleInfra } from "@/components/console/ConsoleInfra";
@@ -29,6 +30,7 @@ type Tab = ConsoleTab;
 const TABS: { v: Tab; l: string; icon: typeof Activity }[] = [
   { v: "overview", l: "Overview", icon: Gauge },
   { v: "products", l: "Products", icon: Building2 },
+  { v: "activity", l: "Activity", icon: History },
   { v: "plans", l: "Plans", icon: Layers },
   { v: "infra", l: "Infra & backend", icon: Activity },
   { v: "seo", l: "SEO insights", icon: Search },
@@ -216,11 +218,25 @@ function ConsoleShell({ email, onSignOut }: { email: string; onSignOut: () => Pr
       <main className="mx-auto max-w-7xl p-4 lg:p-8">
         {tab === "overview" ? <ConsoleOverview /> : null}
         {tab === "products" ? <ConsoleProducts route={route} go={go} /> : null}
+        {tab === "activity" ? <ActivityPage /> : null}
         {tab === "plans" ? <ConsolePlans /> : null}
         {tab === "infra" ? <ConsoleInfra /> : null}
         {tab === "seo" ? <ConsoleSeo /> : null}
       </main>
       <footer className="px-4 pb-8 text-center text-xs text-muted-foreground"><BarChart3 className="mr-1 inline size-3.5" />XTSY POS · Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by XTSY</footer>
+    </div>
+  );
+}
+
+function ActivityPage() {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-brand text-3xl">Activity</h1>
+        <p className="text-sm text-muted-foreground">Every confirmed change across XTSY POS: plans, subscriptions and payments, outlets, logins and support sign-ins, devices, Swiggy & Zomato. Who did it and when, in plain words.</p>
+      </div>
+      <CatalogueDriftBanner />
+      <ConsoleActivity />
     </div>
   );
 }

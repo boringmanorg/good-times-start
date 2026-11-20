@@ -1,3 +1,5 @@
+import { PayablesPanel } from "@/components/PayablesPanel";
+import { vendorPayables } from "@/lib/ledger-logic";
 import { featureOn } from "@/lib/plans";
 import { useEntitlements } from "@/lib/use-entitlements";
 import { createFileRoute } from "@tanstack/react-router";
@@ -41,7 +43,7 @@ export const Route = createFileRoute("/stock")({
 });
 
 const inputClass = "mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm";
-type Tab = "spend" | "items" | "purchases" | "suppliers" | "history";
+type Tab = "spend" | "items" | "purchases" | "payables" | "suppliers" | "history";
 function num(raw: string): number | null {
   const value = Number(raw.trim());
   return raw.trim() !== "" && Number.isFinite(value) ? value : null;
@@ -325,6 +327,7 @@ function StockPage() {
   const materials = useLiveQuery(() => getDb().materials.toArray(), [], []);
   const suppliers = useLiveQuery(() => getDb().suppliers.toArray(), [], []);
   const entries = useLiveQuery(() => getDb().stockEntries.orderBy("at").reverse().toArray(), [], []);
+  const ledger = useLiveQuery(() => getDb().ledger.where("type").equals("vendor_payment").toArray(), [], []);
   const purchases = entries.filter((e) => e.type === "purchase");
   const history = entries.filter((e) => e.type === "purchase" || e.purchaseId);
   const active = materials.filter((m) => !m.archived).sort((a, b) => a.name.localeCompare(b.name));
@@ -364,6 +367,7 @@ function StockPage() {
   };
   const thisMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); })();
   const month = spendSummary(entriesBetween(entries, thisMonth, Date.now() + 1));
+  const owedNow = vendorPayables(entries, ledger, suppliers).reduce((n, v) => n + v.owed, 0);
   const pending = entries.filter((e) => approvalStatus(e) === "pending").sort((a, b) => (a.approval?.requestedAt ?? a.at) - (b.approval?.requestedAt ?? b.at));
   const vendorOf = (p: StockEntry) => p.supplierName ?? suppliers.find((x) => x.id === p.supplierId)?.name ?? "Supplier not recorded";
   const billCard = (p: StockEntry, opts: { showDate?: boolean } = {}) => {
@@ -401,7 +405,7 @@ function StockPage() {
     </header>
     <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Kpi label="Spent this month" value={formatINR(month.spend, 0)} note={`${month.bills} ${month.bills === 1 ? "bill" : "bills"}`} />
-      <Kpi label="Pay later this month" value={formatINR(month.payLater, 0)} note="Owed to vendors" tone={month.payLater ? "warn" : undefined} />
+      <Kpi label="Owed to vendors" value={formatINR(owedNow, 0)} note={owedNow ? "Pay later, not yet paid" : "Nothing owed"} tone={owedNow ? "warn" : undefined} />
       <Kpi label="Waiting for approval" value={String(pending.length)} note={pending.length ? "From the bill desk" : "All clear"} tone={pending.length ? "warn" : undefined} />
       <Kpi label="Purchase items" value={String(active.length)} note={`${purchases.length} bills in all`} />
     </div>
@@ -414,10 +418,11 @@ function StockPage() {
         <div className="divide-y divide-border">{pending.map((p) => billCard(p))}</div>
       </section>
     ) : null}
-    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={(t) => { setTab(t); setBillFilter("all"); }} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
+    <Segmented ariaLabel="Purchase view" stretch value={tab} onChange={(t) => { setTab(t); setBillFilter("all"); }} options={[...(admin ? [{ value: "spend" as const, label: "Spend" }] : []), { value: "items", label: "Items" }, { value: "purchases", label: "Purchases" }, ...(admin ? [{ value: "payables" as const, label: "Pay later" }] : []), ...(vendorsOn ? [{ value: "suppliers" as const, label: "Vendors" }] : []), { value: "history", label: "History" }]}/>
 
     {tab === "items" ? <PurchaseItemsList items={listed} entries={entries} suppliers={suppliers} onEdit={admin ? (m) => void editItem(m) : undefined} /> : null}
 
+    {tab === "payables" && admin ? <PayablesPanel entries={entries} suppliers={suppliers} by={user?.displayName ?? "Admin"} /> : null}
     {tab === "spend" && admin ? <PurchaseSpendDashboard entries={entries} suppliers={suppliers} materials={materials} /> : null}
     {tab === "purchases" || tab === "history" ? <div className="mt-4 space-y-4">
       <div className="flex flex-wrap items-center gap-2">

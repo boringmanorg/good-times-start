@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { CartDraft, Customer, DayClose, InventoryItem, Kot, Material, MenuItem, Order, RestaurantSettings, RestaurantTable, StockEntry, Supplier } from "./types";
+import type { CartDraft, Customer, DayClose, InventoryItem, Kot, LedgerEntry, Material, MenuItem, Order, RestaurantSettings, RestaurantTable, StockEntry, Supplier } from "./types";
 import { kotNumber } from "./kot-history";
 import { SEED_MENU, SEED_TABLES } from "./seed";
 import { normalisePhone } from "./customer-logic";
@@ -36,6 +36,7 @@ class RestroDB extends Dexie {
   stockEntries!: Table<StockEntry, string>;
   customers!: Table<Customer, string>;
   dayCloses!: Table<DayClose, string>;
+  ledger!: Table<LedgerEntry, string>;
   /** Running stock per raw material, kept in step with stockEntries so screens never re-add the whole ledger. */
   materialLevels!: Table<{ materialId: string; qty: number }, string>;
 
@@ -169,6 +170,10 @@ class RestroDB extends Dexie {
     // KOT the counter has ever printed (settling, printing and table moves did, ~1 in 3 actions).
     this.version(9).stores({
       kots: "++id, orderId, status, createdAt, uid, orderUid, submissionId",
+    });
+    // Accounts: vendor payments, expenses and other income (ledger-logic.ts).
+    this.version(10).stores({
+      ledger: "id, type, at, supplierId",
     });
   }
 }
@@ -352,8 +357,8 @@ export async function loadSampleData(): Promise<void> {
  */
 export async function resetDevice(): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", [db.menu, db.orders, db.restTables, db.kots, db.inventory, db.drafts, db.outbox, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels], async () => {
-    await Promise.all([db.materialLevels.clear(), db.menu.clear(), db.orders.clear(), db.restTables.clear(), db.kots.clear(), db.inventory.clear(), db.drafts.clear(), db.outbox.clear(),
+  await db.transaction("rw", [db.menu, db.orders, db.restTables, db.kots, db.inventory, db.drafts, db.outbox, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger], async () => {
+    await Promise.all([db.ledger.clear(), db.materialLevels.clear(), db.menu.clear(), db.orders.clear(), db.restTables.clear(), db.kots.clear(), db.inventory.clear(), db.drafts.clear(), db.outbox.clear(),
       db.materials.clear(), db.suppliers.clear(), db.stockEntries.clear(), db.customers.clear(), db.dayCloses.clear()]);
     for (const key of ["restaurantId", "pullCursor", "restaurantSettings", "lastSyncAt", "syncError"]) await db.meta.delete(key);
   });

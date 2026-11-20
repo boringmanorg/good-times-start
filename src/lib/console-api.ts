@@ -1,5 +1,6 @@
 import { consoleClient } from "./console-client";
 import type { Feature, SeatApp } from "./plans";
+import type { ActivityEvent } from "./activity-logic";
 import type { IntegrationLink, IntegrationMode, Platform, SandboxDish, SandboxLine, SandboxOrderRow } from "./aggregator-logic";
 
 /* Super admin console: thin wrappers over the platform_* cloud functions (super admin only). */
@@ -86,3 +87,7 @@ export const setIntegration = (restaurant: string, platform: Platform, mode: Int
 export const loadSandboxMenu = (restaurant: string) => rpc<SandboxDish[]>("platform_menu_dishes", { _restaurant: restaurant });
 export const sendTestOrder = (restaurant: string, platform: Platform, lines: SandboxLine[], customer: string) =>
   rpc<{ code: string; id: string; subtotal: number }>("platform_send_test_order", { _restaurant: restaurant, _platform: platform, _lines: lines, _customer: customer });
+
+/* Activity log (activity-logic.ts): every confirmed console action, newest first. */
+export const loadActivity = (restaurant: string | null, before: number | null) =>
+  rpc<ActivityEvent[]>("platform_activity", { _restaurant: restaurant, _before: before, _limit: 100 });

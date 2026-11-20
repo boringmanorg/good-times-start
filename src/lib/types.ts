@@ -294,6 +294,33 @@ export interface StockEntry {
   roundOff?: number;
 }
 
+/** How a ledger entry was paid. "Pay later" isn't one: a ledger entry is money that moved. */
+export type LedgerMode = "cash" | "upi" | "card" | "bank";
+
+/**
+ * Money outside bills and purchases (ledger-logic.ts): paying a vendor for "Pay later" bills,
+ * an expense, or other income. Append-only; a mistake is voided with a reason, never edited.
+ */
+export interface LedgerEntry {
+  id: string;
+  type: "vendor_payment" | "expense" | "income";
+  /** When the money moved. */
+  at: number;
+  recordedAt: number;
+  by: string;
+  amount: number;
+  mode: LedgerMode;
+  /** Expense or income category (EXPENSE_CATEGORIES / INCOME_CATEGORIES). */
+  category?: string;
+  supplierId?: string;
+  supplierName?: string;
+  /** A vendor payment set against "Pay later" bills; any rest is an advance to that vendor. */
+  allocations?: { purchaseId: string; amount: number }[];
+  reference?: string;
+  note?: string;
+  void?: { at: number; by: string; reason: string };
+}
+
 export interface PurchaseApproval {
   status: "pending" | "approved" | "rejected";
   /** Display name and login of who recorded it. */

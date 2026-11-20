@@ -528,3 +528,35 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
   Console plan edits are not logged — re-check the feature matrix after any plan edit.
 - Durability: Dexie v9 indexes `kots.orderUid` and `kots.submissionId`; `kotsForBill` replaces
   full KOT scans at settlement/print numbering, sync renumbering and table moves.
+
+## Activity logs, Pay later payments, Accounts (20 Nov 2026)
+
+- **Console Activity** (`activity-logic.ts`, `ConsoleActivity.tsx`, tested): one plain-language
+  line per confirmed action from `account_events` via `platform_activity` (whole platform or one
+  outlet; Activity tab, outlet → Activity section, latest 8 on Overview). Saves that changed
+  nothing are dropped. Plan catalogue edits are logged by a trigger on `plans`
+  (`catalogue_changed`, only the fields that changed, who did it — even direct SQL, shown as
+  "System"); console device activate/block/release logs `device_changed`.
+  `CatalogueDriftBanner` (Overview, Activity, Plans) compares the active plans to the ladder in
+  `plans.ts` (`catalogueDrift`) and offers "Put it back to the ladder". Migration:
+  `docs/migrations/2026-11-20-console-activity.sql` (account_events.account_id now nullable).
+- **Restaurant audit log** (`audit-story.ts`, tested; Settings → Audit log): each entry becomes one
+  readable line ("Bill POS/0055 settled · ₹340", "KOT/0164 sent · Room 666 · Beverages",
+  "Payment corrected on POS/0002 · Reason: …"). Routine book-keeping (tables busy/free, KOT bill
+  numbers, numbering ids — over half the rows) is hidden unless "Show routine updates" is ticked.
+  Secrets (adminCode, any *code/pin/token/key field) are never shown. Support writes show as
+  "XTSY support".
+- **Ledger** record kind (`ledger-logic.ts` / `ledger-actions.ts`, tested): `vendor_payment`,
+  `expense`, `income`; modes cash/upi/card/bank; append-only — a mistake is voided once with a
+  reason. Dexie v10 table `ledger`. Cloud guard `guard_ledger_entry`: owner/manager only, valid
+  type/mode/amount/date, vendor required for payments, no edits except one void, no deletes.
+  Migration: `docs/migrations/2026-11-20-ledger.sql` (adds 'ledger' to the kind check).
+- **Pay later → paid** (`PayablesPanel`, Purchase → Pay later tab for admins, and Accounts):
+  owed per bill = Pay later part − approved returns (capped) − payments set against it; payments
+  go to the oldest bills first (`allocateOldestFirst`), any rest is an advance. Purchase KPI now
+  reads "Owed to vendors".
+- **Accounts** (`/accounts`, POS Manager, `SCREEN_FEATURE` = `accounting`, owner/manager): period
+  Today/This week/This month/Last month; tiles; Profit & loss (sales before GST, purchases less
+  returns at what was paid, expenses by category, other income — owner's capital is not income);
+  money in/out by mode (Pay later, points, gift cards move no money); Expenses (add, void);
+  Pay later; Day book; Excel with all three sheets.

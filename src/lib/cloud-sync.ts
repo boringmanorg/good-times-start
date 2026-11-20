@@ -12,6 +12,7 @@ import {
   RECORD_KINDS,
   isCustomerPayload,
   isDayClosePayload,
+  isLedgerPayload,
   isMaterialPayload,
   isStockEntryPayload,
   isSupplierPayload,
@@ -112,6 +113,7 @@ async function readLocal(kind: RecordKind, recordId: string): Promise<unknown> {
     case "stock_entry": return db.stockEntries.get(recordId);
     case "customer": return db.customers.get(recordId);
     case "day_close": return db.dayCloses.get(recordId);
+    case "ledger": return db.ledger.get(recordId);
   }
 }
 
@@ -506,7 +508,7 @@ export async function fetchBillFromCloud(billUid: string): Promise<boolean> {
 async function applyRemote(rows: RemoteRow[]): Promise<void> {
   const db = getDb();
   // The outbox is read inside the same transaction, so a local edit can't slip in between the check and the write.
-  await db.transaction("rw", [db.outbox, db.menu, db.restTables, db.inventory, db.orders, db.kots, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels], async () => {
+  await db.transaction("rw", [db.outbox, db.menu, db.restTables, db.inventory, db.orders, db.kots, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger], async () => {
     const pending = new Set((await db.outbox.toCollection().primaryKeys()).map(String));
     const conflicted = new Set(parseConflicts((await db.meta.get(CONFLICTS_KEY))?.value).map((c) => c.key));
     for (const row of rows) {
@@ -603,6 +605,10 @@ async function applyRemote(rows: RemoteRow[]): Promise<void> {
         case "day_close":
           if (row.deleted) await db.dayCloses.delete(id);
           else if (isDayClosePayload(payload)) await db.dayCloses.put({ ...payload, id });
+          break;
+        case "ledger":
+          if (row.deleted) await db.ledger.delete(id);
+          else if (isLedgerPayload(payload)) await db.ledger.put({ ...payload, id });
           break;
       }
     }

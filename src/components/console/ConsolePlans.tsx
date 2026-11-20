@@ -7,6 +7,7 @@ import { loadPlans, savePlan, type PlanRow } from "@/lib/console-api";
 import { FEATURES, FEATURE_NAMES, type Feature } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Panel, field } from "./ConsoleBits";
+import { CatalogueDriftBanner } from "./ConsoleActivity";
 
 export function ConsolePlans() {
   const q = useQuery({ queryKey: ["console", "plans"], queryFn: loadPlans });
@@ -18,8 +19,9 @@ export function ConsolePlans() {
     <div className="space-y-5">
       <div>
         <h1 className="font-brand text-3xl">Plans</h1>
-        <p className="text-sm text-muted-foreground">Prices, device seats and features for each plan. Changes apply to every restaurant on that plan at once. The website shows its own copy of the price list.</p>
+        <p className="text-sm text-muted-foreground">Prices, device seats and features for each plan. Changes apply to every restaurant on that plan at once, show on the website straight away, and are recorded in Activity.</p>
       </div>
+      <CatalogueDriftBanner />
       <div className="grid gap-5 xl:grid-cols-2">{live.map((p) => <PlanEditor key={p.id} p={p} />)}</div>
       {old.length ? <p className="text-xs text-muted-foreground">Retired plans kept for history: {old.map((p) => p.name).join(", ")}.</p> : null}
     </div>

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ago, loadOverview } from "@/lib/console-api";
 import { Bars, Failed, Loading, Panel, Stat } from "./ConsoleBits";
+import { CatalogueDriftBanner, ConsoleActivity } from "./ConsoleActivity";
 
 export function ConsoleOverview() {
   const q = useQuery({ queryKey: ["console", "overview"], queryFn: loadOverview, refetchInterval: 60_000 });
@@ -19,6 +20,7 @@ export function ConsoleOverview() {
         <h1 className="font-brand text-3xl">Overview</h1>
         <p className="text-sm text-muted-foreground">All restaurants on XTSY POS · updated {ago(o.at)}</p>
       </div>
+      <CatalogueDriftBanner />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Restaurants" value={o.restaurants} note={`${o.liveAccounts} of ${o.accounts} subscriptions live`} />
         <Stat label="Monthly recurring" value={`₹${o.mrr.toLocaleString("en-IN")}`} note={`${o.complimentary} complimentary · no online payments`} />
@@ -40,25 +42,10 @@ export function ConsoleOverview() {
           </ul>
         </Panel>
       </div>
-      <Panel title="Recent subscription changes">
-        {o.events.length ? (
-          <ul className="divide-y divide-border text-sm">
-            {o.events.map((e, i) => (
-              <li key={i} className="flex flex-wrap justify-between gap-2 py-2">
-                <span><span className="font-medium">{e.account ?? "Account"}</span> · {e.kind.replace(/_/g, " ")}{describe(e.detail)}</span>
-                <span className="text-muted-foreground">{ago(e.at)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="text-sm text-muted-foreground">No changes yet.</p>}
+      <Panel title="Latest activity" action={<a href="#activity" className="text-sm font-semibold text-primary hover:underline">See all</a>}>
+        <ConsoleActivity compact />
       </Panel>
     </div>
   );
 }
 
-function describe(detail: unknown): string {
-  const d = detail as { from?: { plan?: string }; to?: { plan?: string; status?: string } } | null;
-  if (d?.to?.plan && d.from?.plan && d.to.plan !== d.from.plan) return `: ${d.from.plan} → ${d.to.plan}`;
-  if (d?.to?.status) return `: ${d.to.status}`;
-  return "";
-}

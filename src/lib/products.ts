@@ -29,18 +29,19 @@ export function productOf(stored: string | null | undefined): ProductId {
   return isProductId(stored) ? stored : "restaurant_pos";
 }
 
-export type Section = "overview" | "subscription" | "users" | "devices" | "integrations";
+export type Section = "overview" | "subscription" | "users" | "devices" | "integrations" | "activity";
 export const SECTIONS: { v: Section; l: string }[] = [
   { v: "overview", l: "Overview" },
   { v: "subscription", l: "Plan & billing" },
   { v: "users", l: "Users" },
   { v: "devices", l: "Devices" },
   { v: "integrations", l: "Swiggy & Zomato" },
+  { v: "activity", l: "Activity" },
 ];
 const isSection = (v: unknown): v is Section => SECTIONS.some((s) => s.v === v);
 
-export type ConsoleTab = "overview" | "products" | "plans" | "infra" | "seo";
-const TABS: ConsoleTab[] = ["overview", "products", "plans", "infra", "seo"];
+export type ConsoleTab = "overview" | "products" | "activity" | "plans" | "infra" | "seo";
+const TABS: ConsoleTab[] = ["overview", "products", "activity", "plans", "infra", "seo"];
 
 export interface ConsoleRoute { tab: ConsoleTab; product?: ProductId; restaurant?: string; section?: Section }
 

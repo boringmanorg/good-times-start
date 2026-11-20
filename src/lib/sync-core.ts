@@ -1,9 +1,9 @@
 import type { CartLine, Customer, DayClose, InventoryItem, Kot, Material, MenuItem, Order, RestaurantSettings, RestaurantTable, StockEntry, Supplier } from "./types";
 
 /** Kinds of records shared between a restaurant's devices (mirrors restaurant_records.kind). */
-export type RecordKind = "settings" | "menu" | "table" | "order" | "kot" | "inventory" | "material" | "supplier" | "stock_entry" | "customer" | "day_close";
+export type RecordKind = "settings" | "menu" | "table" | "order" | "kot" | "inventory" | "material" | "supplier" | "stock_entry" | "customer" | "day_close" | "ledger";
 
-export const RECORD_KINDS: readonly RecordKind[] = ["settings", "menu", "table", "order", "kot", "inventory", "material", "supplier", "stock_entry", "customer", "day_close"];
+export const RECORD_KINDS: readonly RecordKind[] = ["settings", "menu", "table", "order", "kot", "inventory", "material", "supplier", "stock_entry", "customer", "day_close", "ledger"];
 
 /** The single settings record per restaurant. */
 export const SETTINGS_RECORD_ID = "restaurant";
@@ -112,6 +112,10 @@ export function isCustomerPayload(value: unknown): value is Customer {
 
 export function isDayClosePayload(value: unknown): value is DayClose {
   return isRecord(value) && isString(value["id"]) && isString(value["day"]) && isString(value["series"]) && isNumber(value["countedCash"]);
+}
+
+export function isLedgerPayload(value: unknown): value is import("./types").LedgerEntry {
+  return isRecord(value) && isString(value["id"]) && isString(value["type"]) && isNumber(value["amount"]) && isNumber(value["at"]) && isString(value["mode"]);
 }
 
 export function isSettingsPayload(value: unknown): value is RestaurantSettings {

@@ -27,11 +27,11 @@ export async function loadAuditLog(restaurantId: string, filter: AuditFilter, be
 export const AUDIT_KINDS: { v: string; l: string }[] = [
   { v: "order", l: "Bills" }, { v: "kot", l: "Kitchen tickets" }, { v: "menu", l: "Menu" }, { v: "table", l: "Tables & rooms" },
   { v: "material", l: "Purchase items" }, { v: "stock_entry", l: "Purchases & returns" }, { v: "supplier", l: "Vendors" },
-  { v: "customer", l: "Guests" }, { v: "settings", l: "Settings" }, { v: "inventory", l: "Inventory" },
+  { v: "customer", l: "Guests" }, { v: "settings", l: "Settings" }, { v: "inventory", l: "Inventory" }, { v: "ledger", l: "Accounts" },
 ];
 const KIND_ONE: Record<string, string> = {
   order: "Bill", kot: "Kitchen ticket", menu: "Menu item", table: "Table / room", material: "Purchase item", stock_entry: "Purchase / return",
-  supplier: "Vendor", customer: "Guest", settings: "Settings", day_close: "Day close", inventory: "Inventory",
+  supplier: "Vendor", customer: "Guest", settings: "Settings", day_close: "Day close", inventory: "Inventory", ledger: "Accounts entry",
 };
 export function kindLabel(kind: string): string { return KIND_ONE[kind] ?? kind; }
 
