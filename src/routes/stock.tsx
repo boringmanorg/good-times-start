@@ -175,7 +175,8 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
       if (!row.newItem.name.trim() || price === null || price < 0) { setError("Enter each new item's name and standard price, 0 or more."); return; }
       newMaterials.push({ id: row.materialId, name: row.newItem.name.trim(), unit: row.newItem.unit, costPerUnit: price, lowStockLevel: 0 });
     }
-    const at = purchase?.at ?? new Date(`${purchaseDate}T00:00:00`).getTime();
+    // Today's bill keeps the real time; a past date keeps just the date (its time isn't known).
+    const at = purchase?.at ?? (purchaseDate === dayKey(Date.now()) ? Date.now() : new Date(`${purchaseDate}T00:00:00`).getTime());
     if (!Number.isFinite(at) || at > Date.now()) { setError("Enter a valid purchase date, no later than today."); return; }
     if (needsApproval && !reference.trim()) { setError("Enter the supplier's invoice number, so the admin can check the bill."); return; }
     const payProblem = purchasePayProblem(total, payments, roundOff);
@@ -188,7 +189,7 @@ function PurchaseForm({ materials, suppliers, purchase, onDone }: { materials: M
         await updatePurchase(purchase.id, { items, ...paid, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}) });
         toast.success("Purchase bill updated"); onDone(); return;
       }
-      await recordStockEntry({ type: "purchase", at, items, ...paid, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) },
+      await recordStockEntry({ type: "purchase", at, recordedAt: Date.now(), items, ...paid, ...(supplierId ? { supplierId, supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? "" } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(user ? { by: user.displayName } : {}) },
         needsApproval && user ? { by: user.displayName, ...(user.login ? { login: user.login } : {}) } : undefined, newMaterials);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not record purchase"); return; } finally { setBusy(false); }
     toast.success(needsApproval ? `Purchase of ${formatINR(total + roundOff, 0)} sent to the admin for approval` : `Purchase of ${formatINR(total + roundOff, 0)} recorded`);

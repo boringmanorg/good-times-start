@@ -36,3 +36,16 @@ describe("purchase bill lists", () => {
     expect(billMatches(entries[0]!, "  ", "Fresh Mart", name)).toBe(true);
   });
 });
+
+describe("purchase time shown", () => {
+  const day = (h: number, m = 0) => new Date(2026, 10, 19, h, m).getTime();
+  it("uses the bill's own time, else when it was entered that day, else none", async () => {
+    const { purchaseTime } = await import("./purchase-logic");
+    expect(purchaseTime({ at: day(14, 5) })).toBe(day(14, 5));
+    expect(purchaseTime({ at: day(0), recordedAt: day(18, 30) })).toBe(day(18, 30));
+    expect(purchaseTime({ at: day(0), approval: { status: "pending", requestedBy: "B", requestedAt: day(11) } as never })).toBe(day(11));
+    expect(purchaseTime({ at: day(0), approvedAt: day(9, 15) })).toBe(day(9, 15));
+    expect(purchaseTime({ at: day(0), recordedAt: day(0) + 2 * 86_400_000 })).toBeNull();
+    expect(purchaseTime({ at: day(0) })).toBeNull();
+  });
+});

@@ -269,6 +269,8 @@ export interface StockEntry {
   /** transfer_out / transfer_in are the two sides of a brand stock transfer (transfer_stock). */
   type: "purchase" | "sale" | "wastage" | "count" | "return" | "transfer_out" | "transfer_in";
   at: number;
+  /** When it was entered on the POS. `at` is the bill's date (midnight for a past date), so this gives the time. */
+  recordedAt?: number;
   /** name and unit are copied when the entry is recorded, so history still reads correctly after an item is renamed or deleted. */
   items: { materialId: string; qty: number; unitCost?: number; name?: string; unit?: StockUnit }[];
   supplierId?: string;

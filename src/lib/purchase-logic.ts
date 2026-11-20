@@ -258,6 +258,23 @@ export function topItems(entries: StockEntry[], materials: { id: string; name: s
 export interface BillDay { day: string; label: string; entries: StockEntry[]; total: number }
 
 /** "Today", "Yesterday", or "Mon, 17 Nov 2026" for a list heading. */
+/**
+ * The time to show for a purchase or return, or null when none is known. Bills entered for a
+ * past date are stored at that date's midnight, and showing "12:00 am" for them was wrong
+ * (20 Nov). Use the bill's own time when it has one, else when it was entered or sent for
+ * approval — but only if that was the same day.
+ */
+export function purchaseTime(e: Pick<StockEntry, "at" | "recordedAt" | "approval" | "approvedAt">): number | null {
+  const d = new Date(e.at);
+  const midnight = d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0 && d.getMilliseconds() === 0;
+  if (!midnight) return e.at;
+  const sameDay = (t?: number) => t !== undefined && new Date(t).toDateString() === d.toDateString();
+  if (sameDay(e.recordedAt)) return e.recordedAt!;
+  if (sameDay(e.approval?.requestedAt)) return e.approval!.requestedAt!;
+  if (sameDay(e.approvedAt)) return e.approvedAt!;
+  return null;
+}
+
 export function billDayLabel(at: number, now = Date.now()): string {
   const day = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const diff = Math.round((day(now) - day(at)) / 86_400_000);

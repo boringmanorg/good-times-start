@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, ReceiptText, Undo2 } from "lucide-react";
 import { formatINR } from "@/lib/billing";
 import { formatQty } from "@/lib/stock-logic";
-import { approvalStatus, entryAmount } from "@/lib/purchase-logic";
+import { approvalStatus, entryAmount, purchaseTime } from "@/lib/purchase-logic";
 import { PURCHASE_PAY_MODES } from "@/lib/purchase-pay-logic";
 import type { StockEntry, StockUnit } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const SHOW = 5;
 const MODE_DOT: Record<string, string> = { cash: "bg-success", upi: "bg-primary", card: "bg-gold", bank: "bg-accent-foreground", credit: "bg-destructive" };
 const time = (at: number) => new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
-const when = (at: number) => `${new Date(at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}, ${time(at)}`;
+const day = (at: number) => new Date(at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 /**
  * One supplier bill (or return) as a list row: vendor, invoice, time, how it was paid and the
@@ -40,6 +40,7 @@ export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, s
   const lines = all ? entry.items : entry.items.slice(0, SHOW);
   const amount = entryAmount(entry);
   const qtyTotal = entry.items.length;
+  const clock = purchaseTime(entry);
 
   const paidBy = entry.payments?.length ? [...new Set(entry.payments.map((pay) => PURCHASE_PAY_MODES.find((m) => m.v === pay.mode)?.short ?? pay.mode))].join(" + ") : "Payment not recorded";
 
@@ -60,7 +61,7 @@ export function PurchaseBillCard({ entry, vendor, lineName, lineUnit, against, s
           </span>
           <span className="mt-0.5 block text-xs text-muted-foreground sm:truncate">
             {entry.reference ? <span className="font-medium text-foreground">#{entry.reference}</span> : "No invoice no."}
-            {" · "}{showDate ? when(entry.at) : time(entry.at)}{entry.by ? ` · ${entry.by}` : ""}{" · "}{qtyTotal} {qtyTotal === 1 ? "item" : "items"}
+            {showDate ? ` · ${day(entry.at)}` : ""}{clock !== null ? `${showDate ? ", " : " · "}${time(clock)}` : ""}{entry.by ? ` · ${entry.by}` : ""}{" · "}{qtyTotal} {qtyTotal === 1 ? "item" : "items"}
           </span>
         </span>
         <span className="hidden w-40 shrink-0 truncate text-right text-xs text-muted-foreground md:block">{isReturn ? (against ? `Against ${against}` : "") : paidBy}</span>
