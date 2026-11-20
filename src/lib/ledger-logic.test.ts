@@ -75,3 +75,15 @@ describe("the books", () => {
     expect(lines[0]!.at >= lines[lines.length - 1]!.at).toBe(true);
   });
 });
+
+describe("day book never shows a made-up 12:00 am", () => {
+  it("uses when a midnight-dated purchase was approved that day, else date only", async () => {
+    const { dayBook } = await import("./ledger-logic");
+    const mid = new Date(2026, 10, 20).getTime();
+    const p = (id: string, approvedAt?: number) => ({ id, type: "purchase", at: mid, items: [{ materialId: "m", qty: 1, unitCost: 100 }], payments: [{ mode: "cash", amount: 100 }], ...(approvedAt ? { approvedAt } : {}) });
+    const book = dayBook([], [p("a", mid + 18.5 * 3_600_000), p("b", mid + 30 * 3_600_000)] as never, [], mid, mid + 86_400_000, () => "V");
+    expect(book.find((l) => l.id === "p:a")).toMatchObject({ at: mid + 18.5 * 3_600_000 });
+    expect(book.find((l) => l.id === "p:a")?.dateOnly).toBeUndefined();
+    expect(book.find((l) => l.id === "p:b")).toMatchObject({ at: mid, dateOnly: true });
+  });
+});

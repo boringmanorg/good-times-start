@@ -17,7 +17,7 @@ import { formatINR } from "@/lib/billing";
 import { newUid } from "@/lib/sync-core";
 import { STOCK_UNITS, formatQty, purchaseTotal } from "@/lib/stock-logic";
 import { decidePurchase, deleteMaterial, deletePurchase, deleteSupplier, recordStockEntry, updatePurchase, saveMaterial, saveSupplier, updateMaterial } from "@/lib/stock-actions";
-import { approvalStatus, billMatches, billsByDay, canRequestReturn, canReturnPurchase, entriesBetween, itemPurchaseLines, itemTotals, purchaseReturnDeadline, remainingPurchaseQty, spendSummary, supplierHistories } from "@/lib/purchase-logic";
+import { approvalStatus, billMatches, billsByDay, canRequestReturn, canReturnPurchase, entriesBetween, itemPurchaseLines, itemTotals, purchaseReturnDeadline, purchaseTime, remainingPurchaseQty, spendSummary, supplierHistories } from "@/lib/purchase-logic";
 import { gstinError } from "@/lib/validation";
 import { downloadXlsx } from "@/lib/xlsx";
 import { dayKey } from "@/lib/report-logic";
@@ -44,6 +44,9 @@ export const Route = createFileRoute("/stock")({
 
 const inputClass = "mt-1 w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm";
 type Tab = "spend" | "items" | "purchases" | "payables" | "suppliers" | "history";
+/** The purchase's time for exports, or blank when only its date is known. */
+const purchaseClock = (e: StockEntry) => { const t = purchaseTime(e); return t === null ? "" : new Date(t).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }); };
+
 function num(raw: string): number | null {
   const value = Number(raw.trim());
   return raw.trim() !== "" && Number.isFinite(value) ? value : null;
@@ -356,7 +359,7 @@ function StockPage() {
   const exportPurchase = () => downloadXlsx(`purchase-${dayKey(Date.now())}`, [
     { name: "Items", title: "Purchase items", columns: [{ header: "Item" }, { header: "Unit" }, { header: "Standard price", format: "inr" }, { header: "Bought (net)", format: "qty" }, { header: "Amount", format: "inr" }, { header: "Bills" }], rows: listed.map((m) => { const t = itemTotals(itemPurchaseLines(m.id, entries, suppliers)); return [m.name, m.unit, m.costPerUnit ?? null, t.qty, t.amount, t.bills]; }) },
     { name: "Vendors", title: "Purchases by vendor and day", columns: [{ header: "Vendor" }, { header: "Day" }, { header: "Amount", format: "inr" }, { header: "Bills" }], rows: vendors.flatMap((v) => v.days.map((d) => [v.name, d.day, d.amount, d.entries.filter((e) => e.type === "purchase").length])) },
-    { name: "History", title: "Purchase and return history", columns: [{ header: "Date", format: "datetime" }, { header: "Type" }, { header: "Vendor" }, { header: "Invoice" }, { header: "Item" }, { header: "Quantity", format: "qty" }, { header: "Unit" }, { header: "Unit price", format: "inr" }, { header: "Amount", format: "inr" }, { header: "Paid by", width: 30 }], rows: history.flatMap((e) => e.items.map((i, n) => [e.at, e.purchaseId ? "Supplier return" : "Purchase", e.supplierName ?? suppliers.find((s) => s.id === e.supplierId)?.name ?? "", e.reference ?? "", lineName(i), Math.abs(i.qty), lineUnit(i), i.unitCost ?? null, (e.purchaseId ? -1 : 1) * Math.abs(i.qty) * (i.unitCost ?? 0), e.purchaseId || n > 0 ? "" : `${paymentText(e)}${e.roundOff ? ` (round off ${e.roundOff})` : ""}`])) },
+    { name: "History", title: "Purchase and return history", columns: [{ header: "Date", format: "date" }, { header: "Time" }, { header: "Type" }, { header: "Vendor" }, { header: "Invoice" }, { header: "Item" }, { header: "Quantity", format: "qty" }, { header: "Unit" }, { header: "Unit price", format: "inr" }, { header: "Amount", format: "inr" }, { header: "Paid by", width: 30 }], rows: history.flatMap((e) => e.items.map((i, n) => [e.at, purchaseClock(e), e.purchaseId ? "Supplier return" : "Purchase", e.supplierName ?? suppliers.find((s) => s.id === e.supplierId)?.name ?? "", e.reference ?? "", lineName(i), Math.abs(i.qty), lineUnit(i), i.unitCost ?? null, (e.purchaseId ? -1 : 1) * Math.abs(i.qty) * (i.unitCost ?? 0), e.purchaseId || n > 0 ? "" : `${paymentText(e)}${e.roundOff ? ` (round off ${e.roundOff})` : ""}`])) },
   ], { title: "Purchase" });
 
   // Items that only exist on purchase lines get their item card created first (same id, so history stays linked), then the editor opens.

@@ -7,7 +7,7 @@
  * Ledger entries are append-only. A mistake is voided with a reason (kept, crossed out), never
  * edited or deleted — the cloud enforces the same (docs/migrations/2026-11-20-ledger.sql).
  */
-import { approvalStatus, entryAmount } from "./purchase-logic";
+import { approvalStatus, entryAmount, purchaseTime } from "./purchase-logic";
 import type { LedgerEntry, LedgerMode, Order, StockEntry } from "./types";
 
 export type { LedgerEntry, LedgerMode };
@@ -193,7 +193,7 @@ export function moneyFlow(orders: Order[], entries: StockEntry[], ledger: Ledger
     .sort((a, b) => (order.indexOf(a.mode) + 99 * Number(!order.includes(a.mode))) - (order.indexOf(b.mode) + 99 * Number(!order.includes(b.mode))));
 }
 
-export interface DayBookLine { at: number; kind: "sale" | "purchase" | "return" | "vendor_payment" | "expense" | "income"; title: string; mode: string; moneyIn: number; moneyOut: number; voided?: boolean; id: string }
+export interface DayBookLine { at: number; kind: "sale" | "purchase" | "return" | "vendor_payment" | "expense" | "income"; title: string; mode: string; moneyIn: number; moneyOut: number; voided?: boolean; id: string; /** The time of day isn't known (a past-dated entry): show the date only. */ dateOnly?: boolean }
 
 /** Every money movement in [from, to), newest first: the day book. */
 export function dayBook(orders: Order[], entries: StockEntry[], ledger: LedgerEntry[], from: number, to: number, supplierName: (id?: string) => string): DayBookLine[] {
@@ -209,16 +209,19 @@ export function dayBook(orders: Order[], entries: StockEntry[], ledger: LedgerEn
     if (e.type === "purchase") {
       const now = (e.payments ?? []).filter((p) => p.mode !== "credit");
       const credit = purchaseCredit(e);
-      out.push({ id: `p:${e.id}`, at: e.at, kind: "purchase", title: `Purchase · ${name}${e.reference ? ` #${e.reference}` : ""}${credit ? ` · ₹${credit.toLocaleString("en-IN")} on pay later` : ""}`,
+      const clock = purchaseTime(e);
+      out.push({ id: `p:${e.id}`, at: clock ?? e.at, ...(clock === null ? { dateOnly: true } : {}), kind: "purchase", title: `Purchase · ${name}${e.reference ? ` #${e.reference}` : ""}${credit ? ` · ₹${credit.toLocaleString("en-IN")} on pay later` : ""}`,
         mode: now.map((p) => modeLabel(p.mode)).join(" + ") || (credit ? "Pay later" : "Not recorded"), moneyIn: 0, moneyOut: r2(now.reduce((n, p) => n + p.amount, 0)) });
     } else {
-      out.push({ id: `r:${e.id}`, at: e.at, kind: "return", title: `Return to ${name} · ₹${Math.abs(entryAmount(e)).toLocaleString("en-IN")} off the bill`, mode: "—", moneyIn: 0, moneyOut: 0 });
+      const clock = purchaseTime(e);
+      out.push({ id: `r:${e.id}`, at: clock ?? e.at, ...(clock === null ? { dateOnly: true } : {}), kind: "return", title: `Return to ${name} · ₹${Math.abs(entryAmount(e)).toLocaleString("en-IN")} off the bill`, mode: "—", moneyIn: 0, moneyOut: 0 });
     }
   }
   for (const l of ledger) {
     if (!inRange(l.at, from, to)) continue;
     const title = l.type === "vendor_payment" ? `Paid ${supplierName(l.supplierId) || l.supplierName || "vendor"}` : l.type === "expense" ? categoryLabel(l.category) : categoryLabel(l.category);
-    out.push({ id: `l:${l.id}`, at: l.at, kind: l.type, title: `${title}${l.note ? ` · ${l.note}` : ""}`, mode: modeLabel(l.mode),
+    const clock = purchaseTime({ at: l.at, recordedAt: l.recordedAt });
+    out.push({ id: `l:${l.id}`, at: clock ?? l.at, ...(clock === null ? { dateOnly: true } : {}), kind: l.type, title: `${title}${l.note ? ` · ${l.note}` : ""}`, mode: modeLabel(l.mode),
       moneyIn: l.type === "income" ? l.amount : 0, moneyOut: l.type === "income" ? 0 : l.amount, ...(l.void ? { voided: true } : {}) });
   }
   return out.sort((a, b) => b.at - a.at);

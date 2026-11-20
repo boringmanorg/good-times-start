@@ -111,7 +111,7 @@ function AccountsPage() {
     {view === "payables" ? <PayablesPanel entries={entries} suppliers={suppliers} by={by} /> : null}
     {view === "daybook" ? <ul className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card text-sm">
       {book.map((l) => <li key={l.id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2.5", l.voided && "text-muted-foreground line-through")}>
-        <span className="w-28 shrink-0 text-xs tabular-nums text-muted-foreground">{new Date(l.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span>
+        <span className="w-28 shrink-0 text-xs tabular-nums text-muted-foreground">{new Date(l.at).toLocaleString("en-IN", l.dateOnly ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span>
         <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{l.title}</span>
         <span className="text-xs text-muted-foreground">{l.mode}</span>
         <span className={cn("w-24 text-right font-semibold tabular-nums", l.moneyIn ? "text-success" : l.moneyOut ? "" : "text-muted-foreground")}>{l.moneyIn ? `+${formatINR(l.moneyIn, 0)}` : l.moneyOut ? `−${formatINR(l.moneyOut, 0)}` : "—"}</span>
