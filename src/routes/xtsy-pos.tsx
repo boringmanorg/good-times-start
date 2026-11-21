@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent, type ReactNode } from "react";
 import {
   CalendarCheck, Gift, Check, ChefHat, ClipboardList, FileSpreadsheet, KeyRound, LayoutDashboard, MessageCircle, Printer,
@@ -106,7 +106,7 @@ function SitePage() {
         <section aria-label="First onboarded restaurant" className="border-y border-border bg-card/60">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-center text-sm sm:flex-row sm:text-left">
             <p><span className="font-semibold">Running live at TAB Bistro by XTSY</span><span className="text-muted-foreground">, our first restaurant cum hotel in New Shillong, Meghalaya.</span></p>
-            <p className="text-muted-foreground">Dine-in · rooms · takeaway · delivery</p>
+            <Link to="/tab-bistro" className="inline-flex min-h-11 items-center gap-2 font-semibold text-primary">Visit TAB Bistro <Store className="size-4" /></Link>
           </div>
         </section>
 

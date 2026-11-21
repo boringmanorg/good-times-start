@@ -1,5 +1,10 @@
 # POS expansion
 
+## TAB Bistro public website
+- [ ] Build public restaurant home, live menu, visit/opening-hours and gift-card enquiry pages; link from XTSY website.
+- [ ] Verify public navigation, real menu/logo and mobile/desktop layouts without business-record writes.
+- [ ] Confirm opening hours with the owner; do not publish invented hours.
+
 ## Gift-card checkout
 - [ ] Link gift-card tenders and split payments to bills atomically in Cloud, with safe retries and brand isolation.
 - [ ] Add checkout balance lookup, receipt/report labels and isolated workflow/regression checks; no production test money.

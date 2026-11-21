@@ -28,11 +28,16 @@ import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as SupportRouteImport } from './routes/support'
+import { Route as TabBistroRouteImport } from './routes/tab-bistro'
 import { Route as TablesRouteImport } from './routes/tables'
 import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
 import { Route as OrderSlugRouteImport } from './routes/order.$slug'
+import { Route as TabBistroIndexRouteImport } from './routes/tab-bistro.index'
+import { Route as TabBistroGiftCardsRouteImport } from './routes/tab-bistro.gift-cards'
+import { Route as TabBistroMenuRouteImport } from './routes/tab-bistro.menu'
+import { Route as TabBistroVisitRouteImport } from './routes/tab-bistro.visit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -129,6 +134,11 @@ const SupportRoute = SupportRouteImport.update({
   path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TabBistroRoute = TabBistroRouteImport.update({
+  id: '/tab-bistro',
+  path: '/tab-bistro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TablesRoute = TablesRouteImport.update({
   id: '/tables',
   path: '/tables',
@@ -154,6 +164,26 @@ const OrderSlugRoute = OrderSlugRouteImport.update({
   path: '/order/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TabBistroIndexRoute = TabBistroIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TabBistroRoute,
+} as any)
+const TabBistroGiftCardsRoute = TabBistroGiftCardsRouteImport.update({
+  id: '/gift-cards',
+  path: '/gift-cards',
+  getParentRoute: () => TabBistroRoute,
+} as any)
+const TabBistroMenuRoute = TabBistroMenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => TabBistroRoute,
+} as any)
+const TabBistroVisitRoute = TabBistroVisitRouteImport.update({
+  id: '/visit',
+  path: '/visit',
+  getParentRoute: () => TabBistroRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -175,11 +205,16 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
   '/support': typeof SupportRoute
+  '/tab-bistro': typeof TabBistroRouteWithChildren
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
+  '/tab-bistro/menu': typeof TabBistroMenuRoute
+  '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/tab-bistro/': typeof TabBistroIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -206,6 +241,10 @@ export interface FileRoutesByTo {
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
+  '/tab-bistro/menu': typeof TabBistroMenuRoute
+  '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/tab-bistro': typeof TabBistroIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -228,11 +267,16 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock': typeof StockRoute
   '/support': typeof SupportRoute
+  '/tab-bistro': typeof TabBistroRouteWithChildren
   '/tables': typeof TablesRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
+  '/tab-bistro/menu': typeof TabBistroMenuRoute
+  '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/tab-bistro/': typeof TabBistroIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -256,11 +300,16 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/stock'
     | '/support'
+    | '/tab-bistro'
     | '/tables'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
+    | '/tab-bistro/gift-cards'
+    | '/tab-bistro/menu'
+    | '/tab-bistro/visit'
+    | '/tab-bistro/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -287,6 +336,10 @@ export interface FileRouteTypes {
     | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
+    | '/tab-bistro/gift-cards'
+    | '/tab-bistro/menu'
+    | '/tab-bistro/visit'
+    | '/tab-bistro'
   id:
     | '__root__'
     | '/'
@@ -308,11 +361,16 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/stock'
     | '/support'
+    | '/tab-bistro'
     | '/tables'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
+    | '/tab-bistro/gift-cards'
+    | '/tab-bistro/menu'
+    | '/tab-bistro/visit'
+    | '/tab-bistro/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -335,6 +393,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StockRoute: typeof StockRoute
   SupportRoute: typeof SupportRoute
+  TabBistroRoute: typeof TabBistroRouteWithChildren
   TablesRoute: typeof TablesRoute
   WaiterRoute: typeof WaiterRoute
   XtsyPosRoute: typeof XtsyPosRoute
@@ -477,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tab-bistro': {
+      id: '/tab-bistro'
+      path: '/tab-bistro'
+      fullPath: '/tab-bistro'
+      preLoaderRoute: typeof TabBistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tables': {
       id: '/tables'
       path: '/tables'
@@ -512,8 +578,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tab-bistro/': {
+      id: '/tab-bistro/'
+      path: '/'
+      fullPath: '/tab-bistro/'
+      preLoaderRoute: typeof TabBistroIndexRouteImport
+      parentRoute: typeof TabBistroRoute
+    }
+    '/tab-bistro/gift-cards': {
+      id: '/tab-bistro/gift-cards'
+      path: '/gift-cards'
+      fullPath: '/tab-bistro/gift-cards'
+      preLoaderRoute: typeof TabBistroGiftCardsRouteImport
+      parentRoute: typeof TabBistroRoute
+    }
+    '/tab-bistro/menu': {
+      id: '/tab-bistro/menu'
+      path: '/menu'
+      fullPath: '/tab-bistro/menu'
+      preLoaderRoute: typeof TabBistroMenuRouteImport
+      parentRoute: typeof TabBistroRoute
+    }
+    '/tab-bistro/visit': {
+      id: '/tab-bistro/visit'
+      path: '/visit'
+      fullPath: '/tab-bistro/visit'
+      preLoaderRoute: typeof TabBistroVisitRouteImport
+      parentRoute: typeof TabBistroRoute
+    }
   }
 }
+
+interface TabBistroRouteChildren {
+  TabBistroGiftCardsRoute: typeof TabBistroGiftCardsRoute
+  TabBistroMenuRoute: typeof TabBistroMenuRoute
+  TabBistroVisitRoute: typeof TabBistroVisitRoute
+  TabBistroIndexRoute: typeof TabBistroIndexRoute
+}
+
+const TabBistroRouteChildren: TabBistroRouteChildren = {
+  TabBistroGiftCardsRoute: TabBistroGiftCardsRoute,
+  TabBistroMenuRoute: TabBistroMenuRoute,
+  TabBistroVisitRoute: TabBistroVisitRoute,
+  TabBistroIndexRoute: TabBistroIndexRoute,
+}
+
+const TabBistroRouteWithChildren = TabBistroRoute._addFileChildren(
+  TabBistroRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -535,6 +647,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StockRoute: StockRoute,
   SupportRoute: SupportRoute,
+  TabBistroRoute: TabBistroRouteWithChildren,
   TablesRoute: TablesRoute,
   WaiterRoute: WaiterRoute,
   XtsyPosRoute: XtsyPosRoute,

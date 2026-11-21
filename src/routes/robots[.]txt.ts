@@ -10,7 +10,7 @@ export const Route = createFileRoute("/robots.txt")({
         const body = isMarketingHost(url.hostname)
           ? `User-agent: *\nAllow: /\n\nSitemap: https://${url.host}/sitemap.xml\n`
           : // Only the home page (the website) and its files; "/$" outranks "Disallow: /" for the bare home page.
-          `User-agent: *\nAllow: /$\nAllow: /assets/\nAllow: /brand/\nAllow: /og-xtsy-pos.png\nDisallow: /\n\nSitemap: ${url.origin}/sitemap.xml\n`;
+          `User-agent: *\nAllow: /$\nAllow: /tab-bistro$\nAllow: /tab-bistro/\nAllow: /assets/\nAllow: /brand/\nAllow: /og-xtsy-pos.png\nDisallow: /\n\nSitemap: ${url.origin}/sitemap.xml\n`;
         return new Response(body, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
       },
     },
