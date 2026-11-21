@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       account_events: {
         Row: {
-          account_id: string
+          account_id: string | null
           amount: number | null
           by_user: string | null
           created_at: string
@@ -25,7 +25,7 @@ export type Database = {
           kind: string
         }
         Insert: {
-          account_id: string
+          account_id?: string | null
           amount?: number | null
           by_user?: string | null
           created_at?: string
@@ -34,7 +34,7 @@ export type Database = {
           kind: string
         }
         Update: {
-          account_id?: string
+          account_id?: string | null
           amount?: number | null
           by_user?: string | null
           created_at?: string
@@ -417,8 +417,10 @@ export type Database = {
           customer_phone: string
           delivery_address: string | null
           delivery_landmark: string | null
+          external_id: string | null
           handled_by: string
           id: string
+          is_test: boolean
           lines: Json
           note: string
           opt_in_at: string | null
@@ -429,6 +431,7 @@ export type Database = {
           pay_state: string
           payment: string
           pickup_at: string | null
+          platform: string | null
           qr_no: number | null
           reason: string
           restaurant_id: string
@@ -452,8 +455,10 @@ export type Database = {
           customer_phone?: string
           delivery_address?: string | null
           delivery_landmark?: string | null
+          external_id?: string | null
           handled_by?: string
           id?: string
+          is_test?: boolean
           lines: Json
           note?: string
           opt_in_at?: string | null
@@ -464,6 +469,7 @@ export type Database = {
           pay_state?: string
           payment?: string
           pickup_at?: string | null
+          platform?: string | null
           qr_no?: number | null
           reason?: string
           restaurant_id: string
@@ -487,8 +493,10 @@ export type Database = {
           customer_phone?: string
           delivery_address?: string | null
           delivery_landmark?: string | null
+          external_id?: string | null
           handled_by?: string
           id?: string
+          is_test?: boolean
           lines?: Json
           note?: string
           opt_in_at?: string | null
@@ -499,6 +507,7 @@ export type Database = {
           pay_state?: string
           payment?: string
           pickup_at?: string | null
+          platform?: string | null
           qr_no?: number | null
           reason?: string
           restaurant_id?: string
@@ -963,6 +972,41 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      restaurant_integrations: {
+        Row: {
+          mode: string
+          platform: string
+          restaurant_id: string
+          store_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          mode?: string
+          platform: string
+          restaurant_id: string
+          store_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          mode?: string
+          platform?: string
+          restaurant_id?: string
+          store_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_integrations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurant_invites: {
         Row: {
@@ -1655,6 +1699,12 @@ export type Database = {
         Args: { _app: string; _restaurant: string }
         Returns: number
       }
+      platform_activity: {
+        Args: { _before?: number; _limit?: number; _restaurant?: string }
+        Returns: Json
+      }
+      platform_integrations: { Args: { _restaurant: string }; Returns: Json }
+      platform_menu_dishes: { Args: { _restaurant: string }; Returns: Json }
       platform_overview: { Args: never; Returns: Json }
       platform_payments: { Args: { _account: string }; Returns: Json }
       platform_record_payment: {
@@ -1680,6 +1730,24 @@ export type Database = {
           _quote: boolean
           _tagline: string
           _waiter: number
+        }
+        Returns: undefined
+      }
+      platform_send_test_order: {
+        Args: {
+          _customer: string
+          _lines: Json
+          _platform: string
+          _restaurant: string
+        }
+        Returns: Json
+      }
+      platform_set_integration: {
+        Args: {
+          _mode: string
+          _platform: string
+          _restaurant: string
+          _store_id: string
         }
         Returns: undefined
       }
