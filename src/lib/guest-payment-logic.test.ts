@@ -49,11 +49,12 @@ describe("prepaid QR orders", () => {
 
   it("tells each side what is happening in its own words", () => {
     expect(payLabel("awaiting_confirm", "upi")).toMatch(/Confirm so the guest can pay/);
-    expect(payLabel("paid", "upi")).toMatch(/Paid/);
+    expect(payLabel("paid", "upi")).toMatch(/received/);
+    expect(acceptBlockedReason("proof_sent")).toMatch(/mark the payment received/);
     expect(payLabel("none", "counter")).toMatch(/counter/);
     expect(guestPayLine("awaiting_confirm")).toMatch(/Don't pay yet/);
     expect(guestPayLine("awaiting_payment")).toMatch(/Pay now/);
-    expect(guestPayLine("paid")).toMatch(/checking it/);
+    expect(guestPayLine("proof_sent")).toMatch(/checking it/);
     expect(guestPayLine("none")).toBe("");
   });
 

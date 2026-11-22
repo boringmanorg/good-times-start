@@ -271,6 +271,11 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
     if (error) throw new Error(error.message);
     toast.success(`${order.code}: the guest can pay now`);
   });
+  const verifyPayment = () => run(async () => {
+    const { error } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)("verify_guest_order_payment", { _id: order.id });
+    if (error) throw new Error(error.message);
+    toast.success(`${order.code}: payment marked received`);
+  });
   const openProof = () => run(async () => {
     const { url } = await guestPaymentProofLink({ data: { orderId: order.id } });
     window.open(url, "_blank", "noopener,noreferrer");
@@ -352,7 +357,7 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
       {order.payment === "upi" ? (
         <p className={cn("mt-2 inline-flex flex-wrap items-center gap-1 text-xs font-semibold", pay === "paid" ? "text-success" : pay === "none" ? "text-primary" : "text-warning")}>
           <Smartphone className="size-3.5" />{payLabel(pay, order.payment)}{order.upi_ref ? ` · ref ${order.upi_ref}` : ""}
-          {pay === "paid" ? <button type="button" onClick={() => void openProof()} disabled={busy} className="underline underline-offset-2">View screenshot</button> : null}
+          {pay === "paid" || pay === "proof_sent" ? <button type="button" onClick={() => void openProof()} disabled={busy} className="underline underline-offset-2">View screenshot</button> : null}
         </p>
       ) : null}
       {order.reason && !isActiveGuestOrder(order) ? <p className="mt-2 text-xs text-muted-foreground">{order.reason}</p> : null}
@@ -366,7 +371,9 @@ function GuestOrderCard({ order, onOpenBill }: { order: GuestOrder; onOpenBill: 
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {order.status === "new" && can(user, "guestOrders.handle") ? <>
-            {canConfirmForPayment(order.status, pay)
+            {pay === "proof_sent"
+              ? <Button disabled={busy} onClick={() => void verifyPayment()}><Check />{busy ? "Saving…" : "Payment received"}</Button>
+              : canConfirmForPayment(order.status, pay)
               ? <Button disabled={busy} onClick={() => void confirmForPayment()}><IndianRupee />{busy ? "Confirming…" : "Confirm — ask for payment"}</Button>
               : <ConfirmButton id={`accept-${order.id}`} disabled={busy || !!payBlocked || (seatNeeded && !seatAt)} onConfirm={accept} className={buttonVariants()} armedClassName="!bg-gold !text-gold-foreground" confirm={<><ChefHat />Tap again to accept</>}><ChefHat />{busy ? "Accepting…" : "Accept & send KOT"}</ConfirmButton>}
             <Button variant="ghost" className="text-destructive" disabled={busy} onClick={() => setRejecting(true)}><X />Reject</Button>

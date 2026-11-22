@@ -281,6 +281,13 @@
       "when": 1794975077764,
       "tag": "0039_gift_card_bill_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795343396835,
+      "tag": "0040_qr_payment_staff_verification",
+      "breakpoints": true
     }
   ]
 }

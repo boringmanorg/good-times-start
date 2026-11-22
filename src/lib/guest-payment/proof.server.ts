@@ -24,7 +24,7 @@ export async function sendPaymentProof(input: SendProof): Promise<{ payState: st
   const order = row as { id: string; token: string; status: string; pay_state: string } | null;
   if (!order || order.token !== input.token) throw new Error("Order not found.");
   if (!canSendPayment(order.status, isPayState(order.pay_state) ? order.pay_state : "none")) {
-    throw new Error(order.pay_state === "paid"
+    throw new Error(order.pay_state === "paid" || order.pay_state === "proof_sent"
       ? "This payment has already been sent."
       : "The restaurant hasn't asked for payment on this order yet.");
   }
@@ -40,14 +40,14 @@ export async function sendPaymentProof(input: SendProof): Promise<{ payState: st
   if (upload) throw new Error("Couldn't send the screenshot. Check your connection and try again.");
 
   const { error } = await admin().from("guest_orders").update({
-    pay_state: "paid",
+    // A screenshot is only a claim: staff must check it and mark the money received.
+    pay_state: "proof_sent",
     pay_proof: path,
-    paid_at: new Date().toISOString(),
     payment: "upi",
     upi_ref: input.upiRef.replace(/[^A-Za-z0-9]/g, "").slice(0, 40),
   }).eq("id", order.id);
   if (error) throw new Error("Couldn't record the payment. Try again.");
-  return { payState: "paid" };
+  return { payState: "proof_sent" };
 }
 
 /** Staff open the screenshot: a signed link, after checking they belong to the restaurant. */

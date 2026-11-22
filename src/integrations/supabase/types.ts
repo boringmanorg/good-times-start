@@ -1906,6 +1906,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      verify_guest_order_payment: { Args: { _id: string }; Returns: string }
       verify_void_approval_code: {
         Args: { _bill_uid: string; _code: string; _restaurant_id: string }
         Returns: boolean

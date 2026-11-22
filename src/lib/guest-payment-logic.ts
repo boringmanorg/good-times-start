@@ -7,12 +7,13 @@
  *
  *   awaiting_confirm  order placed, the restaurant hasn't looked at it yet
  *   awaiting_payment  the restaurant confirmed; the guest can now pay
- *   paid              the guest sent the screenshot and confirmed
+ *   proof_sent        the guest sent a screenshot; staff haven't checked it yet
+ *   paid              staff checked the screenshot and marked the money received
  *   none              pay at the counter / on delivery / on the room bill — nothing to collect here
  */
-export type PayState = "none" | "awaiting_confirm" | "awaiting_payment" | "paid";
+export type PayState = "none" | "awaiting_confirm" | "awaiting_payment" | "proof_sent" | "paid";
 
-export const PAY_STATES: PayState[] = ["none", "awaiting_confirm", "awaiting_payment", "paid"];
+export const PAY_STATES: PayState[] = ["none", "awaiting_confirm", "awaiting_payment", "proof_sent", "paid"];
 export const isPayState = (v: unknown): v is PayState => PAY_STATES.includes(v as PayState);
 
 /** Deferred payment is exclusive to an in-house room-service order. */
@@ -26,7 +27,7 @@ export function initialPayState(payment: "counter" | "upi"): PayState {
 }
 
 /** Is the restaurant still waiting on the guest's money? */
-export const owesPayment = (pay: PayState): boolean => pay === "awaiting_confirm" || pay === "awaiting_payment";
+export const owesPayment = (pay: PayState): boolean => pay === "awaiting_confirm" || pay === "awaiting_payment" || pay === "proof_sent";
 
 /**
  * A prepaid order must not reach the kitchen before the money does: Accept is held until the
@@ -35,12 +36,14 @@ export const owesPayment = (pay: PayState): boolean => pay === "awaiting_confirm
 export function acceptBlockedReason(pay: PayState): string | null {
   if (pay === "awaiting_confirm") return "Confirm the order first so the guest can pay.";
   if (pay === "awaiting_payment") return "Waiting for the guest to pay and send the screenshot.";
+  if (pay === "proof_sent") return "Check the screenshot and your UPI app, then mark the payment received.";
   return null;
 }
 
 /** The staff-facing line on a QR order card. */
 export function payLabel(pay: PayState, payment: "counter" | "upi"): string {
-  if (pay === "paid") return "Paid · screenshot sent";
+  if (pay === "paid") return "Payment received";
+  if (pay === "proof_sent") return "Screenshot sent · check payment";
   if (pay === "awaiting_payment") return "Waiting for payment";
   if (pay === "awaiting_confirm") return "Confirm so the guest can pay";
   return payment === "upi" ? "Pay by UPI" : "Pay at the counter";
@@ -48,7 +51,8 @@ export function payLabel(pay: PayState, payment: "counter" | "upi"): string {
 
 /** The guest-facing line, above the pay button. */
 export function guestPayLine(pay: PayState): string {
-  if (pay === "paid") return "Payment sent. The restaurant is checking it and will start your order.";
+  if (pay === "paid") return "Payment received. The restaurant will start your order.";
+  if (pay === "proof_sent") return "Payment sent. The restaurant is checking it and will start your order.";
   if (pay === "awaiting_payment") return "The restaurant can make your order. Pay now to confirm it.";
   if (pay === "awaiting_confirm") return "Waiting for the restaurant to confirm your order. Don't pay yet.";
   return "";

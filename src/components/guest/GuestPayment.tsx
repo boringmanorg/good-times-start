@@ -50,12 +50,12 @@ export function GuestPayment({ store, order, total, token, onPaid }: {
   return (
     <div className="mt-3 rounded-2xl border border-border bg-card p-5">
       <p className="flex items-center gap-2 font-semibold">
-        {pay === "paid" ? <Check className="size-4 text-success" /> : pay === "awaiting_confirm" ? <Clock className="size-4" /> : <Smartphone className="size-4" />}
-        {pay === "paid" ? "Payment sent" : pay === "awaiting_confirm" ? "Waiting for the restaurant" : "Pay to confirm your order"}
+        {(pay === "paid" || pay === "proof_sent") ? <Check className="size-4 text-success" /> : pay === "awaiting_confirm" ? <Clock className="size-4" /> : <Smartphone className="size-4" />}
+        {(pay === "paid" || pay === "proof_sent") ? "Payment sent" : pay === "awaiting_confirm" ? "Waiting for the restaurant" : "Pay to confirm your order"}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">{guestPayLine(pay)}</p>
 
-      {pay === "paid" ? (
+      {(pay === "paid" || pay === "proof_sent") ? (
         <p className="mt-3 text-sm font-semibold text-success">
           Thanks. {store.name} is checking your payment{order.upiRef ? ` (ref ${order.upiRef})` : ""} and will start your order.
         </p>
