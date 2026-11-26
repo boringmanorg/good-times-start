@@ -409,8 +409,10 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   const marketing = useMarketingAccess(user?.role);
   useMarketingOutbox(marketing.denied === null); // queued marketing changes upload even when Marketing isn't open
   const plan = useEntitlements();
-  const notInPlan = (to: string) => { const f = SCREEN_FEATURE[to]; return f !== undefined && !featureOn(plan, f); };
   const stay = isStayProduct(user?.product);
+  // A stay property always has its front desk: while the plan is still loading, its screens stay
+  // on, so a fresh sign-in lands on Home instead of being sent somewhere else first.
+  const notInPlan = (to: string) => { const f = SCREEN_FEATURE[to]; return f !== undefined && !featureOn(plan, f) && !(stay && f === "pms" && !plan); };
   const allowed = screensFor(user?.role, app, stay).filter((to) => !notInPlan(to) && (to !== "/marketing" || marketing.denied === null || marketing.denied === "loading"));
   // Owners and managers see when the subscription needs attention; billing itself never stops.
   const planNotice = isAdmin(user) && plan && !plan.complimentary && (!plan.live || plan.status === "past_due" || plan.status === "suspended" || plan.status === "cancelled"
