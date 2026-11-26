@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { SmartRates } from "@/components/pms/SmartRates";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/billing";
 import { saveRates } from "@/lib/pms/actions";
@@ -109,6 +110,8 @@ function RatesPage() {
           </table>
           {!types.length ? <p className="p-6 text-center text-sm text-muted-foreground">Add room types under Property first.</p> : null}
         </div>
+
+        {types.length ? <SmartRates types={types} units={units} stays={stays} today={today} canApply={admin} /> : null}
 
         {admin && types.length ? (
           <section className="rounded-2xl border border-border bg-card p-4">

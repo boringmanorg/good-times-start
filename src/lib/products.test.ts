@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { consoleHash, filterMatches, parseConsoleHash, productOf, PRODUCTS, restaurantMatches } from "./products";
+import { consoleHash, filterMatches, parseConsoleHash, productOf, PRODUCTS, restaurantMatches, sectionsFor } from "./products";
+import { RESTAURANT_FEATURES, STAY_FEATURES, featureName, isStayPlan } from "./plans";
 
 const RID = "66c66ac4-efce-492b-b709-1c2b38d9cd78";
 
@@ -43,3 +44,26 @@ describe("console address", () => {
     expect(filterMatches({ live: true, status: "active" }, "due")).toBe(false);
   });
 });
+
+describe("per-product console and features", () => {
+  const RID2 = "3bbdddb7-0000-4000-8000-000000000000";
+  it("stays get the channel manager, restaurants get Swiggy & Zomato", () => {
+    expect(sectionsFor("hostel_pos").map((s) => s.v)).toContain("channel");
+    expect(sectionsFor("hostel_pos").map((s) => s.v)).not.toContain("integrations");
+    expect(sectionsFor("restaurant_pos").map((s) => s.v)).toContain("integrations");
+    expect(sectionsFor("restaurant_pos").map((s) => s.v)).not.toContain("channel");
+    expect(parseConsoleHash(`#products/hostel_pos/${RID2}/integrations`).section).toBe("overview");
+    expect(parseConsoleHash(`#products/restaurant_pos/${RID2}/channel`).section).toBe("overview");
+    expect(parseConsoleHash(`#products/hostel_pos/${RID2}/channel`).section).toBe("channel");
+  });
+  it("feature sets don't cross products", () => {
+    expect(RESTAURANT_FEATURES).not.toContain("pms");
+    for (const f of ["aggregators", "waiter_app", "kds", "recipes", "bookings", "gift_cards", "online_ordering"] as const) expect(STAY_FEATURES).not.toContain(f);
+    expect(STAY_FEATURES[0]).toBe("pms");
+    expect(featureName("billing", true)).toBe("Café billing and room bills");
+    expect(featureName("billing", false)).toBe("Billing, KOTs and tables");
+    expect(isStayPlan("stay_pilot")).toBe(true);
+    expect(isStayPlan("pro")).toBe(false);
+  });
+});
+

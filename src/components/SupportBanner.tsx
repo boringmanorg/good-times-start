@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getDb, resetDevice } from "@/lib/db";
 import { supportBannerText } from "@/lib/support-logic";
 import { clearSupport, currentSupport } from "@/lib/support-session";
+import { signInPath } from "@/lib/login-doors";
 
 /**
  * Shown on every staff screen during an XTSY support session ("Sign in as" from the console),
@@ -27,7 +28,7 @@ export function SupportBanner() {
       await supabase.auth.signOut();
       await resetDevice();
       clearSupport();
-      window.location.replace("/login");
+      window.location.replace(signInPath());
     } finally { setBusy(false); }
   };
   return (

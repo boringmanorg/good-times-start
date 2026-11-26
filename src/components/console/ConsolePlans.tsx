@@ -4,7 +4,7 @@ import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { loadPlans, savePlan, type PlanRow } from "@/lib/console-api";
-import { FEATURES, FEATURE_NAMES, type Feature } from "@/lib/plans";
+import { featureName, featuresFor, isStayPlan, type Feature } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Panel, field } from "./ConsoleBits";
 import { CatalogueDriftBanner } from "./ConsoleActivity";
@@ -22,7 +22,11 @@ export function ConsolePlans() {
         <p className="text-sm text-muted-foreground">Prices, device seats and features for each plan. Changes apply to every restaurant on that plan at once, show on the website straight away, and are recorded in Activity.</p>
       </div>
       <CatalogueDriftBanner />
-      <div className="grid gap-5 xl:grid-cols-2">{live.map((p) => <PlanEditor key={p.id} p={p} />)}</div>
+      <h2 className="font-brand text-2xl">Restaurant POS</h2>
+      <div className="grid gap-5 xl:grid-cols-2">{live.filter((p) => !isStayPlan(p.id)).map((p) => <PlanEditor key={p.id} p={p} />)}</div>
+      <h2 className="font-brand text-2xl">Hostel & Hotel POS</h2>
+      <p className="-mt-3 text-sm text-muted-foreground">PMS with the channel manager. Pilot only: these plans never reach the website until stay prices are set.</p>
+      <div className="grid gap-5 xl:grid-cols-2">{live.filter((p) => isStayPlan(p.id)).map((p) => <PlanEditor key={p.id} p={p} />)}</div>
       {old.length ? <p className="text-xs text-muted-foreground">Retired plans kept for history: {old.map((p) => p.name).join(", ")}.</p> : null}
     </div>
   );
@@ -61,9 +65,9 @@ function PlanEditor({ p }: { p: PlanRow }) {
         ))}
       </div>
       <div className="mt-4 flex flex-wrap gap-1.5">
-        {FEATURES.map((f) => (
+        {featuresFor(isStayPlan(p.id)).map((f) => (
           <button key={f} type="button" aria-pressed={!!features[f]} onClick={() => setFeatures((c) => ({ ...c, [f]: !c[f] }))}
-            className={cn("rounded-full px-3 py-1 text-xs font-semibold ring-1", features[f] ? "bg-primary text-primary-foreground ring-primary" : "text-muted-foreground ring-border hover:text-foreground")}>{FEATURE_NAMES[f]}</button>
+            className={cn("rounded-full px-3 py-1 text-xs font-semibold ring-1", features[f] ? "bg-primary text-primary-foreground ring-primary" : "text-muted-foreground ring-border hover:text-foreground")}>{featureName(f, isStayPlan(p.id))}</button>
         ))}
       </div>
       <Button className="mt-4" disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save plan"}</Button>

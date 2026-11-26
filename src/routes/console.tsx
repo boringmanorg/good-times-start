@@ -74,7 +74,7 @@ function ConsoleCard({ children, onSubmit }: { children: ReactNode; onSubmit: (e
       <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center gap-3">
           <img src={logo} alt="" width={36} height={36} className="rounded-[10px]" />
-          <div><p className="font-brand text-2xl leading-none">XTSY POS</p><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Super admin</p></div>
+          <div><p className="font-brand text-2xl leading-none">XTSY Console</p><p className="text-[11px] font-semibold text-primary">Super admin · every XTSY POS model</p></div>
         </div>
         {children}
       </form>
@@ -120,7 +120,7 @@ function ConsoleSignIn() {
       {note ? <p role="status" className="mt-3 text-sm text-success">{note}</p> : null}
       <Button type="submit" className="mt-5 h-11 w-full" disabled={busy}>{busy ? "Please wait…" : "Sign in"}</Button>
       <button type="button" disabled={busy} onClick={() => void forgot()} className="mt-3 w-full text-center text-sm font-medium text-primary hover:underline">Forgot password?</button>
-      <p className="mt-4 text-center text-xs text-muted-foreground">Restricted area. Restaurant staff sign in from their own app. This sign-in is separate from POS Manager and POS Billdesk on this browser.</p>
+      <p className="mt-4 text-center text-xs text-muted-foreground">Restricted area. Restaurant and property staff sign in from their own app. This sign-in is separate from POS Manager and POS Billdesk on this browser.</p>
     </ConsoleCard>
   );
 }
@@ -194,11 +194,11 @@ function ConsoleShell({ email, onSignOut }: { email: string; onSignOut: () => Pr
   const choose = (t: Tab) => go({ tab: t });
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="glass-dark sticky top-0 z-20 border-b border-border px-4 pt-[max(0.625rem,env(safe-area-inset-top))] lg:px-8">
+      <header className="sticky top-0 z-20 border-b-2 border-foreground bg-background/95 px-4 backdrop-blur pt-[max(0.625rem,env(safe-area-inset-top))] lg:px-8">
         <div className="flex items-center justify-between gap-3 pb-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <img src={logo} alt="" width={30} height={30} className="rounded-[8px]" />
-            <div className="min-w-0"><p className="font-brand truncate text-[19px] leading-tight">XTSY POS Console</p><p className="truncate text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary">Super admin · {email}</p></div>
+            <div className="min-w-0"><p className="font-brand truncate text-[22px] leading-tight">XTSY Console</p><p className="truncate text-[11px] font-semibold text-primary">Restaurant POS · Hostel & Hotel POS · super admin {email}</p></div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button size="sm" variant="outline" aria-label="Refresh" onClick={() => void queryClient.invalidateQueries({ queryKey: ["console"] })}><RefreshCw /><span className="hidden sm:inline">Refresh</span></Button>
@@ -223,7 +223,7 @@ function ConsoleShell({ email, onSignOut }: { email: string; onSignOut: () => Pr
         {tab === "infra" ? <ConsoleInfra /> : null}
         {tab === "seo" ? <ConsoleSeo /> : null}
       </main>
-      <footer className="px-4 pb-8 text-center text-xs text-muted-foreground"><BarChart3 className="mr-1 inline size-3.5" />XTSY POS · Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by XTSY</footer>
+      <footer className="px-4 pb-8 text-center text-xs text-muted-foreground"><BarChart3 className="mr-1 inline size-3.5" />XTSY Ventures · Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by XTSY</footer>
     </div>
   );
 }

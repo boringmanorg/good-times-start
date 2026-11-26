@@ -37,6 +37,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
+import { Route as HostelLoginRouteImport } from './routes/hostel.login'
 import { Route as OrderSlugRouteImport } from './routes/order.$slug'
 import { Route as StaysIndexRouteImport } from './routes/stays.index'
 import { Route as StaysBookingsRouteImport } from './routes/stays.bookings'
@@ -188,6 +189,11 @@ const BookSlugRoute = BookSlugRouteImport.update({
   path: '/book/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HostelLoginRoute = HostelLoginRouteImport.update({
+  id: '/hostel/login',
+  path: '/hostel/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderSlugRoute = OrderSlugRouteImport.update({
   id: '/order/$slug',
   path: '/order/$slug',
@@ -268,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
+  '/hostel/login': typeof HostelLoginRoute
   '/order/$slug': typeof OrderSlugRoute
   '/stays/bookings': typeof StaysBookingsRoute
   '/stays/property': typeof StaysPropertyRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByTo {
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
+  '/hostel/login': typeof HostelLoginRoute
   '/order/$slug': typeof OrderSlugRoute
   '/stays/bookings': typeof StaysBookingsRoute
   '/stays/property': typeof StaysPropertyRoute
@@ -348,6 +356,7 @@ export interface FileRoutesById {
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
+  '/hostel/login': typeof HostelLoginRoute
   '/order/$slug': typeof OrderSlugRoute
   '/stays/bookings': typeof StaysBookingsRoute
   '/stays/property': typeof StaysPropertyRoute
@@ -390,6 +399,7 @@ export interface FileRouteTypes {
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
+    | '/hostel/login'
     | '/order/$slug'
     | '/stays/bookings'
     | '/stays/property'
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
+    | '/hostel/login'
     | '/order/$slug'
     | '/stays/bookings'
     | '/stays/property'
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
+    | '/hostel/login'
     | '/order/$slug'
     | '/stays/bookings'
     | '/stays/property'
@@ -510,6 +522,7 @@ export interface RootRouteChildren {
   WaiterRoute: typeof WaiterRoute
   XtsyPosRoute: typeof XtsyPosRoute
   BookSlugRoute: typeof BookSlugRoute
+  HostelLoginRoute: typeof HostelLoginRoute
   OrderSlugRoute: typeof OrderSlugRoute
   StaysBookingsRoute: typeof StaysBookingsRoute
   StaysPropertyRoute: typeof StaysPropertyRoute
@@ -716,6 +729,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hostel/login': {
+      id: '/hostel/login'
+      path: '/hostel/login'
+      fullPath: '/hostel/login'
+      preLoaderRoute: typeof HostelLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order/$slug': {
       id: '/order/$slug'
       path: '/order/$slug'
@@ -836,6 +856,7 @@ const rootRouteChildren: RootRouteChildren = {
   WaiterRoute: WaiterRoute,
   XtsyPosRoute: XtsyPosRoute,
   BookSlugRoute: BookSlugRoute,
+  HostelLoginRoute: HostelLoginRoute,
   OrderSlugRoute: OrderSlugRoute,
   StaysBookingsRoute: StaysBookingsRoute,
   StaysPropertyRoute: StaysPropertyRoute,

@@ -4,7 +4,7 @@ import { Ban, Check, History, IndianRupee, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ago, loadPayments, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
-import { FEATURES, FEATURE_NAMES, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
+import { featureName, featuresFor, isStayPlan, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { field } from "./ConsoleBits";
 
@@ -148,7 +148,7 @@ export function SeatsSummary({ r }: { r: RestaurantRow }) {
 }
 
 /** Plan, status, paid-until, seat and feature overrides, then renewal and payments. */
-export function SubscriptionSection({ r, plans }: { r: RestaurantRow; plans: PlanRow[] }) {
+export function SubscriptionSection({ r, plans, stays = false }: { r: RestaurantRow; plans: PlanRow[]; stays?: boolean }) {
   const queryClient = useQueryClient();
   const a = r.account;
   const [plan, setPlan] = useState(a?.planId ?? "basic");
@@ -178,7 +178,7 @@ export function SubscriptionSection({ r, plans }: { r: RestaurantRow; plans: Pla
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm font-medium">Plan
             <select value={plan} onChange={(e) => setPlan(e.target.value)} className={field}>
-              {plans.filter((p) => p.active || p.id === a.planId).map((p) => <option key={p.id} value={p.id}>{p.name}{p.quote ? " (quote)" : ` · ₹${p.monthly_price}`}</option>)}
+              {plans.filter((p) => ((p.active && isStayPlan(p.id) === stays) || p.id === a.planId)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.quote ? " (quote)" : ` · ₹${p.monthly_price}`}</option>)}
             </select>
           </label>
           <label className="text-sm font-medium">Status
@@ -209,13 +209,13 @@ export function SubscriptionSection({ r, plans }: { r: RestaurantRow; plans: Pla
       <fieldset>
         <legend className="text-sm font-medium">Features <span className="font-normal text-muted-foreground">(Plan follows the plan; On/Off overrides it)</span></legend>
         <ul className="mt-2 space-y-1.5">
-          {FEATURES.map((f) => {
+          {featuresFor(stays).map((f) => {
             const fromPlan = planRow?.features[f] === true;
             const v = features[f];
             const set = (next: boolean | undefined) => setFeatures((cur) => { const c = { ...cur }; if (next === undefined) delete c[f]; else c[f] = next; return c; });
             return (
               <li key={f} className="flex items-center justify-between gap-2 text-sm">
-                <span className={cn((v ?? fromPlan) ? "" : "text-muted-foreground")}>{FEATURE_NAMES[f]}</span>
+                <span className={cn((v ?? fromPlan) ? "" : "text-muted-foreground")}>{featureName(f, stays)}</span>
                 <span className="inline-flex shrink-0 overflow-hidden rounded-lg border border-border text-xs font-semibold">
                   {([["Plan", undefined], ["On", true], ["Off", false]] as const).map(([l, val]) => (
                     <button key={l} type="button" onClick={() => set(val)} className={cn("px-2.5 py-1", v === val ? "bg-primary text-primary-foreground" : "hover:bg-secondary")}>

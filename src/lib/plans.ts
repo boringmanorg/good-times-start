@@ -50,6 +50,37 @@ export const FEATURE_NAMES: Record<Feature, string> = {
   multi_outlet: "Several outlets under one brand",  // the Brand screen: sales together, add an outlet, push the menu
 };
 
+/**
+ * Each product has its own feature set. Restaurant POS never shows the PMS switch; the stay
+ * products (Hostel, Hotel and Resort POS) never show Swiggy & Zomato, Waiter Pro, the kitchen
+ * screen, recipes, table reservations, gift cards or delivery: none of that applies to a
+ * property. Stay plans are the `stay_` rows in the catalogue.
+ */
+export const STAY_FEATURES: Feature[] = [
+  "pms", "billing", "menu", "gst_reports", "manager_app", "insights",
+  "purchases", "vendors", "loyalty", "admin_approval", "qr_ordering", "marketing", "feedback",
+  "accounting", "audit_log",
+];
+export const RESTAURANT_FEATURES: Feature[] = FEATURES.filter((f) => f !== "pms");
+export const featuresFor = (stay: boolean): Feature[] => (stay ? STAY_FEATURES : RESTAURANT_FEATURES);
+
+const STAY_NAMES: Partial<Record<Feature, string>> = {
+  pms: "PMS: rooms and beds, rates, bookings and the front desk",
+  billing: "Café billing and room bills",
+  menu: "Café menu",
+  gst_reports: "GST folios, bills and reports",
+  manager_app: "Property Manager app",
+  insights: "Dashboard, occupancy and rate suggestions",
+  loyalty: "Returning-guest loyalty",
+  qr_ordering: "Room and café QR ordering",
+  feedback: "Guest feedback",
+  accounting: "Accounting and bookkeeping",
+};
+export const featureName = (f: Feature, stay: boolean): string => (stay ? STAY_NAMES[f] : undefined) ?? FEATURE_NAMES[f];
+
+/** Stay plans (Hostel, Hotel and Resort POS) are the catalogue rows whose id starts with `stay_`. */
+export const isStayPlan = (id: string): boolean => id.startsWith("stay_");
+
 /** Features listed on the website (internal switches like multi_outlet stay off the price cards). */
 /**
  * Features listed on the website and on the in-app plan screen.

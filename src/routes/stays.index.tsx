@@ -4,6 +4,7 @@ import { AlertTriangle, BedDouble, CalendarCheck, Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { NewBooking } from "@/components/pms/NewBooking";
 import { StayDialog } from "@/components/pms/StayDialog";
+import { StayInsights } from "@/components/pms/StayInsights";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/billing";
 import { SOURCE_LABEL } from "@/lib/pms/bookings-logic";
@@ -68,6 +69,8 @@ function StaysDashboard() {
           <Kpi label="Room revenue · month" value={formatINR(month.roomRevenue, 0)} sub="before GST" />
           <Kpi label="Average rate · month" value={formatINR(month.adr, 0)} sub={`RevPAR ${formatINR(month.revpar, 0)}`} />
         </div>
+
+        <StayInsights types={types} units={units} stays={stays} today={today} />
 
         <div className="grid gap-4 lg:grid-cols-3">
           <section className="rounded-2xl border border-border bg-card p-4 lg:col-span-2">

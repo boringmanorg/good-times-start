@@ -6,7 +6,7 @@ import { ago, loadPlans, loadRestaurants, type PlanRow, type RestaurantRow } fro
 import { consoleToken } from "@/lib/console-client";
 import { platformRestaurantModels } from "@/lib/platform-restaurants.functions";
 import { modelLabel } from "@/lib/platform-restaurant-logic";
-import { filterMatches, productById, productOf, PRODUCTS, STAY_PRODUCTS, restaurantMatches, SECTIONS, type ConsoleRoute, type ListFilter, type ProductId, type Section } from "@/lib/products";
+import { filterMatches, productById, productOf, PRODUCTS, STAY_PRODUCTS, restaurantMatches, sectionsFor, type ConsoleRoute, type ListFilter, type ProductId, type Section } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Stat } from "./ConsoleBits";
 import { ConsoleOnboard } from "./ConsoleOnboard";
@@ -43,7 +43,7 @@ export function ConsoleProducts({ route, go }: { route: ConsoleRoute; go: Go }) 
   if (route.product && route.restaurant) {
     const r = all.find((x) => x.id === route.restaurant);
     if (!r) return <><Crumbs route={route} go={go} /><Failed error={new Error("That restaurant isn't in the list. It may have been removed.")} /></>;
-    return <RestaurantDetail r={r} plans={planList} model={meta.data?.[r.id]?.model ?? ""} route={route} go={go} stays={STAY_PRODUCTS.includes(productFor(r.id))} />;
+    return <RestaurantDetail r={r} plans={planList} model={meta.data?.[r.id]?.model ?? ""} route={route} go={go} stays={STAY_PRODUCTS.includes(productFor(r.id))} product={productFor(r.id)} />;
   }
   if (route.product) {
     const product = productById(route.product);
@@ -170,7 +170,7 @@ function ProductOutlets({ product, rows, plans, models, route, go }: { product: 
   );
 }
 
-function RestaurantDetail({ r, plans, model, route, go, stays }: { r: RestaurantRow; plans: PlanRow[]; model: string; route: ConsoleRoute; go: Go; stays: boolean }) {
+function RestaurantDetail({ r, plans, model, route, go, stays, product }: { r: RestaurantRow; plans: PlanRow[]; model: string; route: ConsoleRoute; go: Go; stays: boolean; product: ProductId }) {
   const section: Section = route.section ?? "overview";
   const plan = plans.find((p) => p.id === r.account?.planId);
   const pick = (s: Section) => go({ ...route, section: s });
@@ -188,7 +188,7 @@ function RestaurantDetail({ r, plans, model, route, go, stays }: { r: Restaurant
         <span className={cn("rounded-full px-3 py-1 text-sm font-bold", r.account?.live ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive")}>{r.account?.live ? "Live" : "Stopped"}</span>
       </header>
       <nav className="no-scrollbar mt-4 flex gap-1 overflow-x-auto border-b border-border" aria-label="Restaurant">
-        {SECTIONS.filter((s) => s.v !== "channel" || stays).map((s) => (
+        {sectionsFor(product).map((s) => (
           <button key={s.v} type="button" onClick={() => pick(s.v)} aria-current={section === s.v ? "page" : undefined}
             className={cn("relative shrink-0 px-3 py-2.5 text-sm font-semibold", section === s.v ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
             {s.l}{section === s.v ? <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-t bg-primary" aria-hidden="true" /> : null}
@@ -200,22 +200,22 @@ function RestaurantDetail({ r, plans, model, route, go, stays }: { r: Restaurant
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <Stat label="Last activity" value={ago(r.lastActivity)} />
-              <Stat label="Bill changes · 30 days" value={r.bills30d} />
-              <Stat label="QR orders · 7 days" value={r.guestOrders7d} />
+              <Stat label={stays ? "Bookings & bills changed · 30 days" : "Bill changes · 30 days"} value={r.bills30d} />
+              <Stat label={stays ? "Café & room QR orders · 7 days" : "QR orders · 7 days"} value={r.guestOrders7d} />
               <Stat label="Paid until" value={r.account?.complimentary ? "Complimentary" : r.account?.paidUntil ? new Date(r.account.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "No end"} tone={r.account?.live ? undefined : "bad"} />
             </div>
             <SeatsSummary r={r} />
             <RestaurantInfo key={r.id} r={r} />
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => pick("users")}><Building2 />Users and Sign in as</Button>
-              <Button variant="outline" onClick={() => pick("integrations")}>Swiggy & Zomato sandbox</Button>
+              {stays ? <Button variant="outline" onClick={() => pick("channel")}>Channel manager</Button> : <Button variant="outline" onClick={() => pick("integrations")}>Swiggy & Zomato sandbox</Button>}
             </div>
           </div>
         ) : null}
-        {section === "subscription" ? <SubscriptionSection key={r.id} r={r} plans={plans} /> : null}
+        {section === "subscription" ? <SubscriptionSection key={r.id} r={r} plans={plans} stays={stays} /> : null}
         {section === "users" ? <ConsoleLogins restaurantId={r.id} restaurantName={r.name} /> : null}
         {section === "devices" ? <DevicesSection r={r} /> : null}
-        {section === "integrations" ? <ConsoleIntegrations r={r} plan={plan} /> : null}
+        {section === "integrations" && !stays ? <ConsoleIntegrations r={r} plan={plan} /> : null}
         {section === "channel" && stays ? <ConsoleChannel name={r.name} /> : null}
         {section === "activity" ? <ConsoleActivity restaurantId={r.id} /> : null}
       </div>

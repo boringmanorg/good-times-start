@@ -16,9 +16,9 @@ export interface Product { id: ProductId; name: string; status: "live" | "pilot"
 
 export const PRODUCTS: Product[] = [
   { id: "restaurant_pos", name: "Restaurant POS", status: "live", blurb: "Billing, KOTs, tables, QR ordering, purchases and the POS Manager, Billdesk and Waiter Pro apps.", models: "Restaurants, fine dine, cafés, cloud kitchens" },
-  { id: "hotel_pos", name: "Hotel POS", status: "soon", blurb: "Front desk, rooms, check-in and check-out, room bills joined to the restaurant.", models: "Hotels" },
+  { id: "hotel_pos", name: "Hotel POS · multi-property", status: "soon", blurb: "Several hotels under one account with central rates and reports. A single hotel runs on Hostel & Hotel POS today.", models: "Hotel groups" },
   { id: "resort_pos", name: "Resort POS", status: "soon", blurb: "Stays, activities and packages across several outlets on one property.", models: "Resorts, glamping" },
-  { id: "hostel_pos", name: "Hostel POS", status: "pilot", blurb: "Beds and dorms, walk-ins and OTA bookings, café and add-ons on one bill.", models: "Hostels, backpacker stays" },
+  { id: "hostel_pos", name: "Hostel & Hotel POS", status: "pilot", blurb: "PMS and channel manager in one: beds and rooms, rates, OTA and website bookings, front desk, café and room bills.", models: "Hostels, hotels, homestays" },
   { id: "tourism_pos", name: "Tourism POS", status: "soon", blurb: "Tours, rentals and transfers with bookings, drivers and payments.", models: "Tour operators, rentals" },
 ];
 
@@ -45,6 +45,12 @@ export const SECTIONS: { v: Section; l: string }[] = [
 ];
 const isSection = (v: unknown): v is Section => SECTIONS.some((s) => s.v === v);
 
+/** An outlet's console sections follow its product: Swiggy & Zomato for restaurants, the channel manager for stays. */
+export function sectionsFor(product: ProductId): { v: Section; l: string }[] {
+  const stay = STAY_PRODUCTS.includes(product);
+  return SECTIONS.filter((s) => (s.v === "integrations" ? !stay : s.v === "channel" ? stay : true));
+}
+
 export type ConsoleTab = "overview" | "products" | "activity" | "plans" | "infra" | "seo";
 const TABS: ConsoleTab[] = ["overview", "products", "activity", "plans", "infra", "seo"];
 
@@ -59,7 +65,8 @@ export function parseConsoleHash(hash: string): ConsoleRoute {
   if (!TABS.includes(first as ConsoleTab)) return { tab: "overview" };
   if (first !== "products" || !isProductId(product)) return { tab: first as ConsoleTab };
   if (!restaurant || !UUID.test(restaurant)) return { tab: "products", product };
-  return { tab: "products", product, restaurant: restaurant.toLowerCase(), section: isSection(section) ? section : "overview" };
+  const allowed = isSection(section) && sectionsFor(product).some((s) => s.v === section);
+  return { tab: "products", product, restaurant: restaurant.toLowerCase(), section: allowed ? section : "overview" };
 }
 
 export function consoleHash(r: ConsoleRoute): string {

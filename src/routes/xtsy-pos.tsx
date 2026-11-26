@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Check, Play, Send, X } from "lucide-react";
+import { BedDouble, Check, Play, Send, Store, X } from "lucide-react";
 import { FEATURE_NAMES, PUBLIC_FEATURES, PUBLIC_PLANS, SEAT_NAMES, priceText, whatsappLink, type PublicPlan, type SeatApp } from "@/lib/plans";
-import { DEMOS, STATUS, SITE_DESCRIPTION, SITE_TITLE, enquiryMessage, enquiryProblem, faqFor, type Enquiry } from "@/lib/site-content";
+import { DEMOS, SITE_PRODUCTS, STATUS, STAY_FEATURE_BLOCKS, SITE_DESCRIPTION, SITE_TITLE, enquiryMessage, enquiryProblem, faqFor, type Enquiry } from "@/lib/site-content";
 import { loadPublicPlans, priceRange } from "@/lib/public-plans";
 import { siteUrl } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,8 @@ export const Route = createFileRoute("/xtsy-pos")({
         { "@type": "SoftwareApplication", name: "XTSY POS", alternateName: "POS by XTSY", applicationCategory: "BusinessApplication", applicationSubCategory: "Restaurant POS",
           operatingSystem: "Web, Windows, macOS, Android, iOS", description: SITE_DESCRIPTION, url,
           offers: { "@type": "AggregateOffer", priceCurrency: "INR", lowPrice: range.low, highPrice: range.high, offerCount: range.count } },
+        { "@type": "SoftwareApplication", name: "Hostel & Hotel POS by XTSY", applicationCategory: "BusinessApplication", applicationSubCategory: "Property management system with channel manager",
+          operatingSystem: "Web, Windows, macOS, Android, iOS", description: "PMS and channel manager in one for hostels, hotels and homestays: rates, bookings, front desk, housekeeping and reports.", url },
         { "@type": "FAQPage", mainEntity: faqFor(loaderData?.plans ?? PUBLIC_PLANS).map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
       ],
     };
@@ -53,14 +55,16 @@ export const Route = createFileRoute("/xtsy-pos")({
 });
 
 
-const NAV = [{ href: "#demos", l: "Demos" }, { href: "#status", l: "What's live" }, { href: "#pricing", l: "Pricing" }, { href: "#faq", l: "Questions" }];
+const NAV = [{ href: "#products", l: "Products" }, { href: "#stays", l: "Hostels & hotels" }, { href: "#demos", l: "Demos" }, { href: "#status", l: "What's live" }, { href: "#pricing", l: "Pricing" }, { href: "#faq", l: "Questions" }];
 
 function SitePage() {
   const { plans } = Route.useLoaderData();
   const range = priceRange(plans);
   const faq = faqFor(plans);
   const [plan, setPlan] = useState("");
-  const pick = (name: string) => { setPlan(name); document.getElementById("enquire")?.scrollIntoView({ behavior: "smooth" }); };
+  const [product, setProduct] = useState("");
+  const pick = (name: string) => { setPlan(name); setProduct("Restaurant POS"); document.getElementById("enquire")?.scrollIntoView({ behavior: "smooth" }); };
+  const joinPilot = () => { setPlan(""); setProduct("Hostel & Hotel POS"); document.getElementById("enquire")?.scrollIntoView({ behavior: "smooth" }); };
   return (
     <div className="min-h-screen bg-black text-foreground">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -81,16 +85,16 @@ function SitePage() {
         <section className="px-4 pb-14 pt-10 md:pb-20 md:pt-16">
           <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12">
             <div>
-              <h1 className="font-brand text-[3.4rem] leading-[0.9] sm:text-7xl lg:text-[5.4rem]">Bill the table. Send the KOT. See every rupee.</h1>
+              <h1 className="font-brand text-[3.4rem] leading-[0.9] sm:text-7xl lg:text-[5.4rem]">Software for where India eats and stays.</h1>
               <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-muted-foreground">
-                XTSY POS runs the counter, the waiters' phones, guest QR orders and the owner's books. Every device stays in step live, and the counter keeps billing when the internet drops.
+                Restaurant POS runs the counter, the waiters' phones, guest QR orders and the owner's books. Hostel & Hotel POS runs the property: beds and rooms, rates, bookings, the front desk and a channel manager, as one software.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a href="#demos" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-6 font-bold text-primary-foreground hover:bg-primary-hover"><Play className="size-4 fill-current" />Watch the demos</a>
-                <a href="#pricing" className="inline-flex min-h-12 items-center rounded-full border border-white/20 px-6 font-bold hover:bg-white/5">Plans from ₹{range.low} a month</a>
+                <a href="#products" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-6 font-bold text-primary-foreground hover:bg-primary-hover">See both products</a>
+                <a href="#demos" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/20 px-6 font-bold hover:bg-white/5"><Play className="size-4 fill-current" />Watch the demos</a>
               </div>
               <p className="mt-8 max-w-[34rem] text-sm text-muted-foreground">
-                Running every day at <Link to="/tab-bistro" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4 hover:decoration-primary">TAB Bistro by XTSY</Link>, a restaurant and stay in New Shillong, Meghalaya. Made in Tamil Nadu for restaurants across India and Asia.
+                Running every day at <Link to="/tab-bistro" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4 hover:decoration-primary">TAB Bistro by XTSY</Link> and XTSY Travellers Hostel in New Shillong, Meghalaya. Made in Tamil Nadu for restaurants across India and Asia.
               </p>
             </div>
             <div>
@@ -107,6 +111,34 @@ function SitePage() {
             ))}
           </ul>
         </section>
+
+        <Section id="products" title="Two products, one XTSY" intro="Each has its own apps and its own sign-in. A property with a café uses both, and the café bills on the room.">
+          <div className="grid gap-5 lg:grid-cols-2">
+            {SITE_PRODUCTS.map((p) => {
+              const Icon = p.id === "stay" ? BedDouble : Store;
+              const stay = p.id === "stay";
+              return (
+                <article key={p.id} className={cn("flex flex-col rounded-3xl border p-6 md:p-8", stay ? "border-[#E8B4C0]/40 bg-[#FAF7F2] text-[#1F2230]" : "border-white/15 bg-card")}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={cn("grid size-12 place-items-center rounded-2xl", stay ? "bg-[#A12444] text-[#FAF7F2]" : "bg-primary text-primary-foreground")}><Icon className="size-6" /></span>
+                    <span className={cn("rounded-full px-3 py-1 text-xs font-bold", stay ? "bg-[#1F2230] text-[#FAF7F2]" : "bg-success/15 text-success")}>{p.state}</span>
+                  </div>
+                  <h3 className="font-brand mt-5 text-4xl leading-none md:text-5xl">{p.name}</h3>
+                  <p className={cn("mt-1 text-sm", stay ? "text-[#1F2230]/70" : "text-muted-foreground")}>{p.for}</p>
+                  <p className="mt-4 text-lg">{p.line}</p>
+                  <ul className="mt-5 space-y-2 text-sm">
+                    {p.points.map((t) => <li key={t} className="flex gap-2"><Check className={cn("mt-0.5 size-4 shrink-0", stay ? "text-[#A12444]" : "text-primary")} />{t}</li>)}
+                  </ul>
+                  <div className="mt-auto flex flex-wrap gap-3 pt-7">
+                    {stay
+                      ? <><a href="#stays" className="inline-flex min-h-11 items-center rounded-full bg-[#A12444] px-5 font-bold text-[#FAF7F2]">How it works</a><button type="button" onClick={joinPilot} className="inline-flex min-h-11 items-center rounded-full border border-[#1F2230]/25 px-5 font-bold">Join the pilot</button></>
+                      : <><a href="#demos" className="inline-flex min-h-11 items-center rounded-full bg-primary px-5 font-bold text-primary-foreground">Watch the demos</a><a href="#pricing" className="inline-flex min-h-11 items-center rounded-full border border-white/20 px-5 font-bold">Plans from ₹{range.low} a month</a></>}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </Section>
 
         <Section id="demos" title="Watch it work" intro="Real screens from XTSY POS, recorded with TAB Bistro's menu. The owner's screens use sample figures, marked Demo data.">
           <DemoTheatre />
@@ -140,7 +172,9 @@ function SitePage() {
           </div>
         </Section>
 
-        <Section id="pricing" title="Prices, per outlet per month" intro="Each plan adds to the one before it. No payment is taken on this website: send an enquiry and the XTSY team sets you up.">
+        <StaysSection onJoin={joinPilot} />
+
+        <Section id="pricing" title="Restaurant POS prices, per outlet per month" intro="Each plan adds to the one before it. No payment is taken on this website: send an enquiry and the XTSY team sets you up. Hostel & Hotel POS is for pilot properties only; its prices come after the pilot.">
           <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {plans.map((p, i) => <PlanBill key={p.id} plan={p} before={plans[i - 1]} onPick={() => pick(p.name)} />)}
           </div>
@@ -148,8 +182,8 @@ function SitePage() {
           <p className="mt-5 text-sm text-muted-foreground">Users are devices signed in to each app: {Object.values(SEAT_NAMES).join(", ")}. Support runs every day of the week, weekends included, except national holidays.</p>
         </Section>
 
-        <Section id="enquire" title="Start with XTSY POS" intro="Tell us about your restaurant. Your enquiry opens in WhatsApp, addressed to the XTSY team.">
-          <EnquiryForm plan={plan} setPlan={setPlan} plans={plans} />
+        <Section id="enquire" title="Start with XTSY POS" intro="Tell us about your restaurant or property. Your enquiry opens in WhatsApp, addressed to the XTSY team.">
+          <EnquiryForm plan={plan} setPlan={setPlan} plans={plans} product={product} setProduct={setProduct} />
         </Section>
 
         <Section id="faq" title="Questions">
@@ -197,6 +231,41 @@ function DemoTheatre() {
         <p className="mt-4 text-sm text-muted-foreground lg:hidden"><span className="font-semibold text-foreground">{demo.app}.</span> {demo.text}</p>
       </div>
     </div>
+  );
+}
+
+/** Hostel & Hotel POS: what it does, two real screens, and the honest state of the channel manager. */
+function StaysSection({ onJoin }: { onJoin: () => void }) {
+  return (
+    <section id="stays" className="scroll-mt-20 bg-[#FAF7F2] px-4 py-16 text-[#1F2230] md:py-24">
+      <div className="mx-auto max-w-6xl">
+        <p className="text-sm font-bold text-[#A12444]">Hostel & Hotel POS · pilot</p>
+        <h2 className="font-brand mt-2 text-[2.6rem] leading-none md:text-6xl">PMS and channel manager, one software</h2>
+        <p className="mt-4 max-w-[60ch] text-[#1F2230]/75">Built at XTSY Travellers Hostel, where dorm beds, private rooms and a glass suite sell side by side. The desk, the owner and the booking sites work from one calendar, and it keeps working when the Wi-Fi doesn't.</p>
+        <div className="mt-10 grid gap-5 lg:grid-cols-[1.25fr_1fr]">
+          <figure className="overflow-hidden rounded-2xl border border-[#1F2230]/15 bg-white shadow-sm">
+            <img src="/site/stays-rates.jpg" alt="Hostel & Hotel POS rates and availability calendar with suggested rates" width={1440} height={900} loading="lazy" className="block h-auto w-full" />
+            <figcaption className="border-t border-[#1F2230]/10 px-4 py-2.5 text-xs text-[#1F2230]/65">Rates & availability, with suggested rates. Demo data.</figcaption>
+          </figure>
+          <figure className="overflow-hidden rounded-2xl border border-[#1F2230]/15 bg-white shadow-sm">
+            <img src="/site/stays-home.jpg" alt="Hostel & Hotel POS home: arrivals, occupancy and nudges" width={1440} height={900} loading="lazy" className="block h-auto w-full" />
+            <figcaption className="border-t border-[#1F2230]/10 px-4 py-2.5 text-xs text-[#1F2230]/65">Home: today's arrivals, occupancy and what's worth a look. Demo data.</figcaption>
+          </figure>
+        </div>
+        <div className="mt-12 grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+          {STAY_FEATURE_BLOCKS.map((f) => (
+            <div key={f.title} className="border-l-2 border-[#A12444] pl-4">
+              <h3 className="flex flex-wrap items-center gap-2 text-lg font-bold">{f.title}{f.state ? <span className="rounded-full bg-[#1F2230] px-2.5 py-0.5 text-[11px] font-bold text-[#FAF7F2]">{f.state}</span> : null}</h3>
+              <p className="mt-1 text-sm text-[#1F2230]/75">{f.text}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-12 flex flex-wrap items-center gap-4">
+          <button type="button" onClick={onJoin} className="inline-flex min-h-12 items-center rounded-full bg-[#A12444] px-6 font-bold text-[#FAF7F2] hover:bg-[#8a1e3a]">Join the pilot</button>
+          <p className="text-sm text-[#1F2230]/70">Pilot properties are set up by the XTSY team. Prices come after the pilot.</p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -270,7 +339,7 @@ function SiteFooter() {
     <footer className="border-t border-white/10">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-sm text-muted-foreground sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
-          <p><span className="font-brand text-xl text-foreground">XTSY POS</span> is made by XTSY Ventures Private Limited, New Shillong, Meghalaya.</p>
+          <p><span className="font-brand text-xl text-foreground">XTSY POS</span> (Restaurant POS and Hostel & Hotel POS) is made by XTSY Ventures Private Limited, New Shillong, Meghalaya.</p>
           <p className="mt-1">Questions about your data or a payment: <a href="mailto:admin@xtsy.one" className="text-foreground underline underline-offset-4">admin@xtsy.one</a></p>
           <nav aria-label="Policies" className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
             <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
@@ -350,15 +419,16 @@ function PlanComparison({ plans }: { plans: PublicPlan[] }) {
 const BLANK: Enquiry = { name: "", business: "", city: "", phone: "", outlets: "1", plan: "", message: "" };
 const SAVED = "xtsy-pos-enquiry";
 
-function EnquiryForm({ plan, setPlan, plans }: { plan: string; setPlan: (p: string) => void; plans: PublicPlan[] }) {
+function EnquiryForm({ plan, setPlan, plans, product, setProduct }: { plan: string; setPlan: (p: string) => void; plans: PublicPlan[]; product: string; setProduct: (p: string) => void }) {
   const [form, setForm] = useState<Enquiry>(() => {
     if (typeof window === "undefined") return BLANK;
     try { const raw = window.localStorage.getItem(SAVED); return raw ? { ...BLANK, ...(JSON.parse(raw) as Partial<Enquiry>), message: "" } : BLANK; } catch { return BLANK; }
   });
   const [problem, setProblem] = useState("");
   const [sentTo, setSentTo] = useState("");
-  const value = { ...form, plan: plan || form.plan };
-  const set = (k: keyof Enquiry) => (e: { target: { value: string } }) => { if (k === "plan") setPlan(e.target.value); setForm((f) => ({ ...f, [k]: e.target.value })); };
+  const value = { ...form, plan: plan || form.plan, product: product || form.product || "Restaurant POS" };
+  const stayEnquiry = value.product === "Hostel & Hotel POS";
+  const set = (k: keyof Enquiry) => (e: { target: { value: string } }) => { if (k === "plan") setPlan(e.target.value); if (k === "product") setProduct(e.target.value); setForm((f) => ({ ...f, [k]: e.target.value })); };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const p = enquiryProblem(value);
@@ -373,18 +443,25 @@ function EnquiryForm({ plan, setPlan, plans }: { plan: string; setPlan: (p: stri
   const input = "mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-3 text-base";
   return (
     <form onSubmit={submit} className="grid max-w-3xl gap-4 rounded-3xl border border-border bg-card p-6 sm:grid-cols-2 md:p-8" noValidate>
+      <label className="text-sm font-medium sm:col-span-2">Product
+        <select value={value.product} onChange={set("product")} className={input}><option>Restaurant POS</option><option>Hostel & Hotel POS</option></select>
+      </label>
       <label className="text-sm font-medium">Your name *<input autoComplete="name" value={value.name} onChange={set("name")} className={input} /></label>
-      <label className="text-sm font-medium">Restaurant / brand *<input autoComplete="organization" value={value.business} onChange={set("business")} className={input} /></label>
+      <label className="text-sm font-medium">{stayEnquiry ? "Property name *" : "Restaurant / brand *"}<input autoComplete="organization" value={value.business} onChange={set("business")} className={input} /></label>
       <label className="text-sm font-medium">City *<input autoComplete="address-level2" value={value.city} onChange={set("city")} className={input} /></label>
       <label className="text-sm font-medium">Mobile (WhatsApp) *<input type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={14} value={value.phone} onChange={set("phone")} className={input} /></label>
-      <label className="text-sm font-medium">Outlets
+      <label className="text-sm font-medium">{stayEnquiry ? "Properties" : "Outlets"}
         <select value={value.outlets} onChange={set("outlets")} className={input}><option>1</option><option>2–5</option><option>6–20</option><option>More than 20</option></select>
       </label>
-      <label className="text-sm font-medium">Plan
-        <select value={value.plan} onChange={set("plan")} className={input}><option value="">Help me choose</option>{plans.map((p) => <option key={p.id} value={p.name}>{p.name} · {priceText(p.price)}</option>)}</select>
-      </label>
+      {stayEnquiry ? (
+        <p className="self-end pb-3 text-sm text-muted-foreground">Pilot: no plan to pick yet.</p>
+      ) : (
+        <label className="text-sm font-medium">Plan
+          <select value={value.plan} onChange={set("plan")} className={input}><option value="">Help me choose</option>{plans.map((p) => <option key={p.id} value={p.name}>{p.name} · {priceText(p.price)}</option>)}</select>
+        </label>
+      )}
       <label className="text-sm font-medium sm:col-span-2">Your requirement
-        <textarea rows={4} maxLength={800} value={value.message} onChange={set("message")} placeholder="Tables, rooms, counters, waiters, printers, anything special…" className={input} />
+        <textarea rows={4} maxLength={800} value={value.message} onChange={set("message")} placeholder={stayEnquiry ? "Beds and rooms, booking sites you use, a café on site, anything special…" : "Tables, counters, waiters, printers, anything special…"} className={input} />
       </label>
       {problem ? <p role="alert" className="text-sm font-medium text-destructive sm:col-span-2">{problem}</p> : null}
       <div className="flex flex-col items-start gap-3 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">

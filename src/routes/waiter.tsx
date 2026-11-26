@@ -31,6 +31,7 @@ import { useReservations } from "@/lib/use-reservations";
 import { BillPrintButton } from "@/components/BillPrintButton";
 import { withReservations } from "@/lib/reservations";
 import { billLabel } from "@/lib/bill-numbering";
+import { signInPath } from "@/lib/login-doors";
 
 export const Route = createFileRoute("/waiter")({
   head: () => ({
@@ -91,7 +92,7 @@ function WaiterApp() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: "/login", replace: true });
+    await navigate({ to: signInPath(), replace: true });
   };
 
   return (

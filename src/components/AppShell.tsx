@@ -43,6 +43,7 @@ import { SEAT_APPS, featureOn, subscriptionText, whatsappLink, type Feature } fr
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
 import { TerminalWaiting } from "./TerminalApproval";
 import { SubscriptionExpired } from "./SubscriptionExpired";
+import { signInPath } from "@/lib/login-doors";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -155,7 +156,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
   const [checking, setChecking] = useState(false);
 
   const retry = async () => {
-    if (!staff) { await navigate({ to: "/login" }); return; }
+    if (!staff) { await navigate({ to: signInPath() }); return; }
     if (!restaurantId) return;
     if (!online) { await saveSyncError(new Error("No internet connection. Orders remain safely stored on this device.")); return; }
     setBusy(true);
@@ -211,7 +212,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: "/login", replace: true });
+    await navigate({ to: signInPath(), replace: true });
   };
 
   const [buildId, setBuildId] = useState("");
@@ -233,7 +234,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
       </Button>
       {statusOnly ? null : staff
         ? <Button size="icon" variant="ghost" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut /></Button>
-        : <Button size="sm" variant="ghost" onClick={() => void navigate({ to: "/login" })}><LogIn />Sign in</Button>}
+        : <Button size="sm" variant="ghost" onClick={() => void navigate({ to: signInPath() })}><LogIn />Sign in</Button>}
     </div>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" onCloseAutoFocus={(event) => { event.preventDefault(); statusButton.current?.focus({ preventScroll: true }); }}>
@@ -286,7 +287,7 @@ function AccessBlocked({ problem, own }: { problem: string; own: AppKind | null 
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: "/login", replace: true });
+    await navigate({ to: signInPath(), replace: true });
   };
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
@@ -338,7 +339,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   }, [rid, app]);
   // Internal system: every staff screen needs a signed-in person.
   useEffect(() => {
-    if (staffApp && !loading && !user) void navigate({ to: "/login", replace: true });
+    if (staffApp && !loading && !user) void navigate({ to: signInPath(), replace: true });
   }, [staffApp, loading, user, navigate]);
   if (staffApp && (loading || !user)) {
     return (
