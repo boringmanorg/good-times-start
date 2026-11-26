@@ -201,3 +201,15 @@ export async function addPayment(stayId: string, p: { kind: "advance" | "payment
 export async function recordFormIII(stayId: string, reference: string, by: string): Promise<Stay> {
   return update(stayId, (s) => ({ ...s, formIII: { at: Date.now(), by, ...(reference.trim() ? { reference: clean(reference, 60) } : {}) } }));
 }
+
+/** Rates & availability: change the rate and/or open/close a room type over a range of nights. */
+export async function saveRates(typeId: string, from: string, to: string, change: { rate?: number | null; closed?: boolean }, weekdays?: number[]): Promise<UnitType> {
+  const db = getDb();
+  const t = await db.unitTypes.get(typeId);
+  if (!t) throw new Error("Room type not found.");
+  const { applyRange, pruneCalendar } = await import("./rates");
+  const next: UnitType = { ...t, calendar: pruneCalendar(applyRange(t, from, to, change, weekdays), localDate()) };
+  await db.unitTypes.put(next);
+  await markDirty(["unit_type", typeId]);
+  return next;
+}

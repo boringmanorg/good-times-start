@@ -7,6 +7,7 @@ import { createStay } from "@/lib/pms/actions";
 import { addDays, localDate, nightsOf } from "@/lib/pms/dates";
 import { advanceFor, folioOf } from "@/lib/pms/folio";
 import { freeForStay } from "@/lib/pms/inventory";
+import { closedOn, quoteRate } from "@/lib/pms/rates";
 import type { PayMode, Stay, StaySource, Unit, UnitType } from "@/lib/pms/types";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,7 @@ export function NewBooking({ open, onOpenChange, types, units, stays, by, onMade
   const [busy, setBusy] = useState(false);
   const nights = nightsOf(checkIn, checkOut).length;
 
-  const lines = types.filter((t) => (qty[t.id] ?? 0) > 0).map((t) => ({ typeId: t.id, units: qty[t.id] ?? 0, guests: (qty[t.id] ?? 0) * (t.soldAs === "bed" ? 1 : Math.min(2, t.maxGuests)), rate: rates[t.id] ?? t.rate }));
+  const lines = types.filter((t) => (qty[t.id] ?? 0) > 0).map((t) => ({ typeId: t.id, units: qty[t.id] ?? 0, guests: (qty[t.id] ?? 0) * (t.soldAs === "bed" ? 1 : Math.min(2, t.maxGuests)), rate: rates[t.id] ?? quoteRate(t, checkIn, checkOut) }));
   const folio = useMemo(() => folioOf({ checkIn, checkOut, lines: lines.map((l) => ({ ...l, unitIds: [] })), charges: [], payments: [] }, types), [checkIn, checkOut, lines, types]);
 
   const save = async () => {
@@ -79,10 +80,10 @@ export function NewBooking({ open, onOpenChange, types, units, stays, by, onMade
               <li key={t.id} className="flex flex-wrap items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{t.name}{t.femaleOnly ? <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary">Women only</span> : null}</p>
-                  <p className={cn("text-xs", free ? "text-muted-foreground" : "text-destructive")}>{free} {t.soldAs === "bed" ? "beds" : "rooms"} free</p>
+                  <p className={cn("text-xs", free ? "text-muted-foreground" : "text-destructive")}>{free} {t.soldAs === "bed" ? "beds" : "rooms"} free{nightsOf(checkIn, checkOut).some((n) => closedOn(t, n)) ? " · closed to online sale on some nights" : ""}</p>
                 </div>
                 <label className="text-[11px] text-muted-foreground">₹ / night<input type="number" min={0} className="mt-0.5 h-9 w-24 rounded-lg border border-input bg-card px-2 text-sm"
-                  value={rates[t.id] ?? t.rate} onChange={(e) => setRates({ ...rates, [t.id]: Number(e.target.value) || 0 })} /></label>
+                  value={rates[t.id] ?? quoteRate(t, checkIn, checkOut)} onChange={(e) => setRates({ ...rates, [t.id]: Number(e.target.value) || 0 })} /></label>
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="outline" aria-label={`One fewer ${t.name}`} disabled={!q} onClick={() => setQty({ ...qty, [t.id]: q - 1 })}>−</Button>
                   <span className="w-6 text-center tabular-nums">{q}</span>

@@ -27,19 +27,23 @@ function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
   return Promise.race([work, new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
 }
 
+function productOfBranding(branding: unknown): string | undefined {
+  const p = branding && typeof branding === "object" ? (branding as { product?: unknown }).product : undefined;
+  return typeof p === "string" && p ? p : undefined;
+}
+
 async function resolveStaff(id: string, email: string): Promise<SignedInStaff> {
   const [profile, members, loginQuery] = await Promise.all([
     supabase.from("profiles").select("display_name").eq("id", id).maybeSingle(),
-    supabase.from("restaurant_members").select("restaurant_id, role, restaurants(name)").eq("user_id", id),
+    supabase.from("restaurant_members").select("restaurant_id, role, restaurants(name, branding)").eq("user_id", id),
     (supabase as unknown as { from: (t: string) => any }).from("staff_logins").select("login, active, devices, whatsapp, display_name").eq("user_id", id).maybeSingle(), // eslint-disable-line @typescript-eslint/no-explicit-any
   ]);
   // Never mistake "couldn't reach the cloud" for "belongs to no restaurant".
   if (members.error) throw members.error;
-  const memberships: Membership[] = (members.data ?? []).map((row) => ({
-    restaurantId: row.restaurant_id,
-    restaurantName: row.restaurants?.name ?? "Restaurant",
-    role: row.role,
-  }));
+  const memberships: Membership[] = (members.data ?? []).map((row) => {
+    const product = productOfBranding(row.restaurants?.branding);
+    return { restaurantId: row.restaurant_id, restaurantName: row.restaurants?.name ?? "Restaurant", role: row.role, ...(product ? { product } : {}) };
+  });
   // The outlet this device last chose, when the person still belongs to it; else the first.
   const active = pickActive(memberships, chosenOutlet());
   const loginRow = ((loginQuery as { data: LoginRow | null }).data ?? null);
@@ -52,6 +56,7 @@ async function resolveStaff(id: string, email: string): Promise<SignedInStaff> {
     role: active?.role ?? "unknown",
     restaurantId: active?.restaurantId ?? null,
     restaurantName: active?.restaurantName ?? "",
+    ...(active?.product ? { product: active.product } : {}),
     memberships,
   };
 }

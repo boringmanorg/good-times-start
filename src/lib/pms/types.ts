@@ -28,6 +28,16 @@ export interface UnitType {
   /** The id the channel manager knows this type by (ZimmerStack room-type ref). */
   channelRef?: string;
   archived?: boolean;
+  /** Per-night changes from the rates & availability calendar: a different rate, or closed to sale. */
+  calendar?: Record<IsoDate, NightPlan>;
+}
+
+/** One night of one room type on the rates & availability calendar. */
+export interface NightPlan {
+  /** Rate for that night, rupees before GST; the type's base rate when absent. */
+  rate?: number;
+  /** Stop-sell: not offered to the website or booking sites that night (the desk can still book). */
+  closed?: boolean;
 }
 
 export type Housekeeping = "clean" | "dirty" | "inspect" | "out_of_order";

@@ -2,12 +2,14 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useMarketingAccess, useMarketingOutbox } from "@/lib/marketing-access";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { AlertTriangle, ArrowRightLeft, BarChart3, BedDouble, BookOpen, Building2, ChefHat, ClipboardList, LayoutDashboard, LayoutGrid, LogIn, LogOut, Package, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Sparkles, Store, Tablet, Users, UtensilsCrossed, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, BarChart3, BedDouble, BookOpen, Building2, CalendarCheck, CalendarDays, ChefHat, Gauge, Hotel, ClipboardList, LayoutDashboard, LayoutGrid, LogIn, LogOut, Package, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Sparkles, Store, Tablet, Users, UtensilsCrossed, Wifi, WifiOff } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ROLE_LABELS, isAdmin, useStaff } from "@/lib/staff";
+import { isStayProduct } from "@/lib/platform-restaurant-logic";
+import { productById, productOf } from "@/lib/products";
 import { supabase } from "@/integrations/supabase/client";
 import { requeueHeldRecords, clearSyncNotice, getLiveStatus, getSyncSnapshot, onLiveStatus, saveSyncError, syncCloudData } from "@/lib/cloud-sync";
 import { diagnoseCloudSync } from "@/lib/sync-diagnosis.functions";
@@ -45,7 +47,12 @@ import { SubscriptionExpired } from "./SubscriptionExpired";
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/", label: "Bill", icon: ClipboardList },
-  { to: "/front-desk", label: "Front desk", icon: BedDouble },
+  { to: "/stays", label: "Home", icon: Gauge },
+  { to: "/stays/rates", label: "Rates", icon: CalendarDays },
+  { to: "/stays/bookings", label: "Bookings", icon: CalendarCheck },
+  { to: "/front-desk", label: "Desk", icon: BedDouble },
+  { to: "/stays/reports", label: "Reports", icon: BarChart3 },
+  { to: "/stays/property", label: "Property", icon: Hotel },
   { to: "/tables", label: "Tables", icon: LayoutGrid },
   { to: "/menu", label: "Menu", icon: UtensilsCrossed },
   { to: "/kitchen", label: "Kitchen", icon: ChefHat },
@@ -67,7 +74,7 @@ const ROLE_SCREENS: Record<string, NavPath[]> = {
   manager: NAV.map((n) => n.to),
   kitchen: ["/kitchen", "/stock", "/settings"],
   captain: ["/waiter", "/", "/tables", "/menu", "/settings"],
-  cashier: ["/", "/front-desk", "/dashboard", "/tables", "/menu", "/stock", "/customers", "/reports", "/kitchen", "/settings"],
+  cashier: ["/", "/front-desk", "/stays", "/stays/bookings", "/stays/rates", "/dashboard", "/tables", "/menu", "/stock", "/customers", "/reports", "/kitchen", "/settings"],
 };
 
 /** Reception's screens also follow Settings → Roles. */
@@ -82,7 +89,7 @@ function policyAllows(role: string, to: NavPath): boolean {
 
 /** Screens that need a plan feature (all others come with every plan). */
 // The kitchen screen is off until XTSY switches it on for the restaurant, so it fails closed (see DEFAULT_OFF).
-const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app", "/kitchen": "kds", "/brand": "multi_outlet", "/accounts": "accounting", "/front-desk": "pms" };
+const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app", "/kitchen": "kds", "/brand": "multi_outlet", "/accounts": "accounting", "/front-desk": "pms", "/stays": "pms", "/stays/rates": "pms", "/stays/bookings": "pms", "/stays/reports": "pms", "/stays/property": "pms" };
 
 /** Screens each app shows, in menu order. */
 const APP_SCREENS: Record<AppKind, NavPath[]> = {
@@ -92,10 +99,21 @@ const APP_SCREENS: Record<AppKind, NavPath[]> = {
   waiter: ["/waiter"],
 };
 
-function screensFor(role: string | undefined, app: AppKind = "manager"): readonly NavPath[] {
+/**
+ * Hotel / Hostel / Resort POS: its own screens (YCS-style property platform), with the café's
+ * billing (Tables) alongside. The restaurant screens don't show for a stay property.
+ */
+const STAY_SCREENS: Record<AppKind, NavPath[]> = {
+  manager: ["/stays", "/stays/rates", "/stays/bookings", "/front-desk", "/stays/reports", "/stays/property", "/customers", "/settings"],
+  pos: ["/front-desk", "/stays/bookings", "/stays/rates", "/stays", "/tables", "/customers", "/menu", "/settings"],
+  waiter: ["/waiter"],
+};
+
+function screensFor(role: string | undefined, app: AppKind = "manager", stay = false): readonly NavPath[] {
   // Signed out, or signed in without a restaurant yet: no screens.
   if (!role || role === "unknown") return [];
   const allowed = ROLE_SCREENS[role] ?? [];
+  if (stay) return STAY_SCREENS[app].filter((to) => allowed.includes(to) && policyAllows(role, to));
   if (role === "kitchen") return ["/tables", "/stock", "/settings"];
   return APP_SCREENS[app].filter((to) => to !== "/kitchen" && allowed.includes(to) && policyAllows(role, to));
 }
@@ -392,18 +410,31 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   useMarketingOutbox(marketing.denied === null); // queued marketing changes upload even when Marketing isn't open
   const plan = useEntitlements();
   const notInPlan = (to: string) => { const f = SCREEN_FEATURE[to]; return f !== undefined && !featureOn(plan, f); };
-  const allowed = screensFor(user?.role, app).filter((to) => !notInPlan(to) && (to !== "/marketing" || marketing.denied === null || marketing.denied === "loading"));
+  const stay = isStayProduct(user?.product);
+  const allowed = screensFor(user?.role, app, stay).filter((to) => !notInPlan(to) && (to !== "/marketing" || marketing.denied === null || marketing.denied === "loading"));
   // Owners and managers see when the subscription needs attention; billing itself never stops.
   const planNotice = isAdmin(user) && plan && !plan.complimentary && (!plan.live || plan.status === "past_due" || plan.status === "suspended" || plan.status === "cancelled"
     || (plan.paidUntil !== null && Date.parse(plan.paidUntil) < Date.now() + 5 * 86_400_000));
   const nav = NAV.filter((n) => allowed.includes(n.to)).sort((a, b) => allowed.indexOf(a.to) - allowed.indexOf(b.to));
   const otherApps = (appsFor(user?.login ?? null, user?.role) as AppKind[]).filter((a) => a !== app && a !== "waiter");
   // A bill ("/") belongs to Tables: it only opens from a table or a counter order there.
-  const current = pathname === "/" ? NAV.find((n) => n.to === "/tables") : NAV.find((n) => n.to !== "/" && pathname.startsWith(n.to));
+  // The longest matching screen wins, so /stays/rates is Rates, not the /stays dashboard.
+  const current = pathname === "/" ? NAV.find((n) => n.to === "/tables") : NAV.filter((n) => n.to !== "/" && pathname.startsWith(n.to)).sort((a, b) => b.to.length - a.to.length)[0];
   const blocked = !!current && !allowed.includes(current.to);
   const home = nav[0]?.to ?? "/tables";
   // POS Manager opens on the dashboard; on a plan without it, start on the first screen it has.
   const navigateTo = useNavigate();
+  // A stay property's people land on its own screens, never on restaurant ones it doesn't show.
+  useEffect(() => {
+    if (stay && current && !allowed.includes(current.to) && home !== current.to) void navigateTo({ to: home, replace: true });
+  }, [stay, current?.to, home]); // eslint-disable-line react-hooks/exhaustive-deps -- allowed/navigateTo follow the same inputs
+  // Stay properties wear the xtsy.one look (cream, ink, crimson); restaurants stay black for now.
+  useEffect(() => {
+    if (!stay) return;
+    const root = document.documentElement;
+    root.classList.add("theme-xtsy");
+    return () => root.classList.remove("theme-xtsy");
+  }, [stay]);
   useEffect(() => {
     if (plan && current?.to === "/dashboard" && notInPlan("/dashboard") && home !== "/dashboard") void navigateTo({ to: home, replace: true });
   }, [plan, current?.to, home]); // eslint-disable-line react-hooks/exhaustive-deps -- notInPlan/navigateTo are stable for this check
@@ -422,7 +453,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
         </div>
         <nav className="no-scrollbar mt-4 flex w-full flex-col gap-0.5 overflow-y-auto px-2" aria-label="Main">
           {nav.map(({ to, label, icon: Icon }) => {
-            const active = to === "/tables" ? pathname === "/" || pathname.startsWith(to) : pathname.startsWith(to);
+            const active = current?.to === to || (to === "/tables" && pathname === "/");
             return (
               <Link key={to} to={to} aria-current={active ? "page" : undefined} title={wide ? undefined : label}
                 className={`relative flex items-center rounded-[10px] font-medium transition-colors ${wide ? "gap-3 px-3 py-2.5 text-sm" : "flex-col gap-1 px-1 py-2 text-[10.5px]"} ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"}`}>
@@ -452,7 +483,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
             <img src={logo} alt="" width={28} height={28} className="hidden rounded-[8px] min-[400px]:block lg:hidden" />
             <div className="min-w-0">
               <div className="font-brand truncate text-[16px] leading-tight text-foreground min-[400px]:text-[17px] sm:text-[19px]">{restaurantName || "XTSY POS"}</div>
-              <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{APPS[app].name}</div>
+              <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary sm:tracking-[0.14em]">{stay ? `${productById(productOf(user?.product)).name} · ${app === "manager" ? "Manager" : "Front desk"}` : APPS[app].name}</div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2"><OutletSwitcher />{app !== "manager" ? <GuestOrdersButton /> : null}<AdminAlerts /><AdminCodeButton /><InstallButton /><SyncChip /><AppUpdateWatcher /></div>
@@ -465,7 +496,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
         ) : null}
         {needsDetails && !needsRestaurant ? (
           <Link to="/setup" className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-warning lg:px-6">
-            <AlertTriangle className="size-4 shrink-0" />Finish setting up: add your GSTIN, menu, tables and staff so bills carry your details.
+            <AlertTriangle className="size-4 shrink-0" />{stay ? "Finish setting up: add your GSTIN and address so folios and café bills carry your details." : "Finish setting up: add your GSTIN, menu, tables and staff so bills carry your details."}
           </Link>
         ) : null}
         <main className="min-w-0 flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
@@ -493,7 +524,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
 
       <nav className="dark glass-dark no-scrollbar fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-border/70 pb-[env(safe-area-inset-bottom)] text-foreground lg:hidden" aria-label="Main">
         {nav.map(({ to, label, icon: Icon }) => {
-          const active = to === "/tables" ? pathname === "/" || pathname.startsWith(to) : pathname.startsWith(to);
+          const active = current?.to === to || (to === "/tables" && pathname === "/");
           return (
             <Link key={to} to={to} aria-current={active ? "page" : undefined}
               className={`relative flex min-h-14 min-w-[3.1rem] flex-1 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold ${active ? "text-primary" : "text-muted-foreground"}`}>

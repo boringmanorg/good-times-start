@@ -38,6 +38,11 @@ import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
 import { Route as OrderSlugRouteImport } from './routes/order.$slug'
+import { Route as StaysIndexRouteImport } from './routes/stays.index'
+import { Route as StaysBookingsRouteImport } from './routes/stays.bookings'
+import { Route as StaysPropertyRouteImport } from './routes/stays.property'
+import { Route as StaysRatesRouteImport } from './routes/stays.rates'
+import { Route as StaysReportsRouteImport } from './routes/stays.reports'
 import { Route as TabBistroIndexRouteImport } from './routes/tab-bistro.index'
 import { Route as TabBistroGiftCardsRouteImport } from './routes/tab-bistro.gift-cards'
 import { Route as TabBistroMenuRouteImport } from './routes/tab-bistro.menu'
@@ -188,6 +193,31 @@ const OrderSlugRoute = OrderSlugRouteImport.update({
   path: '/order/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaysIndexRoute = StaysIndexRouteImport.update({
+  id: '/stays/',
+  path: '/stays/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaysBookingsRoute = StaysBookingsRouteImport.update({
+  id: '/stays/bookings',
+  path: '/stays/bookings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaysPropertyRoute = StaysPropertyRouteImport.update({
+  id: '/stays/property',
+  path: '/stays/property',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaysRatesRoute = StaysRatesRouteImport.update({
+  id: '/stays/rates',
+  path: '/stays/rates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaysReportsRoute = StaysReportsRouteImport.update({
+  id: '/stays/reports',
+  path: '/stays/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TabBistroIndexRoute = TabBistroIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -239,9 +269,14 @@ export interface FileRoutesByFullPath {
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/stays/bookings': typeof StaysBookingsRoute
+  '/stays/property': typeof StaysPropertyRoute
+  '/stays/rates': typeof StaysRatesRoute
+  '/stays/reports': typeof StaysReportsRoute
   '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
   '/tab-bistro/menu': typeof TabBistroMenuRoute
   '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/stays/': typeof StaysIndexRoute
   '/tab-bistro/': typeof TabBistroIndexRoute
 }
 export interface FileRoutesByTo {
@@ -273,9 +308,14 @@ export interface FileRoutesByTo {
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/stays/bookings': typeof StaysBookingsRoute
+  '/stays/property': typeof StaysPropertyRoute
+  '/stays/rates': typeof StaysRatesRoute
+  '/stays/reports': typeof StaysReportsRoute
   '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
   '/tab-bistro/menu': typeof TabBistroMenuRoute
   '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/stays': typeof StaysIndexRoute
   '/tab-bistro': typeof TabBistroIndexRoute
 }
 export interface FileRoutesById {
@@ -309,9 +349,14 @@ export interface FileRoutesById {
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/stays/bookings': typeof StaysBookingsRoute
+  '/stays/property': typeof StaysPropertyRoute
+  '/stays/rates': typeof StaysRatesRoute
+  '/stays/reports': typeof StaysReportsRoute
   '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
   '/tab-bistro/menu': typeof TabBistroMenuRoute
   '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/stays/': typeof StaysIndexRoute
   '/tab-bistro/': typeof TabBistroIndexRoute
 }
 export interface FileRouteTypes {
@@ -346,9 +391,14 @@ export interface FileRouteTypes {
     | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
+    | '/stays/bookings'
+    | '/stays/property'
+    | '/stays/rates'
+    | '/stays/reports'
     | '/tab-bistro/gift-cards'
     | '/tab-bistro/menu'
     | '/tab-bistro/visit'
+    | '/stays/'
     | '/tab-bistro/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -380,9 +430,14 @@ export interface FileRouteTypes {
     | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
+    | '/stays/bookings'
+    | '/stays/property'
+    | '/stays/rates'
+    | '/stays/reports'
     | '/tab-bistro/gift-cards'
     | '/tab-bistro/menu'
     | '/tab-bistro/visit'
+    | '/stays'
     | '/tab-bistro'
   id:
     | '__root__'
@@ -415,9 +470,14 @@ export interface FileRouteTypes {
     | '/xtsy-pos'
     | '/book/$slug'
     | '/order/$slug'
+    | '/stays/bookings'
+    | '/stays/property'
+    | '/stays/rates'
+    | '/stays/reports'
     | '/tab-bistro/gift-cards'
     | '/tab-bistro/menu'
     | '/tab-bistro/visit'
+    | '/stays/'
     | '/tab-bistro/'
   fileRoutesById: FileRoutesById
 }
@@ -451,6 +511,11 @@ export interface RootRouteChildren {
   XtsyPosRoute: typeof XtsyPosRoute
   BookSlugRoute: typeof BookSlugRoute
   OrderSlugRoute: typeof OrderSlugRoute
+  StaysBookingsRoute: typeof StaysBookingsRoute
+  StaysPropertyRoute: typeof StaysPropertyRoute
+  StaysRatesRoute: typeof StaysRatesRoute
+  StaysReportsRoute: typeof StaysReportsRoute
+  StaysIndexRoute: typeof StaysIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -658,6 +723,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stays/': {
+      id: '/stays/'
+      path: '/stays'
+      fullPath: '/stays/'
+      preLoaderRoute: typeof StaysIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/bookings': {
+      id: '/stays/bookings'
+      path: '/stays/bookings'
+      fullPath: '/stays/bookings'
+      preLoaderRoute: typeof StaysBookingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/property': {
+      id: '/stays/property'
+      path: '/stays/property'
+      fullPath: '/stays/property'
+      preLoaderRoute: typeof StaysPropertyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/rates': {
+      id: '/stays/rates'
+      path: '/stays/rates'
+      fullPath: '/stays/rates'
+      preLoaderRoute: typeof StaysRatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/reports': {
+      id: '/stays/reports'
+      path: '/stays/reports'
+      fullPath: '/stays/reports'
+      preLoaderRoute: typeof StaysReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tab-bistro/': {
       id: '/tab-bistro/'
       path: '/'
@@ -737,6 +837,11 @@ const rootRouteChildren: RootRouteChildren = {
   XtsyPosRoute: XtsyPosRoute,
   BookSlugRoute: BookSlugRoute,
   OrderSlugRoute: OrderSlugRoute,
+  StaysBookingsRoute: StaysBookingsRoute,
+  StaysPropertyRoute: StaysPropertyRoute,
+  StaysRatesRoute: StaysRatesRoute,
+  StaysReportsRoute: StaysReportsRoute,
+  StaysIndexRoute: StaysIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

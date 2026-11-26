@@ -16,6 +16,8 @@ export interface Membership {
   restaurantId: string;
   restaurantName: string;
   role: StaffRole;
+  /** XTSY product of the outlet (products.ts); absent means Restaurant POS. */
+  product?: string;
 }
 
 export interface SignedInStaff {
@@ -26,6 +28,8 @@ export interface SignedInStaff {
   role: StaffRole | "unknown";
   restaurantId: string | null;
   restaurantName: string;
+  /** The active outlet's XTSY product; absent means Restaurant POS. */
+  product?: string;
   memberships: Membership[];
   /** admin, billdesk or waiter; null for any other account (such as the owner's own). */
   login: LoginId | null;

@@ -165,3 +165,47 @@ describe("setup labels", () => {
     expect(expandLabels("")).toEqual([]);
   });
 });
+
+import { applyRange, quoteRate, rateGrid, rateOn } from "./rates";
+describe("rates & availability", () => {
+  const king = types[2]!;
+  it("changes a range, weekends only, and keeps only real changes", () => {
+    // 2026-12-04 is a Friday, 12-05 Saturday.
+    const cal = applyRange(king, "2026-12-01", "2026-12-07", { rate: 3000 }, [5, 6]);
+    expect(Object.keys(cal)).toEqual(["2026-12-04", "2026-12-05"]);
+    const t = { ...king, calendar: cal };
+    expect(rateOn(t, "2026-12-04")).toBe(3000);
+    expect(rateOn(t, "2026-12-03")).toBe(2400);
+    expect(quoteRate(t, "2026-12-03", "2026-12-05")).toBe(2700);
+    expect(applyRange(t, "2026-12-04", "2026-12-05", { rate: 2400 })).toEqual({});
+  });
+  it("stop-sells nights and shows them on the grid", () => {
+    const t = { ...king, calendar: applyRange(king, "2026-12-01", "2026-12-01", { closed: true }) };
+    const [row] = rateGrid([t], units, [], "2026-12-01", 2);
+    expect(row!.cells.map((c) => c.closed)).toEqual([true, false]);
+    expect(row!.cells[0]!.free).toBe(2);
+    expect(() => applyRange(king, "2026-12-05", "2026-12-01", { closed: true })).toThrow();
+  });
+});
+
+import { bookingMatches, bySource } from "./bookings-logic";
+describe("bookings list", () => {
+  const s = stay({ source: "ota", ota: { name: "Booking.com", bookingId: "4471290" }, guest: { name: "Lukas Weber", phone: "+49 151 2345678" } });
+  const all = { query: "", status: "all" as const, source: "all" as const };
+  it("finds by name, reference, OTA id and phone digits", () => {
+    expect(bookingMatches(s, { ...all, query: "lukas" })).toBe(true);
+    expect(bookingMatches(s, { ...all, query: "4471290" })).toBe(true);
+    expect(bookingMatches(s, { ...all, query: "2345678" })).toBe(true);
+    expect(bookingMatches(s, { ...all, query: "riya" })).toBe(false);
+  });
+  it("filters by status, source and nights in range", () => {
+    expect(bookingMatches(s, { ...all, source: "walk_in" })).toBe(false);
+    expect(bookingMatches(s, { ...all, from: "2026-12-03", to: "2026-12-10" })).toBe(false);
+    expect(bookingMatches(s, { ...all, from: "2026-12-02", to: "2026-12-10" })).toBe(true);
+  });
+  it("adds up revenue by channel", () => {
+    const rows = bySource([s, stay({}), stay({ status: "cancelled" })], types, "2026-12-01", "2026-12-31");
+    expect(rows.find((r) => r.source === "ota")).toMatchObject({ bookings: 1, nights: 2, revenue: 800 });
+    expect(rows.find((r) => r.source === "walk_in")?.bookings).toBe(1);
+  });
+});
