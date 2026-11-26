@@ -13,6 +13,9 @@ import {
   isCustomerPayload,
   isDayClosePayload,
   isLedgerPayload,
+  isStayPayload,
+  isUnitPayload,
+  isUnitTypePayload,
   isMaterialPayload,
   isStockEntryPayload,
   isSupplierPayload,
@@ -114,6 +117,9 @@ async function readLocal(kind: RecordKind, recordId: string): Promise<unknown> {
     case "customer": return db.customers.get(recordId);
     case "day_close": return db.dayCloses.get(recordId);
     case "ledger": return db.ledger.get(recordId);
+    case "unit_type": return db.unitTypes.get(recordId);
+    case "unit": return db.units.get(recordId);
+    case "stay": return db.stays.get(recordId);
   }
 }
 
@@ -508,7 +514,7 @@ export async function fetchBillFromCloud(billUid: string): Promise<boolean> {
 async function applyRemote(rows: RemoteRow[]): Promise<void> {
   const db = getDb();
   // The outbox is read inside the same transaction, so a local edit can't slip in between the check and the write.
-  await db.transaction("rw", [db.outbox, db.menu, db.restTables, db.inventory, db.orders, db.kots, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger], async () => {
+  await db.transaction("rw", [db.outbox, db.menu, db.restTables, db.inventory, db.orders, db.kots, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger, db.unitTypes, db.units, db.stays], async () => {
     const pending = new Set((await db.outbox.toCollection().primaryKeys()).map(String));
     const conflicted = new Set(parseConflicts((await db.meta.get(CONFLICTS_KEY))?.value).map((c) => c.key));
     for (const row of rows) {
@@ -609,6 +615,18 @@ async function applyRemote(rows: RemoteRow[]): Promise<void> {
         case "ledger":
           if (row.deleted) await db.ledger.delete(id);
           else if (isLedgerPayload(payload)) await db.ledger.put({ ...payload, id });
+          break;
+        case "unit_type":
+          if (row.deleted) await db.unitTypes.delete(id);
+          else if (isUnitTypePayload(payload)) await db.unitTypes.put({ ...payload, id });
+          break;
+        case "unit":
+          if (row.deleted) await db.units.delete(id);
+          else if (isUnitPayload(payload)) await db.units.put({ ...payload, id });
+          break;
+        case "stay":
+          if (row.deleted) await db.stays.delete(id);
+          else if (isStayPayload(payload)) await db.stays.put({ ...payload, id });
           break;
       }
     }

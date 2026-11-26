@@ -37,6 +37,10 @@ class RestroDB extends Dexie {
   customers!: Table<Customer, string>;
   dayCloses!: Table<DayClose, string>;
   ledger!: Table<LedgerEntry, string>;
+  /** PMS by XTSY: room/bed types, beds and rooms, and stays (src/lib/pms). */
+  unitTypes!: Table<import("./pms/types").UnitType, string>;
+  units!: Table<import("./pms/types").Unit, string>;
+  stays!: Table<import("./pms/types").Stay, string>;
   /** Running stock per raw material, kept in step with stockEntries so screens never re-add the whole ledger. */
   materialLevels!: Table<{ materialId: string; qty: number }, string>;
 
@@ -174,6 +178,12 @@ class RestroDB extends Dexie {
     // Accounts: vendor payments, expenses and other income (ledger-logic.ts).
     this.version(10).stores({
       ledger: "id, type, at, supplierId",
+    });
+    // PMS by XTSY (Hotel / Hostel / Resort POS): the front desk's rooms, beds and stays.
+    this.version(11).stores({
+      unitTypes: "id",
+      units: "id, typeId",
+      stays: "id, status, checkIn, checkOut, reference",
     });
   }
 }
@@ -357,8 +367,8 @@ export async function loadSampleData(): Promise<void> {
  */
 export async function resetDevice(): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", [db.menu, db.orders, db.restTables, db.kots, db.inventory, db.drafts, db.outbox, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger], async () => {
-    await Promise.all([db.ledger.clear(), db.materialLevels.clear(), db.menu.clear(), db.orders.clear(), db.restTables.clear(), db.kots.clear(), db.inventory.clear(), db.drafts.clear(), db.outbox.clear(),
+  await db.transaction("rw", [db.menu, db.orders, db.restTables, db.kots, db.inventory, db.drafts, db.outbox, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger, db.unitTypes, db.units, db.stays], async () => {
+    await Promise.all([db.unitTypes.clear(), db.units.clear(), db.stays.clear(), db.ledger.clear(), db.materialLevels.clear(), db.menu.clear(), db.orders.clear(), db.restTables.clear(), db.kots.clear(), db.inventory.clear(), db.drafts.clear(), db.outbox.clear(),
       db.materials.clear(), db.suppliers.clear(), db.stockEntries.clear(), db.customers.clear(), db.dayCloses.clear()]);
     for (const key of ["restaurantId", "pullCursor", "restaurantSettings", "lastSyncAt", "syncError"]) await db.meta.delete(key);
   });

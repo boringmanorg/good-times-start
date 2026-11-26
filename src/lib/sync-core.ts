@@ -1,9 +1,9 @@
 import type { CartLine, Customer, DayClose, InventoryItem, Kot, Material, MenuItem, Order, RestaurantSettings, RestaurantTable, StockEntry, Supplier } from "./types";
 
 /** Kinds of records shared between a restaurant's devices (mirrors restaurant_records.kind). */
-export type RecordKind = "settings" | "menu" | "table" | "order" | "kot" | "inventory" | "material" | "supplier" | "stock_entry" | "customer" | "day_close" | "ledger";
+export type RecordKind = "settings" | "menu" | "table" | "order" | "kot" | "inventory" | "material" | "supplier" | "stock_entry" | "customer" | "day_close" | "ledger" | "unit_type" | "unit" | "stay";
 
-export const RECORD_KINDS: readonly RecordKind[] = ["settings", "menu", "table", "order", "kot", "inventory", "material", "supplier", "stock_entry", "customer", "day_close", "ledger"];
+export const RECORD_KINDS: readonly RecordKind[] = ["settings", "menu", "table", "order", "kot", "inventory", "material", "supplier", "stock_entry", "customer", "day_close", "ledger", "unit_type", "unit", "stay"];
 
 /** The single settings record per restaurant. */
 export const SETTINGS_RECORD_ID = "restaurant";
@@ -116,6 +116,18 @@ export function isDayClosePayload(value: unknown): value is DayClose {
 
 export function isLedgerPayload(value: unknown): value is import("./types").LedgerEntry {
   return isRecord(value) && isString(value["id"]) && isString(value["type"]) && isNumber(value["amount"]) && isNumber(value["at"]) && isString(value["mode"]);
+}
+
+export function isUnitTypePayload(value: unknown): value is import("./pms/types").UnitType {
+  return isRecord(value) && isString(value["id"]) && isString(value["name"]) && isString(value["soldAs"]) && isNumber(value["rate"]);
+}
+
+export function isUnitPayload(value: unknown): value is import("./pms/types").Unit {
+  return isRecord(value) && isString(value["id"]) && isString(value["typeId"]) && isString(value["label"]);
+}
+
+export function isStayPayload(value: unknown): value is import("./pms/types").Stay {
+  return isRecord(value) && isString(value["id"]) && isString(value["reference"]) && isString(value["checkIn"]) && isString(value["checkOut"]) && Array.isArray(value["lines"]);
 }
 
 export function isSettingsPayload(value: unknown): value is RestaurantSettings {

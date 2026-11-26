@@ -2,7 +2,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useMarketingAccess, useMarketingOutbox } from "@/lib/marketing-access";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { AlertTriangle, ArrowRightLeft, BarChart3, BookOpen, Building2, ChefHat, ClipboardList, LayoutDashboard, LayoutGrid, LogIn, LogOut, Package, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Sparkles, Store, Tablet, Users, UtensilsCrossed, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, BarChart3, BedDouble, BookOpen, Building2, ChefHat, ClipboardList, LayoutDashboard, LayoutGrid, LogIn, LogOut, Package, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Sparkles, Store, Tablet, Users, UtensilsCrossed, Wifi, WifiOff } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ import { SubscriptionExpired } from "./SubscriptionExpired";
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/", label: "Bill", icon: ClipboardList },
+  { to: "/front-desk", label: "Front desk", icon: BedDouble },
   { to: "/tables", label: "Tables", icon: LayoutGrid },
   { to: "/menu", label: "Menu", icon: UtensilsCrossed },
   { to: "/kitchen", label: "Kitchen", icon: ChefHat },
@@ -66,7 +67,7 @@ const ROLE_SCREENS: Record<string, NavPath[]> = {
   manager: NAV.map((n) => n.to),
   kitchen: ["/kitchen", "/stock", "/settings"],
   captain: ["/waiter", "/", "/tables", "/menu", "/settings"],
-  cashier: ["/", "/dashboard", "/tables", "/menu", "/stock", "/customers", "/reports", "/kitchen", "/settings"],
+  cashier: ["/", "/front-desk", "/dashboard", "/tables", "/menu", "/stock", "/customers", "/reports", "/kitchen", "/settings"],
 };
 
 /** Reception's screens also follow Settings → Roles. */
@@ -81,13 +82,13 @@ function policyAllows(role: string, to: NavPath): boolean {
 
 /** Screens that need a plan feature (all others come with every plan). */
 // The kitchen screen is off until XTSY switches it on for the restaurant, so it fails closed (see DEFAULT_OFF).
-const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app", "/kitchen": "kds", "/brand": "multi_outlet", "/accounts": "accounting" };
+const SCREEN_FEATURE: Partial<Record<string, Feature>> = { "/dashboard": "insights", "/stock": "purchases", "/marketing": "marketing", "/waiter": "waiter_app", "/kitchen": "kds", "/brand": "multi_outlet", "/accounts": "accounting", "/front-desk": "pms" };
 
 /** Screens each app shows, in menu order. */
 const APP_SCREENS: Record<AppKind, NavPath[]> = {
-  manager: ["/dashboard", "/menu", "/stock", "/accounts", "/customers", "/reports", "/marketing", "/brand", "/settings"],
+  manager: ["/dashboard", "/front-desk", "/menu", "/stock", "/accounts", "/customers", "/reports", "/marketing", "/brand", "/settings"],
   // Marketing shows on a POS terminal only after the admin enables that terminal (Settings → Terminals).
-  pos: ["/tables", "/customers", "/menu", "/stock", "/reports", "/dashboard", "/kitchen", "/marketing", "/settings"],
+  pos: ["/front-desk", "/tables", "/customers", "/menu", "/stock", "/reports", "/dashboard", "/kitchen", "/marketing", "/settings"],
   waiter: ["/waiter"],
 };
 

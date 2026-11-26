@@ -16,6 +16,7 @@ import { Route as BrandRouteImport } from './routes/brand'
 import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FrontDeskRouteImport } from './routes/front-desk'
 import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ManagerRouteImport } from './routes/manager'
@@ -75,6 +76,11 @@ const CustomersRoute = CustomersRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FrontDeskRoute = FrontDeskRouteImport.update({
+  id: '/front-desk',
+  path: '/front-desk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KitchenRoute = KitchenRouteImport.update({
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/console': typeof ConsoleRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
+  '/front-desk': typeof FrontDeskRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
@@ -245,6 +252,7 @@ export interface FileRoutesByTo {
   '/console': typeof ConsoleRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
+  '/front-desk': typeof FrontDeskRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
@@ -279,6 +287,7 @@ export interface FileRoutesById {
   '/console': typeof ConsoleRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
+  '/front-desk': typeof FrontDeskRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
@@ -315,6 +324,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/customers'
     | '/dashboard'
+    | '/front-desk'
     | '/kitchen'
     | '/login'
     | '/manager'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/customers'
     | '/dashboard'
+    | '/front-desk'
     | '/kitchen'
     | '/login'
     | '/manager'
@@ -382,6 +393,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/customers'
     | '/dashboard'
+    | '/front-desk'
     | '/kitchen'
     | '/login'
     | '/manager'
@@ -417,6 +429,7 @@ export interface RootRouteChildren {
   ConsoleRoute: typeof ConsoleRoute
   CustomersRoute: typeof CustomersRoute
   DashboardRoute: typeof DashboardRoute
+  FrontDeskRoute: typeof FrontDeskRoute
   KitchenRoute: typeof KitchenRoute
   LoginRoute: typeof LoginRoute
   ManagerRoute: typeof ManagerRoute
@@ -489,6 +502,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/front-desk': {
+      id: '/front-desk'
+      path: '/front-desk'
+      fullPath: '/front-desk'
+      preLoaderRoute: typeof FrontDeskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kitchen': {
@@ -695,6 +715,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConsoleRoute: ConsoleRoute,
   CustomersRoute: CustomersRoute,
   DashboardRoute: DashboardRoute,
+  FrontDeskRoute: FrontDeskRoute,
   KitchenRoute: KitchenRoute,
   LoginRoute: LoginRoute,
   ManagerRoute: ManagerRoute,

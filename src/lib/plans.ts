@@ -13,7 +13,7 @@ export type Feature =
   | "insights" | "purchases" | "vendors" | "loyalty" | "bookings" | "admin_approval"
   | "waiter_app" | "qr_ordering" | "online_ordering" | "marketing"
   | "recipes" | "gift_cards" | "feedback" | "kds" | "accounting"
-  | "audit_log" | "multi_outlet" | "aggregators";
+  | "audit_log" | "multi_outlet" | "aggregators" | "pms";
 export type SeatApp = "manager" | "pos" | "waiter";
 
 /** Every feature switch, in the order plans list them. Prices are per outlet. */
@@ -21,7 +21,7 @@ export const FEATURES: Feature[] = [
   "billing", "menu", "gst_reports", "manager_app", "insights",
   "purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval", "aggregators",
   "waiter_app", "qr_ordering", "online_ordering", "marketing", "gift_cards", "feedback",
-  "kds", "accounting", "audit_log", "multi_outlet",
+  "kds", "accounting", "audit_log", "multi_outlet", "pms",
 ];
 
 export const FEATURE_NAMES: Record<Feature, string> = {
@@ -46,6 +46,7 @@ export const FEATURE_NAMES: Record<Feature, string> = {
   accounting: "Accounting and restaurant bookkeeping",
   audit_log: "Audit logs and full reports",
   aggregators: "Swiggy and Zomato orders on the POS",
+  pms: "Front desk: rooms, beds and stays (PMS by XTSY)",
   multi_outlet: "Several outlets under one brand",  // the Brand screen: sales together, add an outlet, push the menu
 };
 
@@ -62,7 +63,8 @@ export const FEATURE_NAMES: Record<Feature, string> = {
  */
 // aggregators: only the sandbox exists until Swiggy/Zomato partner keys are in place, so it is not sold yet.
 // accounting shipped (Accounts screen: profit and loss, expenses, day book, Pay later), so it is listed again.
-const NOT_ON_PRICE_CARDS: Feature[] = ["online_ordering", "kds", "aggregators"];
+// pms: the front desk is switched on per property by XTSY while Hostel POS is piloted.
+const NOT_ON_PRICE_CARDS: Feature[] = ["online_ordering", "kds", "aggregators", "pms"];
 export const PUBLIC_FEATURES: Feature[] = FEATURES.filter((f) => !NOT_ON_PRICE_CARDS.includes(f));
 
 export const SEAT_NAMES: Record<SeatApp, string> = { manager: "Admin / Manager", pos: "Billdesk", waiter: "Waiter" };
@@ -135,7 +137,7 @@ export interface Entitlements {
  * screen is switched on per restaurant by XTSY and is not sold with a plan, and accounting belongs
  * to Enterprise / Brand alone — neither should appear by itself on a cloud that hasn't been updated.
  */
-export const DEFAULT_OFF: Feature[] = ["kds", "accounting"];
+export const DEFAULT_OFF: Feature[] = ["kds", "accounting", "pms"];
 
 /**
  * Whether a feature is on. Unknown (offline before the first check, or an older cloud) means on,
