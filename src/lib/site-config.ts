@@ -43,7 +43,7 @@ export function siteUrl(): string {
 }
 
 /** Paths a marketing host may serve as themselves (files the browser and crawlers need). */
-const PASS_THROUGH = /^\/(assets|icons|brand|_build|@|node_modules|src)\/|^\/(favicon\.png|robots\.txt|sitemap\.xml|og-xtsy-pos\.png)$/;
+const PASS_THROUGH = /^\/(assets|icons|brand|videos|_build|@|node_modules|src)\/|^\/(favicon\.png|robots\.txt|sitemap\.xml|og-xtsy-pos\.png|privacy|terms|refunds)$/;
 
 /**
  * On a marketing host, map the requested path into the website. Anything that isn't the website

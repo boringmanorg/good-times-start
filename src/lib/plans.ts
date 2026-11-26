@@ -54,15 +54,15 @@ export const FEATURE_NAMES: Record<Feature, string> = {
  * Features listed on the website and on the in-app plan screen.
  *
  * Left out: online_ordering is an internal switch; kds is turned on per restaurant by XTSY
- * rather than sold with a plan; and accounting is NOT BUILT YET — it stays off the comparison
- * table until it ships, because a plan must not advertise what it cannot do. Put "accounting"
- * back here the day the feature lands.
+ * rather than sold with a plan. A plan must not advertise what it cannot do, so a feature stays
+ * off this list until it ships.
  *
  * multi_outlet is listed: the Brand screen makes it real (sales across outlets, add an outlet,
  * push the menu), so it is the headline reason to take Enterprise / Brand.
  */
 // aggregators: only the sandbox exists until Swiggy/Zomato partner keys are in place, so it is not sold yet.
-const NOT_ON_PRICE_CARDS: Feature[] = ["online_ordering", "kds", "accounting", "aggregators"];
+// accounting shipped (Accounts screen: profit and loss, expenses, day book, Pay later), so it is listed again.
+const NOT_ON_PRICE_CARDS: Feature[] = ["online_ordering", "kds", "aggregators"];
 export const PUBLIC_FEATURES: Feature[] = FEATURES.filter((f) => !NOT_ON_PRICE_CARDS.includes(f));
 
 export const SEAT_NAMES: Record<SeatApp, string> = { manager: "Admin / Manager", pos: "Billdesk", waiter: "Waiter" };

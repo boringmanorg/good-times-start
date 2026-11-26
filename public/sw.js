@@ -6,7 +6,7 @@
  * - Icons, manifests, fonts: served from cache, refreshed in the background.
  * - Never touches API calls, server functions, Supabase or non-GET requests.
  */
-const VERSION = "xtsy-pos-v14";
+const VERSION = "xtsy-pos-v15";
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
 const STATIC = `${VERSION}-static`;
@@ -28,6 +28,8 @@ self.addEventListener("activate", (event) => {
 
 function isBypassed(url, request) {
   if (request.method !== "GET") return true;
+  // Demo videos stream in byte ranges; a cache would store a partial 206 and break playback.
+  if (request.headers.has("range") || url.pathname.startsWith("/videos/")) return true;
   if (url.origin === self.location.origin) {
     // "Sync now" checks for a newer published app: always ask the server, never a saved copy.
     if (url.searchParams.has("app-update-check")) return true;

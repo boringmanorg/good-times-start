@@ -21,6 +21,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as MenuRouteImport } from './routes/menu'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -30,6 +32,7 @@ import { Route as StockRouteImport } from './routes/stock'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TabBistroRouteImport } from './routes/tab-bistro'
 import { Route as TablesRouteImport } from './routes/tables'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
@@ -99,6 +102,16 @@ const MenuRoute = MenuRouteImport.update({
   path: '/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundsRoute = RefundsRouteImport.update({
+  id: '/refunds',
+  path: '/refunds',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -142,6 +155,11 @@ const TabBistroRoute = TabBistroRouteImport.update({
 const TablesRoute = TablesRouteImport.update({
   id: '/tables',
   path: '/tables',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WaiterRoute = WaiterRouteImport.update({
@@ -198,6 +216,8 @@ export interface FileRoutesByFullPath {
   '/manager': typeof ManagerRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
+  '/privacy': typeof PrivacyRoute
+  '/refunds': typeof RefundsRoute
   '/reports': typeof ReportsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
@@ -207,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/tab-bistro': typeof TabBistroRouteWithChildren
   '/tables': typeof TablesRoute
+  '/terms': typeof TermsRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
@@ -229,6 +250,8 @@ export interface FileRoutesByTo {
   '/manager': typeof ManagerRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
+  '/privacy': typeof PrivacyRoute
+  '/refunds': typeof RefundsRoute
   '/reports': typeof ReportsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
@@ -237,6 +260,7 @@ export interface FileRoutesByTo {
   '/stock': typeof StockRoute
   '/support': typeof SupportRoute
   '/tables': typeof TablesRoute
+  '/terms': typeof TermsRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
@@ -260,6 +284,8 @@ export interface FileRoutesById {
   '/manager': typeof ManagerRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
+  '/privacy': typeof PrivacyRoute
+  '/refunds': typeof RefundsRoute
   '/reports': typeof ReportsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
@@ -269,6 +295,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/tab-bistro': typeof TabBistroRouteWithChildren
   '/tables': typeof TablesRoute
+  '/terms': typeof TermsRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
@@ -293,6 +320,8 @@ export interface FileRouteTypes {
     | '/manager'
     | '/marketing'
     | '/menu'
+    | '/privacy'
+    | '/refunds'
     | '/reports'
     | '/robots.txt'
     | '/settings'
@@ -302,6 +331,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tab-bistro'
     | '/tables'
+    | '/terms'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
@@ -324,6 +354,8 @@ export interface FileRouteTypes {
     | '/manager'
     | '/marketing'
     | '/menu'
+    | '/privacy'
+    | '/refunds'
     | '/reports'
     | '/robots.txt'
     | '/settings'
@@ -332,6 +364,7 @@ export interface FileRouteTypes {
     | '/stock'
     | '/support'
     | '/tables'
+    | '/terms'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
@@ -354,6 +387,8 @@ export interface FileRouteTypes {
     | '/manager'
     | '/marketing'
     | '/menu'
+    | '/privacy'
+    | '/refunds'
     | '/reports'
     | '/robots.txt'
     | '/settings'
@@ -363,6 +398,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tab-bistro'
     | '/tables'
+    | '/terms'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
@@ -386,6 +422,8 @@ export interface RootRouteChildren {
   ManagerRoute: typeof ManagerRoute
   MarketingRoute: typeof MarketingRoute
   MenuRoute: typeof MenuRoute
+  PrivacyRoute: typeof PrivacyRoute
+  RefundsRoute: typeof RefundsRoute
   ReportsRoute: typeof ReportsRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SettingsRoute: typeof SettingsRoute
@@ -395,6 +433,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TabBistroRoute: typeof TabBistroRouteWithChildren
   TablesRoute: typeof TablesRoute
+  TermsRoute: typeof TermsRoute
   WaiterRoute: typeof WaiterRoute
   XtsyPosRoute: typeof XtsyPosRoute
   BookSlugRoute: typeof BookSlugRoute
@@ -487,6 +526,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refunds': {
+      id: '/refunds'
+      path: '/refunds'
+      fullPath: '/refunds'
+      preLoaderRoute: typeof RefundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports': {
       id: '/reports'
       path: '/reports'
@@ -548,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/tables'
       fullPath: '/tables'
       preLoaderRoute: typeof TablesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/waiter': {
@@ -640,6 +700,8 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerRoute: ManagerRoute,
   MarketingRoute: MarketingRoute,
   MenuRoute: MenuRoute,
+  PrivacyRoute: PrivacyRoute,
+  RefundsRoute: RefundsRoute,
   ReportsRoute: ReportsRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SettingsRoute: SettingsRoute,
@@ -649,6 +711,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TabBistroRoute: TabBistroRouteWithChildren,
   TablesRoute: TablesRoute,
+  TermsRoute: TermsRoute,
   WaiterRoute: WaiterRoute,
   XtsyPosRoute: XtsyPosRoute,
   BookSlugRoute: BookSlugRoute,

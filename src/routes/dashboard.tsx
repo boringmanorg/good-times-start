@@ -248,10 +248,11 @@ function Kpi({ label, value, note, icon: Icon, tone }: { label: string; value: s
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          {/* Amounts never get cut off: no icon beside them on phones, and they wrap rather than hide. */}
-          <p className="mt-1 text-[22px] font-bold leading-tight tracking-tight tabular-nums [overflow-wrap:anywhere] sm:text-[26px]">{value}</p>
+          {/* Amounts stay whole ("₹12,360", never "₹12,3 / 60"): no icon beside them where four tiles share a row on
+              a laptop, and a smaller size there. A very long amount still wraps rather than being cut off. */}
+          <p className="mt-1 text-[22px] font-bold leading-tight tracking-tight tabular-nums [overflow-wrap:break-word] sm:text-[26px] lg:text-[22px] 2xl:text-[26px]">{value}</p>
         </div>
-        <span className={cn("hidden size-11 shrink-0 place-items-center rounded-full sm:grid", tone)}><Icon className="size-5" /></span>
+        <span className={cn("hidden size-11 shrink-0 place-items-center rounded-full sm:grid lg:hidden 2xl:grid", tone)}><Icon className="size-5" /></span>
       </div>
       <p className="mt-3 truncate text-xs text-muted-foreground">{note}</p>
     </div>

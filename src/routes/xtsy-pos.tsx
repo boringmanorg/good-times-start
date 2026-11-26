@@ -1,19 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent, type ReactNode } from "react";
-import {
-  CalendarCheck, Gift, Check, ChefHat, ClipboardList, FileSpreadsheet, KeyRound, LayoutDashboard, MessageCircle, Printer,
-  QrCode, Receipt, Send, ShieldCheck, ShoppingBasket, Smartphone, Store, Tablet, Users, WifiOff, X, Play,
-} from "lucide-react";
-import { FEATURE_NAMES, PUBLIC_FEATURES, PUBLIC_PLANS, SEAT_NAMES, priceText, seatText, whatsappLink, type PublicPlan, type SeatApp } from "@/lib/plans";
-import { FAQ, SITE_DESCRIPTION, SITE_TITLE, enquiryMessage, enquiryProblem, type Enquiry } from "@/lib/site-content";
+import { Check, Play, Send, X } from "lucide-react";
+import { FEATURE_NAMES, PUBLIC_FEATURES, PUBLIC_PLANS, SEAT_NAMES, priceText, whatsappLink, type PublicPlan, type SeatApp } from "@/lib/plans";
+import { DEMOS, STATUS, SITE_DESCRIPTION, SITE_TITLE, enquiryMessage, enquiryProblem, faqFor, type Enquiry } from "@/lib/site-content";
 import { loadPublicPlans, priceRange } from "@/lib/public-plans";
 import { siteUrl } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
-import { DemoTour } from "@/components/site/DemoTour";
+import { DemoVideo } from "@/components/site/DemoVideo";
 import logo from "@/assets/logo.png";
 
 /*
- * The XTSY POS website. Showcase only: no sign-in, no payments, no database.
+ * The XTSY POS website. Showcase only: no sign-in, no payments, no database writes.
  * Enquiries become a WhatsApp message to XTSY and a copy stays on the visitor's own device.
  */
 export const Route = createFileRoute("/xtsy-pos")({
@@ -31,7 +28,7 @@ export const Route = createFileRoute("/xtsy-pos")({
         { "@type": "SoftwareApplication", name: "XTSY POS", alternateName: "POS by XTSY", applicationCategory: "BusinessApplication", applicationSubCategory: "Restaurant POS",
           operatingSystem: "Web, Windows, macOS, Android, iOS", description: SITE_DESCRIPTION, url,
           offers: { "@type": "AggregateOffer", priceCurrency: "INR", lowPrice: range.low, highPrice: range.high, offerCount: range.count } },
-        { "@type": "FAQPage", mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
+        { "@type": "FAQPage", mainEntity: faqFor(loaderData?.plans ?? PUBLIC_PLANS).map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
       ],
     };
     return {
@@ -55,286 +52,248 @@ export const Route = createFileRoute("/xtsy-pos")({
   component: SitePage,
 });
 
-const NAV = [{ href: "#brand", l: "Own your brand" }, { href: "#features", l: "Features" }, { href: "#marketing", l: "Marketing" }, { href: "#pricing", l: "Pricing" }, { href: "#faq", l: "FAQ" }];
+
+const NAV = [{ href: "#demos", l: "Demos" }, { href: "#status", l: "What's live" }, { href: "#pricing", l: "Pricing" }, { href: "#faq", l: "Questions" }];
 
 function SitePage() {
   const { plans } = Route.useLoaderData();
   const range = priceRange(plans);
+  const faq = faqFor(plans);
   const [plan, setPlan] = useState("");
-  const [demo, setDemo] = useState(false);
   const pick = (name: string) => { setPlan(name); document.getElementById("enquire")?.scrollIntoView({ behavior: "smooth" }); };
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="glass-dark sticky top-0 z-30 border-b border-border pt-[env(safe-area-inset-top)]">
+    <div className="min-h-screen bg-black text-foreground">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <a href="#top" className="flex items-center gap-2.5" aria-label="XTSY POS home">
             <img src={logo} alt="" width={34} height={34} className="rounded-[9px]" />
-            <span><span className="font-brand block text-[22px] leading-none">XTSY POS</span><span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">POS by XTSY</span></span>
+            <span className="font-brand text-[24px] leading-none">XTSY POS</span>
           </a>
-          <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex" aria-label="Website">
+          <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex" aria-label="Website">
             {NAV.map((n) => <a key={n.href} href={n.href} className="hover:text-foreground">{n.l}</a>)}
           </nav>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setDemo(true)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/60 px-4 py-2 text-sm font-bold text-primary hover:bg-primary-tint"><Play className="size-3.5 fill-current" />Demo</button>
-            <a href="#enquire" className="hidden rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover min-[400px]:inline-block">Get started</a>
-          </div>
+          <a href="#enquire" className="rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover">Talk to us</a>
         </div>
       </header>
-      {demo ? <DemoTour onClose={() => setDemo(false)} /> : null}
 
       <main id="top">
-        {/* Hero */}
-        <section className="relative overflow-hidden">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_75%_10%,color-mix(in_srgb,var(--color-primary)_22%,transparent),transparent_70%)]" />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:py-20 lg:grid-cols-[1.1fr_1fr]">
+        {/* Hero: the product itself, running. */}
+        <section className="px-4 pb-14 pt-10 md:pb-20 md:pt-16">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Restaurant billing software · Made in Tamil Nadu for India & Asia</p>
-              <h1 className="mt-3 text-[2.9rem] leading-[0.98] sm:text-6xl lg:text-7xl">Restaurant billing software, made to be loved.</h1>
-              <p className="mt-5 max-w-xl text-lg text-muted-foreground">Billing, KOTs, QR ordering, guest loyalty and a waiter app, live on every device and still working when the internet isn't. Built in Tamil Nadu for India and Asia — restaurants, fine dine, cafés and cloud kitchens.</p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#pricing" className="rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground hover:bg-primary-hover">See plans from ₹{range.low}/month</a>
-                <button type="button" onClick={() => setDemo(true)} className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 font-bold hover:bg-secondary"><Play className="size-4 fill-current text-primary" />Watch the demo</button>
+              <h1 className="font-brand text-[3.4rem] leading-[0.9] sm:text-7xl lg:text-[5.4rem]">Bill the table. Send the KOT. See every rupee.</h1>
+              <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-muted-foreground">
+                XTSY POS runs the counter, the waiters' phones, guest QR orders and the owner's books. Every device stays in step live, and the counter keeps billing when the internet drops.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a href="#demos" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-6 font-bold text-primary-foreground hover:bg-primary-hover"><Play className="size-4 fill-current" />Watch the demos</a>
+                <a href="#pricing" className="inline-flex min-h-12 items-center rounded-full border border-white/20 px-6 font-bold hover:bg-white/5">Plans from ₹{range.low} a month</a>
               </div>
-              <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                {["0% commission on your own orders", "Works offline", "GST billing", "Live sync across devices"].map((t) => <li key={t} className="flex items-center gap-1.5"><Check className="size-4 text-primary" />{t}</li>)}
-              </ul>
+              <p className="mt-8 max-w-[34rem] text-sm text-muted-foreground">
+                Running every day at <Link to="/tab-bistro" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4 hover:decoration-primary">TAB Bistro by XTSY</Link>, a restaurant and stay in New Shillong, Meghalaya. Made in Tamil Nadu for restaurants across India and Asia.
+              </p>
             </div>
-            <HeroMock />
+            <div>
+              <DemoVideo id="billing" title="Bill a table on POS Billdesk" eager />
+              <p className="mt-3 text-sm text-muted-foreground">POS Billdesk, billing table D1 with TAB Bistro's menu. Recorded on the real app.</p>
+            </div>
           </div>
         </section>
 
-        <section aria-label="First onboarded restaurant" className="border-y border-border bg-card/60">
-          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-center text-sm sm:flex-row sm:text-left">
-            <p><span className="font-semibold">Running live at TAB Bistro by XTSY</span><span className="text-muted-foreground">, our first restaurant cum hotel in New Shillong, Meghalaya.</span></p>
-            <Link to="/tab-bistro" className="inline-flex min-h-11 items-center gap-2 font-semibold text-primary">Visit TAB Bistro <Store className="size-4" /></Link>
-          </div>
-        </section>
-
-        {/* Apps */}
-        <Section id="apps" eyebrow="Three apps, one restaurant" title="Every screen your team needs">
-          <div className="grid gap-4 md:grid-cols-3">
-            <AppCard icon={LayoutDashboard} name="POS Manager" who="Owner and managers · phone, tablet, computer"
-              points={["Live sales, running bills and dashboard", "Menu, prices, purchases and approvals", "Staff logins, roles and every device"]} />
-            <AppCard icon={Store} name="POS Billdesk" who="Reception counter · Windows or Mac"
-              points={["Tables, takeaway, delivery and room bills", "KOTs to each kitchen station", "Cash, UPI, card and split payments"]} />
-            <AppCard icon={Tablet} name="Waiter Pro" who="Waiters · Android phone or tablet" badge="Pro & Enterprise"
-              points={["Take orders at the table", "Send KOTs without walking to the counter", "See which tables wait for their bill"]} />
-          </div>
-        </Section>
-
-        {/* Features */}
-        <Section id="features" eyebrow="Built for real service" title="Everything a busy restaurant runs on">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature icon={WifiOff} title="Offline-first billing">Bills are saved on the counter first. The internet can drop mid-service; billing doesn't.</Feature>
-            <Feature icon={ChefHat} title="KOTs that kitchens can read">Quantity first, one ticket per station, and slips that fit 58 mm and 80 mm thermal printers.</Feature>
-            <Feature icon={QrCode} title="Guest QR ordering">Dine-in, takeaway and delivery from one public QR, plus in-room dining QRs where the restaurant serves a stay.</Feature>
-            <Feature icon={Gift} title="Guest loyalty">Guests earn points back on every bill and spend them on their next visit.</Feature>
-            <Feature icon={CalendarCheck} title="Table bookings">Guests book for their party; your team allots the table and confirms.</Feature>
-            <Feature icon={ShoppingBasket} title="Purchases with approval">The bill desk records supplier bills; the owner checks and approves them.</Feature>
-            <Feature icon={Receipt} title="GST billing">GSTIN on every bill, CGST and SGST per dish, round-off and NC bills done right.</Feature>
-            <Feature icon={FileSpreadsheet} title="Sales summary and Excel">Day, week and month sales by payment, item and staff, ready for your accountant.</Feature>
-            <Feature icon={ShieldCheck} title="Audit log and device control">Who changed what, on which device. Block or release any terminal in seconds.</Feature>
-            <Feature icon={KeyRound} title="60-second admin code">Discounts, voids and reprints can need a code that changes every minute, with no internet needed.</Feature>
-            <Feature icon={MessageCircle} title="WhatsApp marketing">Offers and thank-you messages to guests who agreed to hear from you.</Feature>
-            <Feature icon={Printer} title="Prints from any device">Waiters send prints to the counter printer; the counter prints silently.</Feature>
-          </div>
-        </Section>
-
-        {/* POS by XTSY models */}
-        <Section id="for" eyebrow="POS by XTSY" title="One XTSY brand, an app for every kind of hospitality">
-          <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-            <div className="rounded-3xl border border-border bg-card p-6">
-              <p className="flex items-center gap-2 text-sm font-semibold text-success"><span className="size-2 rounded-full bg-success" aria-hidden="true" />Live now</p>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-center">
-                {["Restaurants", "Fine dine", "Cafés", "Cloud kitchens"].map((t) => (
-                  <div key={t} className="rounded-2xl bg-secondary px-3 py-5 font-semibold">{t}</div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-3xl border border-dashed border-primary/50 bg-primary-tint/40 p-6">
-              <p className="flex items-center gap-2 text-sm font-semibold text-primary"><span className="size-2 rounded-full bg-primary" aria-hidden="true" />Coming soon</p>
-              <ul className="mt-4 space-y-3">
-                <li className="rounded-2xl bg-card px-4 py-3"><p className="font-semibold">POS by XTSY for Hotels & Resorts</p><p className="text-sm text-muted-foreground">Rooms, stays, in-room dining and the front desk.</p></li>
-                <li className="rounded-2xl bg-card px-4 py-3"><p className="font-semibold">POS by XTSY for Tourism</p><p className="text-sm text-muted-foreground">Tours, travel desks and experiences.</p></li>
-              </ul>
-            </div>
-          </div>
-          <p className="mx-auto mt-5 max-w-2xl text-center text-sm text-muted-foreground">Separate apps for each part of hospitality and tourism, all under one XTSY brand.</p>
-        </Section>
-
-        {/* Own your brand, not the aggregator's */}
-        <Section id="brand" eyebrow="Your brand, your guests, your margin" title="Stop renting your customers from Swiggy and Zomato">
-          <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-            <div className="rounded-3xl border border-border bg-card p-6">
-              <p className="text-sm font-semibold text-destructive">What an aggregator order really costs</p>
-              <p className="mt-3 text-muted-foreground">Delivery aggregators take roughly <strong className="text-foreground">18–30% of every order</strong>, plus GST on that commission. The guest is theirs, not yours: you never get the phone number, so you can't bring them back yourself.</p>
-              <div className="mt-5 space-y-2.5">
-                {[["₹5,00,000", "delivery sales in a month"], ["− ₹1,25,000", "gone at 25% commission"], ["₹37,500 back", "if just 30% of it came through your own QR"]].map(([a, b], i) => (
-                  <div key={a} className={cn("flex flex-col gap-0.5 rounded-xl px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3", i === 2 ? "bg-success/15" : "bg-secondary")}>
-                    <span className={cn("whitespace-nowrap text-xl font-extrabold tabular-nums", i === 1 && "text-destructive", i === 2 && "text-success")}>{a}</span>
-                    <span className="text-sm text-muted-foreground sm:text-right">{b}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">Your own numbers will differ — put your delivery sales and your commission rate in and the arithmetic is the same.</p>
-            </div>
-            <div className="rounded-3xl border border-primary/40 bg-primary-tint/40 p-6">
-              <p className="text-sm font-semibold text-primary">What your own ordering gives you</p>
-              <ul className="mt-3 space-y-3">
-                {[
-                  ["0% commission", "Every rupee of a QR order stays with you. One flat monthly fee, whatever you sell."],
-                  ["The guest is yours", "Name, mobile and order history on your own guest list — not locked inside someone else's app."],
-                  ["Your prices, your offers", "No inflated menu to cover commission, no forced discounts to stay visible."],
-                  ["Bring them back", "WhatsApp the guests who already came. Points on their bill bring them in again."],
-                  ["Your name on everything", "Your logo and colours on the ordering page, the QR card and the printed bill."],
-                ].map(([t, d]) => (
-                  <li key={t} className="flex gap-2.5"><Check className="mt-0.5 size-4 shrink-0 text-primary" /><span><strong>{t}.</strong> <span className="text-muted-foreground">{d}</span></span></li>
-                ))}
-              </ul>
-              <p className="mt-5 rounded-xl bg-card p-3 text-sm text-muted-foreground">Keep the aggregators for discovery if they work for you. XTSY POS is how you stop depending on them.</p>
-            </div>
-          </div>
-        </Section>
-
-        {/* QR */}
-        <Section id="qr" eyebrow="Stunning on the table, in the room, on the street" title="One QR. Dine-in, takeaway, delivery and room service.">
-          <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.25fr]">
-            <QrShowcase />
-            <div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  [QrCode, "Printed cards that look the part", "Table tents and counter cards in the XTSY Pines or Classic theme, with your name, logo and table number already on them."],
-                  [Smartphone, "Opens straight on the menu", "No app, no sign-up, no landing page. Photos, veg and non-veg marks, prices and today's availability."],
-                  [ClipboardList, "The guest picks the kind of order", "Dine in at the table, takeaway with an arrival time, or delivery with a Google Maps pin so the rider finds them."],
-                  [ChefHat, "The counter chimes and accepts", "The order lands at POS Billdesk with a sound, the KOT prints, and the bill builds itself."],
-                  [Receipt, "Room service for hotels", "An in-room QR puts the order on the room bill, settled at check-out or whenever the desk asks."],
-                  [Gift, "Points on every QR order", "Guests who order from your QR earn points back and come in again for them."],
-                ].map(([Icon, t, d]) => {
-                  const I = Icon as typeof Store;
-                  return (
-                    <div key={t as string} className="rounded-2xl border border-border bg-card p-4">
-                      <I className="size-5 text-primary" />
-                      <p className="mt-2 font-semibold">{t as string}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{d as string}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        {/* Marketing and branding */}
-        <Section id="marketing" eyebrow="Marketing and branding tools" title="Boost your sales with the guests you already have">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature icon={MessageCircle} title="WhatsApp campaigns">Send an offer to guests who agreed to hear from you — by how recently they came, how often, or how much they spend.</Feature>
-            <Feature icon={Users} title="Your own guest list">Every bill builds it: name, mobile, visits, favourite dishes and points. It is yours, and it leaves with you.</Feature>
-            <Feature icon={Gift} title="Points that bring them back">Set the percentage; guests earn on every bill and spend it on the next one. No cards, no app.</Feature>
-            <Feature icon={Store} title="Your brand everywhere">Logo, colours and name on the ordering page, printed bills, KOTs and QR cards.</Feature>
-            <Feature icon={CalendarCheck} title="Win back quiet guests">Find the guests who haven't come in a month and message just them, instead of blasting everyone.</Feature>
-            <Feature icon={FileSpreadsheet} title="See what actually worked">Which dishes sell, which hours are busy, which offers brought guests back — in the dashboard, not a spreadsheet.</Feature>
-          </div>
-          <p className="mx-auto mt-5 max-w-2xl text-center text-sm text-muted-foreground">Marketing and branding tools come with Pro and Enterprise / Brand. Guest loyalty and your guest list start at Pro Lite.</p>
-        </Section>
-
-        {/* Pricing */}
-        <Section id="pricing" eyebrow="Simple monthly plans, per outlet" title="Pricing">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {plans.map((p) => (
-              <article key={p.id} className={cn("relative flex flex-col rounded-3xl border p-6", p.highlight ? "border-primary bg-primary-tint" : "border-border bg-card")}>
-                {p.highlight ? <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">Most popular</span> : null}
-                <h3 className="font-brand text-3xl">{p.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-                <p className="mt-5"><span className="text-4xl font-extrabold tabular-nums">{p.price === null ? "Custom" : `₹${p.price}`}</span>{p.price === null ? null : <span className="text-muted-foreground"> / month per outlet</span>}</p>
-                <ul className="mt-5 space-y-2 text-sm">
-                  {(["pos", "manager", "waiter"] as SeatApp[]).map((a) => (
-                    <li key={a} className={cn("flex gap-2 font-semibold", p.seats[a] === 0 && "font-normal text-muted-foreground")}>
-                      {p.seats[a] === 0 ? <X className="mt-0.5 size-4 shrink-0 opacity-50" /> : <Users className="mt-0.5 size-4 shrink-0 text-primary" />}{seatText(a, p.seats[a])}
-                    </li>
-                  ))}
-                </ul>
-                <ul className="mt-4 flex-1 space-y-2 border-t border-border pt-4 text-sm">
-                  {PUBLIC_FEATURES.map((f) => {
-                    const on = p.features.includes(f);
-                    return (
-                      <li key={f} className={cn("flex gap-2", !on && "text-muted-foreground/70")}>
-                        {on ? <Check className="mt-0.5 size-4 shrink-0 text-primary" /> : <X className="mt-0.5 size-4 shrink-0 opacity-50" />}
-                        <span>{FEATURE_NAMES[f]}{!on ? <span className="sr-only"> (not included)</span> : null}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <button type="button" onClick={() => pick(p.name)}
-                  className={cn("mt-6 rounded-full px-5 py-3 font-bold", p.highlight ? "bg-primary text-primary-foreground hover:bg-primary-hover" : "border border-border hover:bg-secondary")}>
-                  {p.price === null ? "Call for quote" : `Choose ${p.name}`}
-                </button>
-              </article>
+        <section aria-label="In short" className="border-y border-white/10 px-4 py-6">
+          <ul className="mx-auto grid max-w-6xl gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            {["No commission on orders from your own QR", "Keeps billing when the internet drops", "UPI, card, cash and GST-ready bills", "Counter, waiters and owner in sync live"].map((t) => (
+              <li key={t} className="flex items-start gap-2"><Check className="mt-0.5 size-4 shrink-0 text-primary" />{t}</li>
             ))}
+          </ul>
+        </section>
+
+        <Section id="demos" title="Watch it work" intro="Real screens from XTSY POS, recorded with TAB Bistro's menu. The owner's screens use sample figures, marked Demo data.">
+          <DemoTheatre />
+        </Section>
+
+        <Section id="status" title="Where XTSY POS stands today" intro="Updated November 2026. Live means restaurants use it now; nothing below is sold before it works.">
+          <StatusBoard />
+        </Section>
+
+        <Section id="brand" title="Your guests, not the aggregator's" intro="Keep Swiggy and Zomato for discovery if they work for you. Orders from your own QR cost you nothing per order, and the guest stays yours.">
+          <div className="grid gap-10 lg:grid-cols-2">
+            <div>
+              <p className="text-muted-foreground">Aggregators take roughly 18–30% of every order, plus GST on that commission, and you never get the guest's number. Here is the same month two ways:</p>
+              <dl className="mt-6 divide-y divide-white/10 border-y border-white/10">
+                {[["Delivery sales in a month", "₹5,00,000", ""], ["Gone at 25% commission", "− ₹1,25,000", "text-destructive"], ["Kept if 30% came through your own QR", "₹37,500", "text-success"]].map(([l, v, tone]) => (
+                  <div key={l} className="flex items-baseline justify-between gap-4 py-3.5"><dt className="text-sm text-muted-foreground">{l}</dt><dd className={cn("whitespace-nowrap text-xl font-bold tabular-nums", tone)}>{v}</dd></div>
+                ))}
+              </dl>
+              <p className="mt-3 text-xs text-muted-foreground">Put in your own sales and commission; the arithmetic is the same.</p>
+            </div>
+            <ul className="space-y-5">
+              {[
+                ["The guest list is yours", "Name, mobile, visits and favourite dishes build up from every bill. It leaves with you if you ever leave."],
+                ["Bring them back on WhatsApp", "Send an offer to guests who agreed to hear from you, picked by how recently or how often they come."],
+                ["Points on every bill", "Guests earn a percentage back and spend it on their next visit. No cards, no app."],
+                ["Your name on everything", "Your logo and colours on the ordering page, the QR card and the printed bill."],
+              ].map(([t, d]) => (
+                <li key={t} className="border-l-2 border-primary pl-4"><p className="font-semibold">{t}</p><p className="mt-1 text-sm text-muted-foreground">{d}</p></li>
+              ))}
+            </ul>
+          </div>
+        </Section>
+
+        <Section id="pricing" title="Prices, per outlet per month" intro="Each plan adds to the one before it. No payment is taken on this website: send an enquiry and the XTSY team sets you up.">
+          <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {plans.map((p, i) => <PlanBill key={p.id} plan={p} before={plans[i - 1]} onPick={() => pick(p.name)} />)}
           </div>
           <PlanComparison plans={plans} />
-          <p className="mt-5 text-center text-sm text-muted-foreground">Prices are per outlet per month. Users are devices signed in to each app: {Object.values(SEAT_NAMES).join(", ")}. No payment is taken on this website; we set you up after your enquiry. Support runs every day of the week, Saturday and Sunday included, except national holidays.</p>
+          <p className="mt-5 text-sm text-muted-foreground">Users are devices signed in to each app: {Object.values(SEAT_NAMES).join(", ")}. Support runs every day of the week, weekends included, except national holidays.</p>
         </Section>
 
-        {/* Enquiry */}
-        <Section id="enquire" eyebrow="Tell us what you need" title="Start with XTSY POS">
+        <Section id="enquire" title="Start with XTSY POS" intro="Tell us about your restaurant. Your enquiry opens in WhatsApp, addressed to the XTSY team.">
           <EnquiryForm plan={plan} setPlan={setPlan} plans={plans} />
         </Section>
 
-        {/* FAQ */}
-        <Section id="faq" eyebrow="Questions" title="Frequently asked">
-          <div className="mx-auto max-w-3xl divide-y divide-border rounded-3xl border border-border bg-card">
-            {FAQ.map((f) => (
-              <details key={f.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold"><h3 className="text-base">{f.q}</h3><span className="text-primary transition-transform group-open:rotate-45" aria-hidden="true">+</span></summary>
-                <p className="mt-2 text-muted-foreground">{f.a}</p>
+        <Section id="faq" title="Questions">
+          <div className="max-w-3xl divide-y divide-white/10 border-y border-white/10">
+            {faq.map((f) => (
+              <details key={f.q} className="group py-4 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold"><h3 className="text-base">{f.q}</h3><span className="text-xl text-primary transition-transform group-open:rotate-45" aria-hidden="true">+</span></summary>
+                <p className="mt-2 max-w-[65ch] text-muted-foreground">{f.a}</p>
               </details>
             ))}
           </div>
         </Section>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row">
-          <p><span className="font-brand text-lg text-foreground">XTSY POS</span> · POS by XTSY · © {new Date().getFullYear()} XTSY Ventures Private Limited</p>
-          <p className="text-base text-foreground">Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by <a href="https://xtsy.one" target="_blank" rel="noreferrer" className="font-semibold hover:text-primary">XTSY</a></p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
 
-/** A QR table card as it is printed, drawn in CSS — no image, so it stays crisp at any size. */
-function QrShowcase() {
+/** The six recorded demos: pick one on the left (a row of chips on phones), watch it on the right. */
+function DemoTheatre() {
+  // The hero already plays billing, so the theatre opens on the next one.
+  const [active, setActive] = useState(DEMOS[1]!.id);
+  const demo = DEMOS.find((d) => d.id === active) ?? DEMOS[0]!;
   return (
-    <div className="mx-auto w-full max-w-xs">
-      <div className="rounded-[2rem] border border-primary/30 bg-gradient-to-b from-card to-background p-6 text-center shadow-2xl">
-        <p className="font-brand text-3xl leading-none">TAB BISTRO</p>
-        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">by XTSY</p>
-        <div className="mx-auto mt-5 grid size-40 place-items-center rounded-2xl bg-white p-3" aria-hidden="true">
-          <svg viewBox="0 0 29 29" className="size-full" role="presentation">
-            {/* a decorative QR-like pattern, not a scannable code */}
-            <rect width="29" height="29" fill="#fff" />
-            {([[0, 0], [22, 0], [0, 22]] as const).map(([x, y]) => (
-              <g key={`${x}-${y}`} fill="#000">
-                <rect x={x} y={y} width="7" height="7" />
-                <rect x={x + 1} y={y + 1} width="5" height="5" fill="#fff" />
-                <rect x={x + 2} y={y + 2} width="3" height="3" />
-              </g>
-            ))}
-            {Array.from({ length: 150 }, (_, i) => {
-              const x = (i * 7) % 29;
-              const y = Math.floor((i * 11) / 29) % 29;
-              const inFinder = (x < 8 && y < 8) || (x > 20 && y < 8) || (x < 8 && y > 20);
-              return inFinder ? null : <rect key={i} x={x} y={y} width="1" height="1" fill="#000" />;
-            })}
-          </svg>
+    <div className="grid gap-6 lg:grid-cols-[19rem_1fr] lg:gap-10">
+      <div role="group" aria-label="Choose a demo" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:block lg:space-y-1 lg:overflow-visible lg:px-0">
+        {DEMOS.map((d) => {
+          const on = d.id === active;
+          return (
+            <button key={d.id} type="button" aria-pressed={on} onClick={() => setActive(d.id)}
+              className={cn("shrink-0 rounded-full border px-4 py-2 text-left text-sm font-semibold lg:block lg:w-full lg:rounded-none lg:border-0 lg:border-l-2 lg:px-4 lg:py-3",
+                on ? "border-primary bg-primary text-primary-foreground lg:bg-white/[0.04] lg:text-foreground" : "border-white/15 text-muted-foreground hover:text-foreground lg:border-white/10")}>
+              <span className="block">{d.title}</span>
+              <span className={cn("hidden text-xs font-normal lg:block", on ? "text-primary" : "text-muted-foreground")}>{d.app}</span>
+              {on ? <span className="mt-2 hidden text-sm font-normal leading-relaxed text-muted-foreground lg:block">{d.text}</span> : null}
+            </button>
+          );
+        })}
+      </div>
+      <div className="rounded-2xl bg-[#141416] p-3 sm:p-6">
+        <div className={cn(demo.device === "phone" && "mx-auto max-w-[300px]")}>
+          <DemoVideo key={demo.id} id={demo.id} title={demo.title} phone={demo.device === "phone"} />
         </div>
-        <p className="mt-5 text-sm font-bold">Scan to see the menu and order</p>
-        <p className="mt-1 text-xs text-muted-foreground">Dine in · Takeaway · Delivery</p>
-        <div className="mt-4 inline-flex rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground">Table D4</div>
-        <p className="mt-4 border-t border-border pt-3 text-[10px] text-muted-foreground">No app needed · Pay at the counter or on delivery</p>
+        <p className="mt-4 text-sm text-muted-foreground lg:hidden"><span className="font-semibold text-foreground">{demo.app}.</span> {demo.text}</p>
       </div>
     </div>
+  );
+}
+
+function StatusBoard() {
+  return (
+    <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr]">
+      <div>
+        <h3 className="flex items-center gap-2 font-semibold"><span className="size-2.5 rounded-full bg-success" aria-hidden="true" />Live now</h3>
+        <ul className="mt-4 grid gap-x-6 gap-y-2.5 text-sm sm:grid-cols-2">
+          {STATUS.live.map((t) => <li key={t} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" />{t}</li>)}
+        </ul>
+      </div>
+      <div>
+        <h3 className="flex items-center gap-2 font-semibold"><span className="size-2.5 rounded-full bg-gold" aria-hidden="true" />Being tested</h3>
+        <ul className="mt-4 space-y-4">
+          {STATUS.testing.map((t) => <li key={t.name} className="border-l-2 border-gold pl-3"><p className="text-sm font-semibold">{t.name}</p><p className="mt-0.5 text-sm text-muted-foreground">{t.note}</p></li>)}
+        </ul>
+      </div>
+      <div>
+        <h3 className="flex items-center gap-2 font-semibold"><span className="size-2.5 rounded-full bg-[#c0335a]" aria-hidden="true" />Coming next</h3>
+        <ul className="mt-4 space-y-4">
+          {STATUS.next.map((t) => <li key={t.name} className="border-l-2 border-[#c0335a] pl-3"><p className="text-sm font-semibold">{t.name}</p><p className="mt-0.5 text-sm text-muted-foreground">{t.note}</p></li>)}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/** A plan printed as a thermal bill: seats, what it adds, and the monthly total. */
+function PlanBill({ plan: p, before, onPick }: { plan: PublicPlan; before?: PublicPlan | undefined; onPick: () => void }) {
+  const adds = PUBLIC_FEATURES.filter((f) => p.features.includes(f) && !before?.features.includes(f));
+  const rule = <div className="my-3 border-t border-dashed border-black/35" aria-hidden="true" />;
+  return (
+    <article className={cn("relative", p.highlight && "lg:-mt-4")}>
+      <div className="bg-[#faf9f5] px-5 pb-6 pt-5 text-[#1b1b1b] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]" style={{ fontFamily: '"Courier New", ui-monospace, monospace' }}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-xs">XTSY POS</p>
+          {p.highlight ? <p className="-rotate-3 rounded border-2 border-[#a12444] px-1.5 text-[11px] font-bold text-[#a12444]">RECOMMENDED</p> : null}
+        </div>
+        <h3 className="font-brand mt-1 text-[2rem] leading-none" style={{ fontFamily: "var(--font-brand)" }}>{p.name}</h3>
+        <p className="mt-1.5 text-xs leading-snug">{p.tagline}</p>
+        {rule}
+        <dl className="space-y-1 text-[13px]">
+          {(["pos", "manager", "waiter"] as SeatApp[]).map((a) => (
+            <div key={a} className="flex justify-between gap-2"><dt>{SEAT_NAMES[a]} users</dt><dd className="tabular-nums">{p.seats[a] === null ? "Unlimited" : p.seats[a] === 0 ? "—" : p.seats[a]}</dd></div>
+          ))}
+        </dl>
+        {rule}
+        <p className="text-[13px]">{before ? `Everything on ${before.name}, plus:` : "Includes:"}</p>
+        <ul className="mt-1.5 space-y-1 text-[13px]">
+          {adds.map((f) => <li key={f}>{FEATURE_NAMES[f]}</li>)}
+        </ul>
+        {rule}
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-bold">TOTAL</span>
+          <span className="text-[1.9rem] font-bold leading-none tabular-nums">{p.price === null ? "Quote" : `₹${p.price}`}</span>
+        </div>
+        <p className="mt-1 text-right text-xs">{p.price === null ? "call us" : "a month, per outlet"}</p>
+        <button type="button" onClick={onPick}
+          className={cn("mt-5 w-full rounded-full py-3 font-sans text-sm font-bold", p.highlight ? "bg-[#a12444] text-white hover:bg-[#8a1d3a]" : "bg-[#1b1b1b] text-white hover:bg-black")}>
+          {p.price === null ? "Call for a quote" : `Choose ${p.name}`}
+        </button>
+      </div>
+      <div aria-hidden="true" className="h-3" style={{ background: "radial-gradient(circle at 7px 0, #faf9f5 6px, transparent 6.5px) 0 0 / 14px 12px repeat-x" }} />
+    </article>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="border-t border-white/10">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-sm text-muted-foreground sm:grid-cols-[1fr_auto] sm:items-end">
+        <div>
+          <p><span className="font-brand text-xl text-foreground">XTSY POS</span> is made by XTSY Ventures Private Limited, New Shillong, Meghalaya.</p>
+          <p className="mt-1">Questions about your data or a payment: <a href="mailto:admin@xtsy.one" className="text-foreground underline underline-offset-4">admin@xtsy.one</a></p>
+          <nav aria-label="Policies" className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+            <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+            <Link to="/terms" className="hover:text-foreground">Terms of service</Link>
+            <Link to="/refunds" className="hover:text-foreground">Refunds and cancellation</Link>
+            <Link to="/tab-bistro" className="hover:text-foreground">TAB Bistro</Link>
+          </nav>
+        </div>
+        <p className="text-base text-foreground">© {new Date().getFullYear()} · Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by <a href="https://xtsy.one" target="_blank" rel="noreferrer" className="font-semibold hover:text-primary">XTSY</a></p>
+      </div>
+    </footer>
+  );
+}
+
+function Section({ id, title, intro, children }: { id: string; title: string; intro?: string; children: ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-20 border-t border-white/10 px-4 py-16 md:py-24">
+      <div className="mx-auto max-w-6xl">
+        <h2 className="font-brand text-[2.6rem] leading-none md:text-6xl">{title}</h2>
+        {intro ? <p className="mt-4 max-w-[60ch] text-muted-foreground">{intro}</p> : null}
+        <div className="mt-10">{children}</div>
+      </div>
+    </section>
   );
 }
 
@@ -388,75 +347,6 @@ function PlanComparison({ plans }: { plans: PublicPlan[] }) {
   );
 }
 
-function Section({ id, eyebrow, title, children }: { id: string; eyebrow: string; title: string; children: ReactNode }) {
-  return (
-    <section id={id} className="scroll-mt-20 px-4 py-14 md:py-20">
-      <div className="mx-auto max-w-6xl">
-        <p className="text-center text-xs font-bold uppercase tracking-[0.22em] text-primary">{eyebrow}</p>
-        <h2 className="font-brand mt-2 text-center text-4xl md:text-5xl">{title}</h2>
-        <div className="mt-10">{children}</div>
-      </div>
-    </section>
-  );
-}
-
-function AppCard({ icon: Icon, name, who, points, badge }: { icon: typeof Store; name: string; who: string; points: string[]; badge?: string }) {
-  return (
-    <article className="rounded-3xl border border-border bg-card p-6">
-      <div className="flex items-center justify-between"><span className="grid size-12 place-items-center rounded-2xl bg-primary-tint text-primary"><Icon className="size-6" /></span>
-        {badge ? <span className="rounded-full border border-primary/50 px-2.5 py-1 text-[11px] font-bold text-primary">{badge}</span> : null}</div>
-      <h3 className="font-brand mt-4 text-3xl">{name}</h3>
-      <p className="text-sm text-muted-foreground">{who}</p>
-      <ul className="mt-4 space-y-2 text-sm">{points.map((p) => <li key={p} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-primary" />{p}</li>)}</ul>
-    </article>
-  );
-}
-
-function Feature({ icon: Icon, title, children }: { icon: typeof Store; title: string; children: ReactNode }) {
-  return (
-    <article className="rounded-2xl border border-border bg-card p-5">
-      <Icon className="size-6 text-primary" />
-      <h3 className="mt-3 text-lg font-bold">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{children}</p>
-    </article>
-  );
-}
-
-/** A drawn (not screenshotted) preview of the counter and waiter apps. */
-function HeroMock() {
-  const tiles = [
-    { l: "D1", s: "₹1,240 · 45 min", tone: "border-primary bg-primary/15" },
-    { l: "D2", s: "Bill ready", tone: "border-gold bg-gold/15" },
-    { l: "Hut 1", s: "Free", tone: "border-border bg-secondary" },
-    { l: "Room 7A", s: "₹380 · room bill", tone: "border-primary bg-primary/15" },
-    { l: "Family", s: "Booked 8 pm", tone: "border-border bg-secondary" },
-    { l: "Bonfire", s: "Free", tone: "border-border bg-secondary" },
-  ];
-  return (
-    <div aria-hidden="true" className="relative mx-auto w-full max-w-lg">
-      <div className="rounded-3xl border border-border bg-card p-4 shadow-[0_30px_80px_-30px_color-mix(in_srgb,var(--color-primary)_45%,transparent)]">
-        <div className="flex items-center justify-between border-b border-border pb-3">
-          <div className="flex items-center gap-2"><img src={logo} alt="" width={22} height={22} className="rounded-md" /><span className="font-brand text-lg">POS Billdesk</span></div>
-          <span className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-semibold text-success">Live</span>
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {tiles.map((t) => <div key={t.l} className={cn("rounded-xl border-2 p-3", t.tone)}><p className="font-bold">{t.l}</p><p className="text-[11px] text-muted-foreground">{t.s}</p></div>)}
-        </div>
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary p-3 text-sm">
-          <span className="flex items-center gap-2"><ClipboardList className="size-4 text-primary" />KOT/0072 sent to Kitchen</span><span className="font-bold">4 x Tawa Roti</span>
-        </div>
-      </div>
-      <div className="absolute -bottom-10 -right-2 w-40 rounded-[1.6rem] border border-border bg-card p-3 shadow-2xl sm:-right-8">
-        <div className="flex items-center gap-1.5 text-xs font-semibold"><Smartphone className="size-3.5 text-primary" />Waiter Pro</div>
-        <div className="mt-2 space-y-1.5">
-          {["Paneer Tikka x2", "Masala Chai x4", "Butter Naan x3"].map((l) => <p key={l} className="rounded-lg bg-secondary px-2 py-1.5 text-[11px]">{l}</p>)}
-        </div>
-        <p className="mt-2 rounded-lg bg-primary py-1.5 text-center text-[11px] font-bold text-primary-foreground">Send KOT</p>
-      </div>
-    </div>
-  );
-}
-
 const BLANK: Enquiry = { name: "", business: "", city: "", phone: "", outlets: "1", plan: "", message: "" };
 const SAVED = "xtsy-pos-enquiry";
 
@@ -482,7 +372,7 @@ function EnquiryForm({ plan, setPlan, plans }: { plan: string; setPlan: (p: stri
   };
   const input = "mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-3 text-base";
   return (
-    <form onSubmit={submit} className="mx-auto grid max-w-3xl gap-4 rounded-3xl border border-border bg-card p-6 sm:grid-cols-2 md:p-8" noValidate>
+    <form onSubmit={submit} className="grid max-w-3xl gap-4 rounded-3xl border border-border bg-card p-6 sm:grid-cols-2 md:p-8" noValidate>
       <label className="text-sm font-medium">Your name *<input autoComplete="name" value={value.name} onChange={set("name")} className={input} /></label>
       <label className="text-sm font-medium">Restaurant / brand *<input autoComplete="organization" value={value.business} onChange={set("business")} className={input} /></label>
       <label className="text-sm font-medium">City *<input autoComplete="address-level2" value={value.city} onChange={set("city")} className={input} /></label>
