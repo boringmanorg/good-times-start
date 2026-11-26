@@ -94,7 +94,7 @@ function SitePage() {
                 <a href="#demos" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/20 px-6 font-bold hover:bg-white/5"><Play className="size-4 fill-current" />Watch the demos</a>
               </div>
               <p className="mt-8 max-w-[34rem] text-sm text-muted-foreground">
-                Running every day at <Link to="/tab-bistro" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4 hover:decoration-primary">TAB Bistro by XTSY</Link> and XTSY Travellers Hostel in New Shillong, Meghalaya. Made in Tamil Nadu for restaurants across India and Asia.
+                Running every day at <Link to="/tab-bistro" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4 hover:decoration-primary">TAB Bistro by XTSY</Link> and XTSY Travellers Hostel. Made by XTSY Ventures Private Limited, a DPIIT-recognised startup from Coimbatore, Tamil Nadu, for restaurants and stays across India and Asia.
               </p>
             </div>
             <div>
@@ -339,7 +339,7 @@ function SiteFooter() {
     <footer className="border-t border-white/10">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-sm text-muted-foreground sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
-          <p><span className="font-brand text-xl text-foreground">XTSY POS</span> (Restaurant POS and Hostel & Hotel POS) is made by XTSY Ventures Private Limited, New Shillong, Meghalaya.</p>
+          <p><span className="font-brand text-xl text-foreground">XTSY POS</span> (Restaurant POS and Hostel & Hotel POS) is made by XTSY Ventures Private Limited, a DPIIT-recognised startup from Coimbatore, Tamil Nadu.</p>
           <p className="mt-1">Questions about your data or a payment: <a href="mailto:admin@xtsy.one" className="text-foreground underline underline-offset-4">admin@xtsy.one</a></p>
           <nav aria-label="Policies" className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
             <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
