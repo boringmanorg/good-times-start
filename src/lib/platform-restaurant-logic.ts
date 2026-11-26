@@ -6,7 +6,7 @@
  * and so model-specific features can key off it later.
  */
 
-export type BusinessModel = "restaurant" | "fine_dine" | "cafe" | "cloud_kitchen" | "hotel";
+export type BusinessModel = "restaurant" | "fine_dine" | "cafe" | "cloud_kitchen" | "hotel" | "hostel";
 
 export const BUSINESS_MODELS: { v: BusinessModel; l: string }[] = [
   { v: "restaurant", l: "Restaurant" },
@@ -14,6 +14,7 @@ export const BUSINESS_MODELS: { v: BusinessModel; l: string }[] = [
   { v: "cafe", l: "Café" },
   { v: "cloud_kitchen", l: "Cloud Kitchen" },
   { v: "hotel", l: "Hotel & Resort" },
+  { v: "hostel", l: "Hostel" },
 ];
 
 export const isBusinessModel = (v: string): v is BusinessModel => BUSINESS_MODELS.some((m) => m.v === v);

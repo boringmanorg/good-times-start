@@ -1,6 +1,6 @@
 # PMS by XTSY: channel manager plan (ZimmerStack)
 
-Decided with the owner, 26 Nov 2026.
+Decided with the owner, 26 Nov 2026; revised the same night: **the PMS sends for every property, XTSY's own included**. The table below records the first plan and is superseded.
 
 ## One sender per hotel
 

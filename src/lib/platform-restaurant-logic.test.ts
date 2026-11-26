@@ -5,8 +5,8 @@ import {
 } from "./platform-restaurant-logic";
 
 describe("onboarding a new outlet", () => {
-  it("offers the five business models XTSY sells today", () => {
-    expect(BUSINESS_MODELS.map((m) => m.v)).toEqual(["restaurant", "fine_dine", "cafe", "cloud_kitchen", "hotel"]);
+  it("offers the business models XTSY onboards today (Hostel joined with the Hostel POS pilot)", () => {
+    expect(BUSINESS_MODELS.map((m) => m.v)).toEqual(["restaurant", "fine_dine", "cafe", "cloud_kitchen", "hotel", "hostel"]);
     expect(isBusinessModel("cloud_kitchen")).toBe(true);
     expect(isBusinessModel("tourism")).toBe(false); // not launched yet
     expect(modelLabel("fine_dine")).toBe("Fine Dine");

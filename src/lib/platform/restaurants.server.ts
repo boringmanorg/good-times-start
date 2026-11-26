@@ -6,6 +6,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createLogin } from "./logins.server";
 import { cleanEmail } from "@/lib/platform-login-logic";
+import { isProductId, STAY_PRODUCTS, type ProductId } from "@/lib/products";
 import { cleanSlug, isBusinessModel, isOnboardingPlan, nameProblem, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,6 +23,8 @@ export interface OnboardRestaurant {
   ownerEmail: string;
   ownerName: string;
   ownerPassword: string;
+  /** XTSY product (products.ts); none means Restaurant POS. */
+  product?: string | undefined;
 }
 
 export interface Onboarded { restaurantId: string; accountId: string; ownerUserId: string; ownerEmail: string }
@@ -36,9 +39,12 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
   const slug = cleanSlug(input.slug);
   const problem = nameProblem(name) ?? slugProblem(slug)
     ?? (isBusinessModel(input.model) ? null : "Choose the business model.")
-    ?? (isOnboardingPlan(input.plan) ? null : "Choose a plan.");
+    ?? (isOnboardingPlan(input.plan) ? null : "Choose a plan.")
+    ?? (input.product === undefined || isProductId(input.product) ? null : "Choose the product.");
   if (problem) throw new Error(problem);
   const model = input.model as BusinessModel;
+  const product: ProductId = isProductId(input.product) ? input.product : "restaurant_pos";
+  const stays = STAY_PRODUCTS.includes(product);
 
   if (slug) {
     const { data: taken } = await admin().from("restaurants").select("id").eq("slug", slug).maybeSingle();
@@ -52,6 +58,8 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
     billing_phone: input.billingPhone.trim().slice(0, 20),
     billing_email: cleanEmail(input.billingEmail).slice(0, 120),
     notes: "",
+    // A stay property gets the front desk (PMS by XTSY); no plan carries it yet.
+    ...(stays ? { feature_overrides: { pms: true } } : {}),
   }).select("id").single();
   if (aErr || !account) throw new Error(`Couldn't create the account: ${aErr?.message ?? "unknown error"}`);
   const accountId = (account as { id: string }).id;
@@ -61,7 +69,7 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
     slug: slug || null,
     city: input.city.trim().slice(0, 80),
     account_id: accountId,
-    branding: { model, product: "restaurant_pos" },
+    branding: { model, product },
   }).select("id").single();
   if (rErr || !rest) {
     await admin().from("accounts").delete().eq("id", accountId);
@@ -89,7 +97,7 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
   await admin().from("account_events").insert({
     account_id: accountId,
     kind: "onboarded",
-    detail: { restaurant: restaurantId, model, plan: input.plan, owner: owner.email },
+    detail: { restaurant: restaurantId, model, product, plan: input.plan, owner: owner.email },
     by_user: by,
   });
   return { restaurantId, accountId, ownerUserId: owner.userId, ownerEmail: owner.email };

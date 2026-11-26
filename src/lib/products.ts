@@ -11,15 +11,19 @@
  */
 export type ProductId = "restaurant_pos" | "hotel_pos" | "resort_pos" | "hostel_pos" | "tourism_pos";
 
-export interface Product { id: ProductId; name: string; status: "live" | "soon"; blurb: string; models: string }
+/** "pilot": open for onboarding by XTSY while the first property tries it; not sold on the website yet. */
+export interface Product { id: ProductId; name: string; status: "live" | "pilot" | "soon"; blurb: string; models: string }
 
 export const PRODUCTS: Product[] = [
   { id: "restaurant_pos", name: "Restaurant POS", status: "live", blurb: "Billing, KOTs, tables, QR ordering, purchases and the POS Manager, Billdesk and Waiter Pro apps.", models: "Restaurants, fine dine, cafés, cloud kitchens" },
   { id: "hotel_pos", name: "Hotel POS", status: "soon", blurb: "Front desk, rooms, check-in and check-out, room bills joined to the restaurant.", models: "Hotels" },
   { id: "resort_pos", name: "Resort POS", status: "soon", blurb: "Stays, activities and packages across several outlets on one property.", models: "Resorts, glamping" },
-  { id: "hostel_pos", name: "Hostel POS", status: "soon", blurb: "Beds and dorms, walk-ins and OTA bookings, café and add-ons on one bill.", models: "Hostels, backpacker stays" },
+  { id: "hostel_pos", name: "Hostel POS", status: "pilot", blurb: "Beds and dorms, walk-ins and OTA bookings, café and add-ons on one bill.", models: "Hostels, backpacker stays" },
   { id: "tourism_pos", name: "Tourism POS", status: "soon", blurb: "Tours, rentals and transfers with bookings, drivers and payments.", models: "Tour operators, rentals" },
 ];
+
+/** Products with the front desk (PMS by XTSY): onboarding switches `pms` on for the outlet. */
+export const STAY_PRODUCTS: ProductId[] = ["hotel_pos", "resort_pos", "hostel_pos"];
 
 export const isProductId = (v: unknown): v is ProductId => PRODUCTS.some((p) => p.id === v);
 export const productById = (id: ProductId): Product => PRODUCTS.find((p) => p.id === id) ?? PRODUCTS[0]!;
@@ -29,13 +33,14 @@ export function productOf(stored: string | null | undefined): ProductId {
   return isProductId(stored) ? stored : "restaurant_pos";
 }
 
-export type Section = "overview" | "subscription" | "users" | "devices" | "integrations" | "activity";
+export type Section = "overview" | "subscription" | "users" | "devices" | "integrations" | "channel" | "activity";
 export const SECTIONS: { v: Section; l: string }[] = [
   { v: "overview", l: "Overview" },
   { v: "subscription", l: "Plan & billing" },
   { v: "users", l: "Users" },
   { v: "devices", l: "Devices" },
   { v: "integrations", l: "Swiggy & Zomato" },
+  { v: "channel", l: "Channel manager" },
   { v: "activity", l: "Activity" },
 ];
 const isSection = (v: unknown): v is Section => SECTIONS.some((s) => s.v === v);

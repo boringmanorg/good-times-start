@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { consoleToken } from "@/lib/console-client";
 import { onboardPlatformRestaurant } from "@/lib/platform-restaurants.functions";
+import type { ProductId } from "@/lib/products";
 import { emailProblem } from "@/lib/platform-login-logic";
 import { passwordProblem } from "@/lib/staff-login-logic";
 import { BUSINESS_MODELS, ONBOARDING_PLANS, cleanSlug, nameProblem, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
@@ -21,11 +22,11 @@ const domainFrom = (slug: string) => `${slug.replace(/-/g, "") || "outlet"}.pos`
  * Onboard a new outlet: account, restaurant and the owner's login in one pass.
  * Super admin only — restaurants cannot create themselves.
  */
-export function ConsoleOnboard({ plans }: { plans: PlanRow[] }) {
+export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: PlanRow[]; product?: ProductId }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [model, setModel] = useState<BusinessModel>("restaurant");
+  const [model, setModel] = useState<BusinessModel>(product === "hostel_pos" ? "hostel" : product === "restaurant_pos" ? "restaurant" : "hotel");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [city, setCity] = useState("");
@@ -53,7 +54,7 @@ export function ConsoleOnboard({ plans }: { plans: PlanRow[] }) {
     setBusy(true);
     try {
       const r = await onboardPlatformRestaurant({ data: {
-        token: await consoleToken(), name: name.trim(), model, slug: effectiveSlug, city, plan,
+        token: await consoleToken(), product, name: name.trim(), model, slug: effectiveSlug, city, plan,
         billingPhone: phone, billingEmail, ownerEmail: effectiveOwner,
         ownerName: ownerName.trim() || "Admin", ownerPassword: password,
       } });

@@ -6,10 +6,11 @@ import { ago, loadPlans, loadRestaurants, type PlanRow, type RestaurantRow } fro
 import { consoleToken } from "@/lib/console-client";
 import { platformRestaurantModels } from "@/lib/platform-restaurants.functions";
 import { modelLabel } from "@/lib/platform-restaurant-logic";
-import { filterMatches, productById, productOf, PRODUCTS, restaurantMatches, SECTIONS, type ConsoleRoute, type ListFilter, type ProductId, type Section } from "@/lib/products";
+import { filterMatches, productById, productOf, PRODUCTS, STAY_PRODUCTS, restaurantMatches, SECTIONS, type ConsoleRoute, type ListFilter, type ProductId, type Section } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Stat } from "./ConsoleBits";
 import { ConsoleOnboard } from "./ConsoleOnboard";
+import { ConsoleChannel } from "./ConsoleChannel";
 import { ConsoleLogins } from "./ConsoleLogins";
 import { ConsoleIntegrations } from "./ConsoleIntegrations";
 import { ConsoleActivity } from "./ConsoleActivity";
@@ -42,7 +43,7 @@ export function ConsoleProducts({ route, go }: { route: ConsoleRoute; go: Go }) 
   if (route.product && route.restaurant) {
     const r = all.find((x) => x.id === route.restaurant);
     if (!r) return <><Crumbs route={route} go={go} /><Failed error={new Error("That restaurant isn't in the list. It may have been removed.")} /></>;
-    return <RestaurantDetail r={r} plans={planList} model={meta.data?.[r.id]?.model ?? ""} route={route} go={go} />;
+    return <RestaurantDetail r={r} plans={planList} model={meta.data?.[r.id]?.model ?? ""} route={route} go={go} stays={STAY_PRODUCTS.includes(productFor(r.id))} />;
   }
   if (route.product) {
     const product = productById(route.product);
@@ -87,7 +88,7 @@ function ProductsHome({ rows, productFor, go }: { rows: RestaurantRow[]; product
               className={cn("group flex flex-col rounded-2xl border p-5 text-left transition-colors", soon ? "cursor-not-allowed border-dashed border-border bg-card/60" : "border-border bg-card hover:border-primary")}>
               <div className="flex items-start justify-between gap-3">
                 <span className={cn("grid size-11 place-items-center rounded-xl", soon ? "bg-secondary text-muted-foreground" : "bg-primary text-primary-foreground")}><Icon className="size-5" /></span>
-                <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide", soon ? "bg-secondary text-muted-foreground" : "bg-success/15 text-success")}>{soon ? "Coming soon" : "Live"}</span>
+                <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide", soon ? "bg-secondary text-muted-foreground" : "bg-success/15 text-success")}>{soon ? "Coming soon" : p.status === "pilot" ? "Pilot" : "Live"}</span>
               </div>
               <p className="mt-4 text-lg font-bold">{p.name}</p>
               <p className="text-xs font-medium text-primary">{p.models}</p>
@@ -123,7 +124,7 @@ function ProductOutlets({ product, rows, plans, models, route, go }: { product: 
       <Crumbs route={route} go={go} />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><h1 className="font-brand text-3xl">{p.name}</h1><p className="text-sm text-muted-foreground">{p.models}</p></div>
-        {p.status === "live" ? <Button onClick={() => setOnboarding((v) => !v)} variant={onboarding ? "outline" : "default"}>{onboarding ? <><X />Close</> : <><Plus />Onboard an outlet</>}</Button> : null}
+        {p.status !== "soon" ? <Button onClick={() => setOnboarding((v) => !v)} variant={onboarding ? "outline" : "default"}>{onboarding ? <><X />Close</> : <><Plus />Onboard an outlet</>}</Button> : null}
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Outlets" value={rows.length} />
@@ -131,7 +132,7 @@ function ProductOutlets({ product, rows, plans, models, route, go }: { product: 
         <Stat label="Stopped" value={rows.filter((r) => !r.account?.live).length} tone={rows.some((r) => !r.account?.live) ? "bad" : undefined} />
         <Stat label="Billed monthly" value={`₹${mrr.toLocaleString("en-IN")}`} note="live, not complimentary" />
       </div>
-      {onboarding ? <ConsoleOnboard plans={plans} /> : null}
+      {onboarding ? <ConsoleOnboard plans={plans} product={product} /> : null}
       <div className="flex flex-wrap items-center gap-2">
         <label className="relative min-w-[14rem] flex-1"><span className="sr-only">Search outlets</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -169,7 +170,7 @@ function ProductOutlets({ product, rows, plans, models, route, go }: { product: 
   );
 }
 
-function RestaurantDetail({ r, plans, model, route, go }: { r: RestaurantRow; plans: PlanRow[]; model: string; route: ConsoleRoute; go: Go }) {
+function RestaurantDetail({ r, plans, model, route, go, stays }: { r: RestaurantRow; plans: PlanRow[]; model: string; route: ConsoleRoute; go: Go; stays: boolean }) {
   const section: Section = route.section ?? "overview";
   const plan = plans.find((p) => p.id === r.account?.planId);
   const pick = (s: Section) => go({ ...route, section: s });
@@ -187,7 +188,7 @@ function RestaurantDetail({ r, plans, model, route, go }: { r: RestaurantRow; pl
         <span className={cn("rounded-full px-3 py-1 text-sm font-bold", r.account?.live ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive")}>{r.account?.live ? "Live" : "Stopped"}</span>
       </header>
       <nav className="no-scrollbar mt-4 flex gap-1 overflow-x-auto border-b border-border" aria-label="Restaurant">
-        {SECTIONS.map((s) => (
+        {SECTIONS.filter((s) => s.v !== "channel" || stays).map((s) => (
           <button key={s.v} type="button" onClick={() => pick(s.v)} aria-current={section === s.v ? "page" : undefined}
             className={cn("relative shrink-0 px-3 py-2.5 text-sm font-semibold", section === s.v ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
             {s.l}{section === s.v ? <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-t bg-primary" aria-hidden="true" /> : null}
@@ -215,6 +216,7 @@ function RestaurantDetail({ r, plans, model, route, go }: { r: RestaurantRow; pl
         {section === "users" ? <ConsoleLogins restaurantId={r.id} restaurantName={r.name} /> : null}
         {section === "devices" ? <DevicesSection r={r} /> : null}
         {section === "integrations" ? <ConsoleIntegrations r={r} plan={plan} /> : null}
+        {section === "channel" && stays ? <ConsoleChannel name={r.name} /> : null}
         {section === "activity" ? <ConsoleActivity restaurantId={r.id} /> : null}
       </div>
     </div>
