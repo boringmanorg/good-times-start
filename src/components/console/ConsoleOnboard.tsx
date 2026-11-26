@@ -8,7 +8,7 @@ import { onboardPlatformRestaurant } from "@/lib/platform-restaurants.functions"
 import type { ProductId } from "@/lib/products";
 import { emailProblem } from "@/lib/platform-login-logic";
 import { passwordProblem } from "@/lib/staff-login-logic";
-import { BUSINESS_MODELS, ONBOARDING_PLANS, cleanSlug, nameProblem, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
+import { BUSINESS_MODELS, cleanSlug, isStayProduct, onboardingPlansFor, nameProblem, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
 import type { PlanRow } from "@/lib/console-api";
 import { cn } from "@/lib/utils";
 import { field } from "./ConsoleBits";
@@ -30,7 +30,7 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [city, setCity] = useState("");
-  const [plan, setPlan] = useState<string>("basic");
+  const [plan, setPlan] = useState<string>(onboardingPlansFor(product)[0] ?? "basic");
   const [phone, setPhone] = useState("");
   const [billingEmail, setBillingEmail] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
@@ -72,14 +72,16 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
     );
   }
 
-  const planRows = ONBOARDING_PLANS.map((id) => plans.find((p) => p.id === id)).filter((p): p is PlanRow => !!p);
+  const planRows = onboardingPlansFor(product).map((id) => plans.find((p) => p.id === id)).filter((p): p is PlanRow => !!p);
 
   return (
     <div className="rounded-2xl border border-primary/40 bg-card p-4">
       <h2 className="flex items-center gap-2 font-brand text-xl"><Store className="size-5 text-primary" />Onboard a new outlet</h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Creates the account, the outlet and its owner login together. It starts on a 14-day trial of the plan you choose —
-        record the first payment under Renewal and payment to make it live.
+        Creates the account, the outlet and its owner login together.{" "}
+        {isStayProduct(product)
+          ? "Stay properties go on the complimentary pilot plan with the front desk switched on; their own prices come after the pilot."
+          : "It starts on a 14-day trial of the plan you choose — record the first payment under Renewal and payment to make it live."}
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

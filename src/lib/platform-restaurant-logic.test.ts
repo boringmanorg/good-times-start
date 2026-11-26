@@ -37,3 +37,13 @@ describe("onboarding a new outlet", () => {
     expect(cleanSlug("  TAB-Bistro  ")).toBe("tab-bistro");
   });
 });
+
+import { onboardingPlansFor } from "./platform-restaurant-logic";
+describe("stay products", () => {
+  it("are onboarded only on the pilot plan, never the restaurant price list", () => {
+    expect(onboardingPlansFor("hostel_pos")).toEqual(["stay_pilot"]);
+    expect(onboardingPlansFor("hotel_pos")).toEqual(["stay_pilot"]);
+    expect(onboardingPlansFor("restaurant_pos")).toEqual(["basic", "pro_lite", "pro", "enterprise"]);
+    expect(onboardingPlansFor(undefined)).toContain("basic");
+  });
+});

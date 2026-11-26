@@ -25,6 +25,18 @@ export const ONBOARDING_PLANS = ["basic", "pro_lite", "pro", "enterprise"] as co
 export type OnboardingPlan = (typeof ONBOARDING_PLANS)[number];
 export const isOnboardingPlan = (v: string): v is OnboardingPlan => (ONBOARDING_PLANS as readonly string[]).includes(v);
 
+/**
+ * Hotel / Hostel / Resort POS have their own plans. Until stay prices are set (owner's decision,
+ * 27 Nov 2026), they are onboarded only on the complimentary pilot plan: front desk, channel
+ * manager and the café's billing. Never on the restaurant price list.
+ */
+export const STAY_PILOT_PLAN = "stay_pilot";
+const STAY_PRODUCT_IDS = ["hotel_pos", "resort_pos", "hostel_pos"];
+export const isStayProduct = (product: string | undefined) => !!product && STAY_PRODUCT_IDS.includes(product);
+export function onboardingPlansFor(product: string | undefined): readonly string[] {
+  return isStayProduct(product) ? [STAY_PILOT_PLAN] : ONBOARDING_PLANS;
+}
+
 /** The QR address as stored: trimmed, lower case; empty means none yet. */
 export const cleanSlug = (text: string) => text.trim().toLowerCase();
 
