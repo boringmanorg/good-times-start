@@ -49,11 +49,16 @@ describe("reports", () => {
   });
 
   it("filters by date and fills empty days", () => {
-    const range = { from: new Date(2026, 9, 15).getTime(), to: new Date(2026, 9, 16, 23, 59).getTime() };
+    const range = { from: new Date(2026, 9, 15, 6).getTime(), to: new Date(2026, 9, 17, 6).getTime() - 1 };
     expect(inRange([a, b], { from: new Date(2026, 9, 16).getTime(), to: range.to })).toEqual([a]);
     expect(dailySales([a, b], range)).toEqual([{ day: "2026-10-15", net: 57 }, { day: "2026-10-16", net: 480 }]);
+    // Business days open at 6 am: at 3 pm "today" began at 6 am; at 1 am it is still yesterday's day.
     const today = presetRange("today", new Date(2026, 9, 16, 15).getTime());
-    expect(today.from).toBe(new Date(2026, 9, 16).getTime());
+    expect(today.from).toBe(new Date(2026, 9, 16, 6).getTime());
+    expect(today.to).toBe(new Date(2026, 9, 17, 6).getTime() - 1);
+    expect(presetRange("today", new Date(2026, 9, 17, 1).getTime()).from).toBe(new Date(2026, 9, 16, 6).getTime());
+    const late = order({ createdAt: new Date(2026, 9, 16, 23).getTime(), settledAt: new Date(2026, 9, 17, 0, 2).getTime(), total: 100, payments: [{ mode: "upi", amount: 100 }] });
+    expect(dailySales([a, late], { from: new Date(2026, 9, 16, 6).getTime(), to: new Date(2026, 9, 17, 6).getTime() - 1 })).toEqual([{ day: "2026-10-16", net: 580 }]);
   });
 
   it("works out each counter's expected cash from its bill series", () => {

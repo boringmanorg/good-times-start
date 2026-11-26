@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { DAY_OPENS_HOUR, businessDayStart, businessMonthStart, nextBusinessDay } from "@/lib/business-day";
 import { createFileRoute } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Ban, Download, Plus, X } from "lucide-react";
@@ -31,13 +32,17 @@ const field = "mt-1 h-10 w-full rounded-lg border border-input bg-card px-3 text
 const signed = (n: number) => (n < 0 ? `−${formatINR(-n, 0)}` : formatINR(n, 0));
 const dayInput = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
-function periodRange(p: Period, now = new Date()): { from: number; to: number; label: string } {
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  if (p === "today") return { from: startOfDay, to: startOfDay + 86_400_000, label: now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) };
-  if (p === "week") { const mon = startOfDay - ((now.getDay() + 6) % 7) * 86_400_000; return { from: mon, to: startOfDay + 86_400_000, label: "This week" }; }
-  if (p === "month") return { from: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), to: startOfDay + 86_400_000, label: now.toLocaleDateString("en-IN", { month: "long", year: "numeric" }) };
-  const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return { from: from.getTime(), to: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), label: from.toLocaleDateString("en-IN", { month: "long", year: "numeric" }) };
+/** Periods follow the business day (6 am to 6 am, business-day.ts), like the Summary and dashboard. */
+function periodRange(p: Period, clock = new Date()): { from: number; to: number; label: string } {
+  const startOfDay = businessDayStart(clock.getTime());
+  const now = new Date(startOfDay);
+  const tomorrow = nextBusinessDay(startOfDay);
+  if (p === "today") return { from: startOfDay, to: tomorrow, label: now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) };
+  if (p === "week") { const mon = businessDayStart(startOfDay - ((now.getDay() + 6) % 7) * 86_400_000 + 3_600_000); return { from: mon, to: tomorrow, label: "This week" }; }
+  const monthStart = businessMonthStart(startOfDay);
+  if (p === "month") return { from: monthStart, to: tomorrow, label: now.toLocaleDateString("en-IN", { month: "long", year: "numeric" }) };
+  const from = new Date(now.getFullYear(), now.getMonth() - 1, 1, DAY_OPENS_HOUR);
+  return { from: from.getTime(), to: monthStart, label: from.toLocaleDateString("en-IN", { month: "long", year: "numeric" }) };
 }
 
 function AccountsPage() {

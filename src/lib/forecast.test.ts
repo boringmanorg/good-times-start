@@ -58,13 +58,14 @@ describe("KPI forecast", () => {
 });
 
 describe("forecast uses the time a bill was paid", () => {
-  it("counts a bill opened yesterday and paid today as today's sale", async () => {
+  it("counts a bill paid after midnight in the business day it belongs to (days open at 6 am)", async () => {
     const { kpiForecast } = await import("./forecast");
     const now = new Date(2026, 10, 17, 14, 0).getTime();
     const day = 86_400_000;
     const past = Array.from({ length: 10 }, (_, i) => ({ uid: `p${i}`, status: "settled", total: 1000, createdAt: now - (i + 1) * day, settledAt: now - (i + 1) * day }));
     const lateBill = { uid: "late", status: "settled", total: 500, createdAt: new Date(2026, 10, 16, 23, 30).getTime(), settledAt: new Date(2026, 10, 17, 0, 20).getTime() };
-    const f = kpiForecast([...past, lateBill] as never, now);
-    expect(f.ready && f.today.soFar).toBe(500);
+    const morning = { uid: "am", status: "settled", total: 300, createdAt: new Date(2026, 10, 17, 9, 0).getTime(), settledAt: new Date(2026, 10, 17, 9, 30).getTime() };
+    const f = kpiForecast([...past, lateBill, morning] as never, now);
+    expect(f.ready && f.today.soFar).toBe(300); // the 12:20 am bill is the 16 Nov late night's
   });
 });

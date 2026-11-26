@@ -26,6 +26,8 @@ import { touchTerminal, useTerminalStatus } from "@/lib/terminal-actions";
 import { isLovablePreview } from "@/lib/preview-host";
 import { isSupportSession } from "@/lib/support-session";
 import { SupportBanner } from "./SupportBanner";
+import { LaunchSplash, XtsyLoader } from "./LaunchSplash";
+import { DailyWelcome } from "./DailyWelcome";
 import { APP_DEVICES, APPS, APP_LINKS, accessProblem, appsFor, type AppKind } from "@/lib/staff-login-logic";
 import { isTestBrowser } from "@/lib/test-browser";
 import { SyncConflictAlert } from "@/components/SyncConflictAlert";
@@ -320,9 +322,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   }, [staffApp, loading, user, navigate]);
   if (staffApp && (loading || !user)) {
     return (
-      <div className="grid min-h-screen place-items-center bg-background">
-        <img src={logo} alt="XTSY POS" width={44} height={44} className="rounded-xl opacity-80" />
-      </div>
+      <>{staffApp ? <LaunchSplash /> : null}<XtsyLoader /></>
     );
   }
   // The subscription ran out (7-day grace included) or XTSY paused it: the whole outlet stops,
@@ -359,7 +359,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   if (staffApp && user && rid && terminal === "pending" && !support && !isTestBrowser() && !isLovablePreview()) {
     return <TerminalWaiting restaurantId={rid} app={pathname.startsWith("/waiter") ? "waiter" : app} device={currentDevice()} />;
   }
-  const gates = staffApp ? <><SupportBanner /><PolicySync /><PinGate /></> : null;
+  const gates = staffApp ? <><LaunchSplash />{support ? null : <DailyWelcome />}<SupportBanner /><PolicySync /><PinGate /></> : null;
   if (!framed) return <>{gates}{children}</>;
   return <FrameContext.Provider value={setTone}>{gates}<Frame tone={tone}>{children}</Frame></FrameContext.Provider>;
 }

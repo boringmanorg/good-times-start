@@ -27,7 +27,7 @@ import { useEntitlements } from "@/lib/use-entitlements";
 import { withReservations } from "@/lib/reservations";
 import { startReservationOrder } from "@/lib/reservation-actions";
 import { boardTables } from "@/lib/table-board";
-import { dayBounds, dateLabel } from "@/lib/orders-history";
+import { businessDayBounds as dayBounds, businessDateLabel as dateLabel } from "@/lib/business-day";
 import { BillPrintButton } from "@/components/BillPrintButton";
 import { reportOrders } from "@/lib/report-orders";
 import { hasBillNumber, shortBillNo } from "@/lib/bill-numbering";

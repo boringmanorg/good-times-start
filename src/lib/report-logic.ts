@@ -1,4 +1,5 @@
 import type { MenuItem, Order, PaymentMode } from "./types";
+import { businessDayKey, businessDayStart, businessMonthStart, nextBusinessDay } from "./business-day";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -22,16 +23,15 @@ export function dayKey(at: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Sales ranges follow the business day (6 am to 6 am, business-day.ts): a 12:02 am bill is yesterday's sale. */
 export function presetRange(preset: "today" | "yesterday" | "7d" | "month", now = Date.now()): Range {
-  const today = dayStart(now);
+  const today = businessDayStart(now);
+  const end = nextBusinessDay(today) - 1;
   const day = 24 * 60 * 60 * 1000;
-  if (preset === "yesterday") return { from: today - day, to: today - 1 };
-  if (preset === "7d") return { from: today - 6 * day, to: today + day - 1 };
-  if (preset === "month") {
-    const d = new Date(now);
-    return { from: new Date(d.getFullYear(), d.getMonth(), 1).getTime(), to: today + day - 1 };
-  }
-  return { from: today, to: today + day - 1 };
+  if (preset === "yesterday") return { from: businessDayStart(today - 3_600_000), to: today - 1 };
+  if (preset === "7d") return { from: businessDayStart(today - 6 * day + 3_600_000), to: end };
+  if (preset === "month") return { from: businessMonthStart(now), to: end };
+  return { from: today, to: end };
 }
 
 export function inRange<T extends { createdAt: number; settledAt?: number }>(rows: T[], range: Range): T[] {
@@ -179,8 +179,8 @@ export function staffSales(orders: Order[]): { name: string; bills: number; net:
 export function dailySales(orders: Order[], range: Range): { day: string; net: number }[] {
   const out: { day: string; net: number }[] = [];
   const totals = new Map<string, number>();
-  for (const o of orders.filter((x) => x.status === "settled")) totals.set(dayKey(o.settledAt ?? o.createdAt), r2((totals.get(dayKey(o.settledAt ?? o.createdAt)) ?? 0) + o.total));
-  for (let t = dayStart(range.from); t <= range.to; t = dayStart(t + 36 * 60 * 60 * 1000)) out.push({ day: dayKey(t), net: totals.get(dayKey(t)) ?? 0 });
+  for (const o of orders.filter((x) => x.status === "settled")) { const k = businessDayKey(o.settledAt ?? o.createdAt); totals.set(k, r2((totals.get(k) ?? 0) + o.total)); }
+  for (let t = businessDayStart(range.from); t <= range.to; t = nextBusinessDay(t)) out.push({ day: businessDayKey(t), net: totals.get(businessDayKey(t)) ?? 0 });
   return out;
 }
 

@@ -131,6 +131,12 @@ function Frame({ store, children }: { store?: Storefront; children: ReactNode })
   return (
     <div className="min-h-screen bg-background text-foreground" style={(palette ?? undefined) as CSSProperties | undefined}>
       <div className="mx-auto min-h-screen max-w-3xl bg-background pb-28">
+        {store && xtsy ? (
+          // xtsy.one's ink announcement bar, above the hero.
+          <p className="bg-[#1f2230] px-4 py-2 text-center text-[12px] font-semibold text-[#f4efe8]">
+            Order from your phone, no app needed{store.address ? <span className="hidden sm:inline"> · {store.address}</span> : null}
+          </p>
+        ) : null}
         {store ? (
           <header className="relative overflow-hidden bg-sidebar text-sidebar-foreground">
             <img src={brand.cover || menuCover} alt="" decoding="async" fetchPriority="high" width={1536} height={768} className="absolute inset-0 size-full object-cover" />
@@ -140,7 +146,7 @@ function Frame({ store, children }: { store?: Storefront; children: ReactNode })
                 {brand.logo ? <img src={brand.logo} alt={`${store.name} logo`} width={64} height={64} className="size-16 shrink-0 rounded-2xl bg-white object-contain p-1 shadow-lg ring-2 ring-white/70" /> : null}
                 <div className="min-w-0">
                   {xtsy && brand.tagline ? <p className="xt-eyebrow text-[#e07a8b]">{brand.tagline}</p> : null}
-                  <h1 className={xtsy ? "mt-1 text-[2.6rem] text-sidebar-foreground sm:text-5xl" : "text-3xl font-extrabold leading-tight text-sidebar-foreground"}>{store.name}</h1>
+                  <h1 className={xtsy ? "mt-1 text-[3.1rem] leading-[0.92] text-[#f4efe8] sm:text-6xl" : "text-3xl font-extrabold leading-tight text-sidebar-foreground"}>{store.name}</h1>
                   {!xtsy && brand.tagline ? <p className="mt-0.5 text-sm font-medium text-sidebar-foreground/90">{brand.tagline}</p> : null}
                 </div>
               </div>
@@ -157,6 +163,12 @@ function Frame({ store, children }: { store?: Storefront; children: ReactNode })
         <footer className="px-5 pt-10 text-center text-[11px] text-muted-foreground">
           {store?.fssai ? <p>FSSAI {store.fssai}</p> : null}
           {xtsy ? <p className="xt-eyebrow mt-2 text-xs text-foreground">XTSY<sup>®</sup> · New Shillong</p> : null}
+          {xtsy && (brand.links?.stays || brand.links?.voyage) ? (
+            <p className="mt-3 flex flex-wrap justify-center gap-2">
+              {brand.links?.stays ? <a href={brand.links.stays} target="_blank" rel="noreferrer" className="rounded-full bg-[#1f2230] px-4 py-2 text-xs font-extrabold text-[#f4efe8]">Stay with XTSY</a> : null}
+              {brand.links?.voyage ? <a href={brand.links.voyage} target="_blank" rel="noreferrer" className="rounded-full border border-[#1f2230] px-4 py-2 text-xs font-extrabold text-[#1f2230]">XTSY Voyage</a> : null}
+            </p>
+          ) : null}
           <p className="mt-1">Ordering by XTSY POS</p>
         </footer>
       </div>

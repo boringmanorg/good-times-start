@@ -30,12 +30,13 @@ export interface PrintOptions {
   subline: string;
   /** A current offer to feature on posters and standees. */
   offer?: string;
-  /** Look of the print: "xtsy" (pines and night sky, xtsy.one palette) or "classic" (brand colour bar). */
+  /** Look of the print: "noir" (black and gold), "xtsy" (pines and night sky, xtsy.one palette) or "classic" (brand colour bar). */
   theme?: PrintTheme;
 }
 
-export type PrintTheme = "xtsy" | "classic";
+export type PrintTheme = "noir" | "xtsy" | "classic";
 export const PRINT_THEMES: { id: PrintTheme; label: string; hint: string }[] = [
+  { id: "noir", label: "XTSY Noir", hint: "Black card with a gold edge, a white QR tile, your name in Staatliches and a gold table pill." },
   { id: "xtsy", label: "XTSY Pines", hint: "Night sky and pines on xtsy.one cream, crimson table pills and the XTSY brand strap." },
   { id: "classic", label: "Classic", hint: "Clean white card with your brand colour bar." },
 ];
@@ -92,6 +93,7 @@ function face(card: PrintCard, o: PrintOptions, logo: string, qrSize: string): s
 
 /** The whole printable page. */
 export function buildPrintSheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions): string {
+  if (o.theme === "noir") return buildNoirSheet(design, cards, o);
   if (o.theme === "xtsy") return buildXtsySheet(design, cards, o);
   const accent = accentFor(o.brand);
   const logo = safeImage(o.brand.logo);
@@ -322,3 +324,79 @@ function buildXtsySheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions
 </style></head><body>${pages}<script>window.onload = () => (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => setTimeout(() => window.print(), 300));</script></body></html>`;
 }
 
+
+/* ---------------- XTSY Noir theme (black card, gold edge, white QR tile; the website's QR card) ---------------- */
+
+export const NOIR = { black: "#050505", card: "#101012", gold: "#E9B949", goldLine: "rgba(233,185,73,.45)", white: "#FFFFFF", mute: "#B9B9C0", rule: "rgba(255,255,255,.16)" } as const;
+
+/** "TAB Bistro by XTSY" → ["TAB Bistro", "by XTSY"]: the name big, the "by …" line in gold. */
+export function noirName(restaurant: string, tagline?: string): [string, string] {
+  const m = restaurant.match(/^(.*?)\s+(by\s+.+)$/i);
+  return m && m[1] ? [m[1], m[2] ?? ""] : [restaurant, tagline ?? ""];
+}
+
+function noirFace(card: PrintCard, o: PrintOptions, logo: string, qrSize: string): string {
+  const [name, by] = noirName(o.restaurant, o.brand.tagline);
+  const handles = [handleFrom(o.brand.links?.instagram), o.brand.whatsapp ? `WhatsApp +${o.brand.whatsapp}` : ""].filter(Boolean);
+  return `<div class="nname">${escapeHtml(name)}</div>
+    ${by ? `<div class="nby">${escapeHtml(by)}</div>` : ""}
+    <div class="nqr" style="width:${qrSize};height:${qrSize}"><img class="code" src="${card.qr}" alt="" />${logo ? `<span class="badge"><img src="${logo}" alt="" /></span>` : ""}</div>
+    <div class="nhead">${escapeHtml(o.headline)}</div>
+    ${o.subline ? `<div class="nsub">${escapeHtml(o.subline)}</div>` : ""}
+    ${o.offer ? `<div class="noffer">${escapeHtml(o.offer)}</div>` : ""}
+    ${card.label ? `<div class="npill">${escapeHtml(card.label)}</div>` : ""}
+    <div class="nfoot">${["No app needed", ...handles].map(escapeHtml).join(" · ")}</div>`;
+}
+
+function buildNoirSheet(design: PrintDesign, cards: PrintCard[], o: PrintOptions): string {
+  const logo = safeImage(o.brand.logo);
+  const card = (c: PrintCard, cls: string, qr: string) => `<div class="ncard ${cls}">${noirFace(c, o, logo, qr)}</div>`;
+  let pages = "";
+  if (design === "tent") pages = cards.map((c) => `<div class="tent"><div class="panel flip">${card(c, "row", "54mm")}</div><div class="fold"></div><div class="panel">${card(c, "row", "54mm")}</div></div>`).join("");
+  else if (design === "sticker") pages = `<div class="stickers">${cards.map((c) => card(c, "sticker", "38mm")).join("")}</div>`;
+  else if (design === "poster") pages = cards.map((c) => `<div class="page">${card(c, "poster", "105mm")}</div>`).join("");
+  else pages = `<div class="standees">${cards.map((c) => `<div class="half">${card(c, "standee", "56mm")}</div>`).join("")}</div>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(o.restaurant)} QR codes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Staatliches&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Manrope, "Helvetica Neue", Arial, sans-serif; background: ${NOIR.white}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ncard { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: ${NOIR.white};
+    background: linear-gradient(180deg, ${NOIR.card} 0%, ${NOIR.black} 100%); border: .5mm solid ${NOIR.goldLine}; border-radius: 9mm; padding: 8mm 9mm 6mm; overflow: hidden; }
+  .nname { font-family: Staatliches, Impact, sans-serif; font-size: 30pt; line-height: .95; letter-spacing: .02em; text-transform: uppercase; }
+  .nby { font-family: Manrope, Arial, sans-serif; font-weight: 700; color: ${NOIR.gold}; letter-spacing: .3em; text-transform: uppercase; font-size: 9pt; margin-top: 2mm; }
+  .nqr { position: relative; background: ${NOIR.white}; border-radius: 6mm; padding: 4mm; margin: 6mm 0 5mm; }
+  .nqr .code { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  .nqr .badge { position: absolute; left: 50%; top: 50%; width: 21%; height: 21%; transform: translate(-50%, -50%); background: ${NOIR.white}; border-radius: 2mm; padding: 1.2%; display: flex; }
+  .nqr .badge img { width: 100%; height: 100%; object-fit: contain; }
+  .nhead { font-weight: 800; font-size: 15pt; line-height: 1.2; }
+  .nsub { color: ${NOIR.mute}; font-size: 10.5pt; margin-top: 1.5mm; }
+  .noffer { margin-top: 3mm; border: .4mm solid ${NOIR.gold}; color: ${NOIR.gold}; border-radius: 99mm; padding: 1.5mm 5mm; font-weight: 700; font-size: 10pt; }
+  .npill { margin-top: 5mm; background: ${NOIR.gold}; color: #141414; font-weight: 800; font-size: 14pt; border-radius: 99mm; padding: 2.2mm 7mm; line-height: 1; }
+  .nfoot { align-self: stretch; margin-top: 6mm; padding-top: 3.5mm; border-top: .3mm solid ${NOIR.rule}; color: ${NOIR.mute}; font-size: 8.5pt; }
+  /* Table tent: two A6 panels per A4, name and words on the left, QR on the right. */
+  .tent { width: 210mm; height: 297mm; display: flex; flex-direction: column; break-after: page; padding: 6mm; gap: 0; }
+  .panel { flex: 1; display: flex; padding: 4mm; } .panel.flip { transform: rotate(180deg); }
+  .fold { border-top: .3mm dashed #999; }
+  .ncard.row { flex: 1; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto 1fr auto auto auto; column-gap: 10mm; text-align: left; align-items: start; padding: 9mm 11mm 6mm; }
+  .row .nname { grid-column: 1; font-size: 34pt; } .row .nby { grid-column: 1; }
+  .row .nqr { grid-column: 2; grid-row: 1 / span 5; margin: 0; align-self: center; }
+  .row .nhead { grid-column: 1; align-self: end; margin-top: 4mm; } .row .nsub { grid-column: 1; }
+  .row .npill { grid-column: 1; justify-self: start; } .row .noffer { grid-column: 1; justify-self: start; }
+  .row .nfoot { grid-column: 1 / -1; text-align: center; }
+  .stickers { display: grid; grid-template-columns: repeat(2, 88mm); grid-auto-rows: 128mm; gap: 6mm; justify-content: center; padding: 10mm 0; }
+  .ncard.sticker { border-radius: 7mm; padding: 6mm 6mm 4mm; break-inside: avoid; }
+  .sticker .nname { font-size: 21pt; } .sticker .nby { font-size: 7pt; } .sticker .nqr { padding: 3mm; margin: 4mm 0 3mm; border-radius: 4.5mm; }
+  .sticker .nhead { font-size: 11pt; } .sticker .nsub { font-size: 8pt; } .sticker .npill { font-size: 11pt; padding: 1.8mm 5.5mm; margin-top: 3mm; } .sticker .nfoot { font-size: 6.5pt; margin-top: 3.5mm; padding-top: 2.5mm; }
+  .page { width: 210mm; height: 297mm; padding: 10mm; display: flex; break-after: page; }
+  .ncard.poster { flex: 1; border-radius: 14mm; padding: 16mm 14mm 10mm; }
+  .poster .nname { font-size: 64pt; } .poster .nby { font-size: 15pt; } .poster .nqr { padding: 6mm; border-radius: 9mm; margin: 12mm 0 9mm; }
+  .poster .nhead { font-size: 26pt; } .poster .nsub { font-size: 15pt; } .poster .npill { font-size: 22pt; } .poster .noffer { font-size: 16pt; } .poster .nfoot { font-size: 12pt; margin-top: auto; }
+  .standees { display: flex; flex-direction: column; }
+  .half { width: 210mm; height: 148.5mm; padding: 6mm 30mm; display: flex; break-inside: avoid; } .half:nth-child(2n) { break-after: page; }
+  .ncard.standee { flex: 1; padding: 6mm 9mm 4mm; } .standee .nname { font-size: 26pt; } .standee .nqr { margin: 4mm 0 3mm; } .standee .nfoot { margin-top: 3mm; padding-top: 2.5mm; }
+  @media screen { body { background: #2a2a2e; } .tent, .page, .stickers, .standees { background: ${NOIR.white}; margin: 6mm auto; width: 210mm; box-shadow: 0 1mm 6mm rgba(0,0,0,.4); } }
+</style></head><body>${pages}<script>window.onload = () => (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => setTimeout(() => window.print(), 300));</script></body></html>`;
+}

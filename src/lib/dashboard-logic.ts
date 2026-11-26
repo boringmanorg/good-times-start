@@ -1,6 +1,7 @@
 /** Owner dashboard: business overview and live status, computed from this device's bills. Pure functions. */
 import type { Kot, Order, OrderType, PaymentMode, StockEntry } from "./types";
-import { dayStart, paymentLabel, salesSummary, type Range } from "./report-logic";
+import { paymentLabel, salesSummary, type Range } from "./report-logic";
+import { businessDayStart as dayStart, businessMonthStart, entryDayAt, nextBusinessDay, DAY_OPENS_HOUR } from "./business-day";
 
 const DAY = 86_400_000;
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -10,20 +11,25 @@ export const PRESET_LABELS: Record<Preset, string> = {
   today: "Today", yesterday: "Yesterday", thisWeek: "This week", lastWeek: "Last week", last15: "Last 15 days", thisMonth: "This month", lastMonth: "Last month",
 };
 
-/** Weeks start on Monday, as on Indian calendars. Ranges end at the start of the day after. */
+/**
+ * Weeks start on Monday, as on Indian calendars. Days are business days (6 am to 6 am, see
+ * business-day.ts), so a bill paid at 12:30 am counts in the day it belongs to. Ranges end at
+ * the opening of the day after.
+ */
 export function dashboardRange(preset: Preset, now = Date.now()): Range {
   const today = dayStart(now);
+  const tomorrow = nextBusinessDay(today);
   const d = new Date(today);
-  const weekStart = today - ((d.getDay() + 6) % 7) * DAY;
-  const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  const weekStart = dayStart(today - ((d.getDay() + 6) % 7) * DAY + 3_600_000);
+  const monthStart = businessMonthStart(now);
   switch (preset) {
-    case "today": return { from: today, to: today + DAY };
-    case "yesterday": return { from: today - DAY, to: today };
-    case "thisWeek": return { from: weekStart, to: today + DAY };
-    case "lastWeek": return { from: weekStart - 7 * DAY, to: weekStart };
-    case "last15": return { from: today - 14 * DAY, to: today + DAY };
-    case "thisMonth": return { from: monthStart, to: today + DAY };
-    case "lastMonth": return { from: new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime(), to: monthStart };
+    case "today": return { from: today, to: tomorrow };
+    case "yesterday": return { from: dayStart(today - 3_600_000), to: today };
+    case "thisWeek": return { from: weekStart, to: tomorrow };
+    case "lastWeek": return { from: dayStart(weekStart - 7 * DAY + 3_600_000), to: weekStart };
+    case "last15": return { from: dayStart(today - 14 * DAY + 3_600_000), to: tomorrow };
+    case "thisMonth": return { from: monthStart, to: tomorrow };
+    case "lastMonth": return { from: new Date(d.getFullYear(), d.getMonth() - 1, 1, DAY_OPENS_HOUR).getTime(), to: monthStart };
   }
 }
 
@@ -65,7 +71,7 @@ export function businessOverview(orders: Order[], kots: Kot[], stock: StockEntry
     .filter(([, amount]) => amount > 0)
     .sort((a, b) => b[1] - a[1])
     .map(([mode, amount]) => ({ mode, label: paymentLabel(mode), amount, share: s.net ? amount / s.net : 0 }));
-  const purchases = r2(stock.filter((e) => e.type === "purchase" && e.at >= range.from && e.at < range.to)
+  const purchases = r2(stock.filter((e) => e.type === "purchase" && entryDayAt(e.at) >= range.from && entryDayAt(e.at) < range.to)
     .reduce((t, e) => t + e.items.reduce((u, i) => u + i.qty * (i.unitCost ?? 0), 0), 0));
   return {
     net: s.net,
@@ -153,7 +159,7 @@ export function liveStatus(orders: Order[], kots: Kot[] = []): { cards: LiveCard
 /** Net sales for each day of the range, including days with none. */
 export function salesByDay(orders: Order[], range: Range): { day: number; net: number; bills: number }[] {
   const out: { day: number; net: number; bills: number }[] = [];
-  for (let d = dayStart(range.from); d < range.to; d = dayStart(d + DAY + 3_600_000)) out.push({ day: d, net: 0, bills: 0 });
+  for (let d = dayStart(range.from); d < range.to; d = nextBusinessDay(d)) out.push({ day: d, net: 0, bills: 0 });
   const index = new Map(out.map((r, i) => [r.day, i]));
   for (const o of orders) {
     const at = o.settledAt ?? o.createdAt;

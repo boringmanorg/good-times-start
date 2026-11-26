@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { getSyncSnapshot } from "@/lib/cloud-sync";
 import { formatINR } from "@/lib/billing";
 import { reportOrders } from "@/lib/report-orders";
-import { dateLabel, dayBounds } from "@/lib/orders-history";
+import { businessDayBounds as dayBounds, businessDateLabel as dateLabel } from "@/lib/business-day";
 import { liveTotals } from "@/lib/live-totals";
 
 /** Today's totals straight from this device's records; re-render whenever any terminal's sync lands. */

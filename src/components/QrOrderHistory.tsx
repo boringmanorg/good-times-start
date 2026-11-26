@@ -7,7 +7,7 @@ import { useStaff } from "@/lib/staff";
 import { getDb } from "@/lib/db";
 import { formatINR } from "@/lib/billing";
 import { placeName } from "@/lib/table-logic";
-import { dayBounds, dateLabel } from "@/lib/orders-history";
+import { businessDayBounds as dayBounds, businessDateLabel as dateLabel } from "@/lib/business-day";
 import { loadGuestOrderHistory } from "@/lib/guest-order-actions";
 import { qrOrderState, qrSeriesLabel } from "@/lib/guest-order-logic";
 import type { Order } from "@/lib/types";

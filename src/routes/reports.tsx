@@ -25,9 +25,10 @@ import { formatINR } from "@/lib/billing";
 import { isAdmin, useStaff } from "@/lib/staff";
 import { voidSettledBill } from "@/lib/bill-actions";
 import {
-  categorySales, dailySales, untaxedSales, dayKey, expectedCash, gstByRate, hourlySales, inRange, itemSales, paymentLabel,
+  categorySales, dailySales, untaxedSales, expectedCash, gstByRate, hourlySales, inRange, itemSales, paymentLabel,
   presetRange, salesSummary, summaryAt, seriesOf, staffSales, toCsv, type Range,
 } from "@/lib/report-logic";
+import { businessDayBounds, businessDayKey } from "@/lib/business-day";
 import type { Order } from "@/lib/types";
 import { Dropdown } from "@/components/Dropdown";
 import { Segmented } from "@/components/Segmented";
@@ -63,11 +64,13 @@ function download(name: string, csv: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function toInputDate(at: number) { return dayKey(at); }
+// A picked date is a business day: 6 am that day until 6 am the next (business-day.ts).
+function toInputDate(at: number) { return businessDayKey(at); }
 function fromInputDate(value: string, endOfDay = false) {
   const [y, m, d] = value.split("-").map(Number);
   if (!y || !m || !d) return null;
-  return endOfDay ? new Date(y, m - 1, d, 23, 59, 59, 999).getTime() : new Date(y, m - 1, d).getTime();
+  const [from, to] = businessDayBounds(value);
+  return endOfDay ? to - 1 : from;
 }
 
 function Stat({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: string }) {
@@ -273,7 +276,7 @@ function ReportsPage() {
     const db = getDb();
     downloadXlsx(`reports-${file}`, reportsWorkbook(orders, await db.menu.toArray(), range, restaurant), { title: `${restaurant} reports` });
   };
-  const file = `xtsy-pos-${dayKey(range.from)}${dayKey(range.from) === dayKey(range.to) ? "" : `-to-${dayKey(range.to)}`}`;
+  const file = `xtsy-pos-${businessDayKey(range.from)}${businessDayKey(range.from) === businessDayKey(range.to) ? "" : `-to-${businessDayKey(range.to)}`}`;
   const presets: { v: Preset; l: string }[] = full || can(user, "reports.summary") ? [
     { v: "today", l: "Today" }, { v: "yesterday", l: "Yesterday" }, { v: "7d", l: "Last 7 days" }, { v: "month", l: "This month" }, { v: "custom", l: "Pick dates" },
   ] : [{ v: "today", l: "Today" }, { v: "yesterday", l: "Yesterday" }];

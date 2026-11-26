@@ -32,7 +32,7 @@ export function QrKit({ slug, restaurantName, brand, ordering }: { slug: string;
   const sorted = useMemo(() => [...tables].sort((a, b) => a.section.localeCompare(b.section) || a.label.localeCompare(b.label, undefined, { numeric: true })), [tables]);
   const sections = useMemo(() => [...new Set(sorted.map((t) => t.section))], [sorted]);
   const [design, setDesign] = useState<PrintDesign>("tent");
-  const [theme, setTheme] = useState<PrintTheme>("xtsy");
+  const [theme, setTheme] = useState<PrintTheme>("noir");
   const [picked, setPicked] = useState<Set<string> | null>(null); // null = all tables
   const [source, setSource] = useState("poster");
   const [headline, setHeadline] = useState(HEADLINES.tent);

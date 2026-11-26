@@ -7,7 +7,7 @@
  * Month: billed so far this month, plus the rest of today, plus the usual sales per calendar day
  *   (closed days included) for each day left in the month.
  */
-import { dayStart } from "./report-logic";
+import { DAY_OPENS_HOUR, businessDayStart as dayStart, businessMonthStart, nextBusinessDay } from "./business-day";
 import type { Order } from "./types";
 
 const DAY = 86_400_000;
@@ -40,8 +40,8 @@ export interface KpiForecast {
 
 export interface ForecastNotReady { ready: false; tradingDays: number; needed: number }
 
-/** Start of the next calendar day, safe across clock changes. */
-const nextDay = (at: number) => dayStart(at + DAY + 3_600_000);
+/** The next business day's opening (days run 6 am to 6 am, business-day.ts). */
+const nextDay = (at: number) => nextBusinessDay(at);
 
 interface DayTotals { day: number; net: number; bills: number; netAfter: number; billsAfter: number }
 
@@ -85,8 +85,8 @@ export function kpiForecast(orders: Order[], now: number = Date.now()): KpiForec
   const usual = mean((d) => d.net);
 
   // Month: sales per calendar day since the first sale in the window (or the full window), closed days included.
-  const monthStart = new Date(new Date(today).getFullYear(), new Date(today).getMonth(), 1).getTime();
-  const nextMonth = new Date(new Date(today).getFullYear(), new Date(today).getMonth() + 1, 1).getTime();
+  const monthStart = businessMonthStart(today);
+  const nextMonth = new Date(new Date(today).getFullYear(), new Date(today).getMonth() + 1, 1, DAY_OPENS_HOUR).getTime();
   const windowStart = Math.max(lookFrom, firstSale);
   const calendarDays = Math.max(1, Math.round((today - windowStart) / DAY));
   const dailyAverage = r2(trading.reduce((t, d) => t + d.net, 0) / calendarDays);

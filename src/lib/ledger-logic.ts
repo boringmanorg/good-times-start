@@ -8,6 +8,7 @@
  * edited or deleted — the cloud enforces the same (docs/migrations/2026-11-20-ledger.sql).
  */
 import { approvalStatus, entryAmount, purchaseTime } from "./purchase-logic";
+import { entryDayAt } from "./business-day";
 import type { LedgerEntry, LedgerMode, Order, StockEntry } from "./types";
 
 export type { LedgerEntry, LedgerMode };
@@ -143,7 +144,7 @@ export function profitAndLoss(orders: Order[], entries: StockEntry[], ledger: Le
   const gstOf = (o: Order) => r2((o.cgst ?? 0) + (o.sgst ?? 0) + ((o as { igst?: number }).igst ?? 0));
   const sales = r2(settled.reduce((n, o) => n + (o.total - gstOf(o)), 0));
   const gst = r2(settled.reduce((n, o) => n + gstOf(o), 0));
-  const counted = entries.filter((e) => approvalStatus(e) === "approved" && inRange(e.at, from, to));
+  const counted = entries.filter((e) => approvalStatus(e) === "approved" && inRange(entryDayAt(e.at), from, to));
   const purchases = r2(counted.filter((e) => e.type === "purchase").reduce((n, e) => n + entryAmount(e), 0));
   const returns = r2(-counted.filter((e) => e.type === "return").reduce((n, e) => n + entryAmount(e), 0));
   const live = ledger.filter((l) => isLive(l) && inRange(l.at, from, to));
@@ -181,7 +182,7 @@ export function moneyFlow(orders: Order[], entries: StockEntry[], ledger: Ledger
     for (const p of o.payments) if (p.mode !== "points" && p.mode !== "gift_card" && p.mode !== "credit") add(p.mode, "moneyIn", p.amount);
   }
   for (const e of entries) {
-    if (e.type !== "purchase" || approvalStatus(e) !== "approved" || !inRange(e.at, from, to)) continue;
+    if (e.type !== "purchase" || approvalStatus(e) !== "approved" || !inRange(entryDayAt(e.at), from, to)) continue;
     for (const p of e.payments ?? []) if (p.mode !== "credit") add(p.mode, "moneyOut", p.amount);
   }
   for (const l of ledger) {
@@ -204,7 +205,7 @@ export function dayBook(orders: Order[], entries: StockEntry[], ledger: LedgerEn
     out.push({ id: `o:${o.uid ?? o.id}`, at: soldAt(o), kind: "sale", title: `Bill ${o.billNo || ""}`.trim(), mode: modes, moneyIn: o.payments.filter((p) => p.mode !== "points" && p.mode !== "gift_card").reduce((n, p) => n + p.amount, 0), moneyOut: 0 });
   }
   for (const e of entries) {
-    if (approvalStatus(e) !== "approved" || !inRange(e.at, from, to) || (e.type !== "purchase" && e.type !== "return")) continue;
+    if (approvalStatus(e) !== "approved" || !inRange(entryDayAt(e.at), from, to) || (e.type !== "purchase" && e.type !== "return")) continue;
     const name = supplierName(e.supplierId) || e.supplierName || "Vendor";
     if (e.type === "purchase") {
       const now = (e.payments ?? []).filter((p) => p.mode !== "credit");

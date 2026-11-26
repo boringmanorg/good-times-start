@@ -64,3 +64,22 @@ describe("XTSY print refresh", () => {
     }
   });
 });
+
+describe("XTSY Noir prints (the default)", () => {
+  const card = { label: "Table D4", url: "https://x", qr: "data:image/png;base64,AA==" };
+  const opts = { restaurant: "TAB Bistro by XTSY", brand: { whatsapp: "918837317070" }, headline: "Scan to see the menu and order", subline: "Dine in · Takeaway · Delivery", theme: "noir" as const };
+  it("splits the name into the big name and a gold 'by' line, with a gold table pill", async () => {
+    const { buildPrintSheet, noirName, PRINT_THEMES } = await import("./qr-print");
+    expect(PRINT_THEMES[0]!.id).toBe("noir");
+    expect(noirName("TAB Bistro by XTSY")).toEqual(["TAB Bistro", "by XTSY"]);
+    expect(noirName("Cloud Nine", "Café")).toEqual(["Cloud Nine", "Café"]);
+    for (const design of ["tent", "sticker", "poster", "standee"] as const) {
+      const html = buildPrintSheet(design, [card], opts);
+      expect(html).toContain('<div class="nname">TAB Bistro</div>');
+      expect(html).toContain('<div class="nby">by XTSY</div>');
+      expect(html).toContain("No app needed");
+      if (design === "tent" || design === "sticker") expect(html).toContain('<div class="npill">Table D4</div>');
+    }
+    expect(buildPrintSheet("poster", [card], { ...opts, restaurant: "<b>x</b>" })).not.toContain("<b>x</b>");
+  });
+});
