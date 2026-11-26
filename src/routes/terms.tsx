@@ -51,7 +51,7 @@ function Terms() {
       <p>You can stop at any time by telling us; the plan stays live until its paid-until date. We may suspend an outlet that breaks these terms or doesn't pay, after telling you.</p>
 
       <h2>Law and disputes</h2>
-      <p>These terms are governed by the laws of India. Disputes are subject to the courts at Shillong, Meghalaya. Write to <a href="mailto:admin@xtsy.one">admin@xtsy.one</a> first; most things are settled faster that way.</p>
+      <p>These terms are governed by the laws of India. Disputes are subject to the courts at Coimbatore, Tamil Nadu. Write to <a href="mailto:admin@xtsy.one">admin@xtsy.one</a> first; most things are settled faster that way.</p>
     </LegalPage>
   );
 }

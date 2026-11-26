@@ -30,3 +30,11 @@ describe("website content", () => {
     expect(marketingPath("/login")).toBe("/xtsy-pos");
   });
 });
+
+describe("no property names in public copy", () => {
+  it("never names the pilot hostel or its location", async () => {
+    const mod = await import("./site-content");
+    const text = JSON.stringify([mod.SITE_PRODUCTS, mod.STAY_FEATURE_BLOCKS, mod.STATUS, mod.faqFor([]), mod.SITE_DESCRIPTION]);
+    expect(text).not.toMatch(/Travellers Hostel|Experience by XTSY|Shillong|Meghalaya/i);
+  });
+});

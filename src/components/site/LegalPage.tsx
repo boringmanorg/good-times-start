@@ -21,7 +21,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
       </header>
       <main className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="font-brand text-5xl leading-none md:text-6xl">{title}</h1>
-        <p className="mt-3 text-sm text-muted-foreground">Last updated {updated}. XTSY Ventures Private Limited, New Shillong, Meghalaya, India.</p>
+        <p className="mt-3 text-sm text-muted-foreground">Last updated {updated}. XTSY Ventures Private Limited, Coimbatore, Tamil Nadu, India.</p>
         <div className="legal mt-10 max-w-[68ch] space-y-4 leading-relaxed text-[#d6d6db] [&_a]:text-foreground [&_a]:underline [&_a]:underline-offset-4 [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-2">
           {children}
         </div>

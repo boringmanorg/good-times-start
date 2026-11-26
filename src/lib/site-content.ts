@@ -25,7 +25,7 @@ export const STAY_FEATURE_BLOCKS: { title: string; text: string; state?: string 
   { title: "Housekeeping", text: "Clean, dirty or out of order per bed and room, so the desk never gives an unmade bed." },
   { title: "Café on the room", text: "The café bills on the guest's bed or room from POS Billdesk; check-out waits until it's settled." },
   { title: "Smarter rates", text: "Suggestions from your own bookings: busy and weekend nights go up, empty nights close in come down. Nothing changes until you tap Apply." },
-  { title: "Channel manager", text: "Room counts and prices sent to booking sites through ZimmerStack, from the same calendar. The connection is being set up with the pilot property and isn't sending yet.", state: "Rolling out" },
+  { title: "Channel manager", text: "Room counts and prices sent to booking sites through ZimmerStack, from the same calendar. The connection is being set up during the pilot and isn't sending yet.", state: "Rolling out" },
 ];
 
 /** The demo videos on the website: real XTSY POS screens, recorded with TAB Bistro's menu. */
@@ -63,7 +63,7 @@ export const STATUS: { live: string[]; testing: { name: string; note: string }[]
     "Billing without internet",
   ],
   testing: [
-    { name: "Hostel & Hotel POS", note: "In its pilot at XTSY Travellers Hostel, New Shillong: rates, bookings, front desk, housekeeping and reports. More properties join by invitation." },
+    { name: "Hostel & Hotel POS", note: "In its pilot: rates, bookings, front desk, housekeeping and reports. More properties join by invitation." },
     { name: "Channel manager for booking sites", note: "Part of Hostel & Hotel POS. The ZimmerStack connection is being set up; it doesn't send to booking sites yet." },
     { name: "Swiggy and Zomato orders on the POS", note: "Working in a test sandbox. Switches on once the partner access is approved." },
     { name: "Kitchen display screen", note: "Switched on by XTSY for restaurants that ask for it." },
@@ -86,8 +86,8 @@ export function faqFor(plans: PublicPlan[]): { q: string; a: string }[] {
     { q: "Which plan has the waiter app and QR ordering?", a: "Waiter Pro, guest QR ordering, gift cards, guest feedback and marketing come with Pro and Enterprise / Brand. Pro Lite adds purchases, vendors, recipe costing, guest loyalty and table reservations to Basic." },
     { q: "What is in Enterprise / Brand?", a: "Everything in Pro, with unlimited Billdesk and Waiter users, up to 4 admins, accounts (profit and loss, expenses, day book), audit logs, and several outlets under one brand." },
     { q: "Do Swiggy and Zomato orders come into the POS?", a: "Not yet. The connection works in a test sandbox and goes live once Swiggy and Zomato approve partner access. Until then, bill those orders on the POS as Swiggy or Zomato orders." },
-    { q: "Is there a version for hostels and hotels?", a: "Yes: Hostel & Hotel POS, with its own sign-in and apps. It is in its pilot at XTSY Travellers Hostel, so it isn't sold on price yet; send an enquiry to join the pilot. A café or restaurant on the property bills on the room from the same software." },
-    { q: "Does Hostel & Hotel POS include a channel manager?", a: "Yes, as part of the same software, not a separate subscription. Room counts and prices go to booking sites through ZimmerStack from the same calendar the desk uses. The connection is being set up now with the pilot property and isn't sending to booking sites yet." },
+    { q: "Is there a version for hostels and hotels?", a: "Yes: Hostel & Hotel POS, with its own sign-in and apps. It is in its pilot, so it isn't sold on price yet; send an enquiry to join the pilot. A café or restaurant on the property bills on the room from the same software." },
+    { q: "Does Hostel & Hotel POS include a channel manager?", a: "Yes, as part of the same software, not a separate subscription. Room counts and prices go to booking sites through ZimmerStack from the same calendar the desk uses. The connection is being set up now during the pilot and isn't sending to booking sites yet." },
     { q: "How do I pay for a plan?", a: "There's no online payment on this website. Send an enquiry and the XTSY team sets you up and shares the payment details." },
     { q: "When can I get support?", a: "Every day of the week, Saturday and Sunday included, except national holidays. Reach the XTSY team on WhatsApp and a person answers." },
   ];

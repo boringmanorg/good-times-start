@@ -94,7 +94,7 @@ function SitePage() {
                 <a href="#demos" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/20 px-6 font-bold hover:bg-white/5"><Play className="size-4 fill-current" />Watch the demos</a>
               </div>
               <p className="mt-8 max-w-[34rem] text-sm text-muted-foreground">
-                Running every day at <Link to="/tab-bistro" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4 hover:decoration-primary">TAB Bistro by XTSY</Link> and XTSY Travellers Hostel. Made by XTSY Ventures Private Limited, a DPIIT-recognised startup from Coimbatore, Tamil Nadu, for restaurants and stays across India and Asia.
+                Running every day at <Link to="/tab-bistro" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4 hover:decoration-primary">TAB Bistro by XTSY</Link>. Made by XTSY Ventures Private Limited, a DPIIT-recognised startup from Coimbatore, Tamil Nadu, for restaurants and stays across India and Asia.
               </p>
             </div>
             <div>
@@ -241,7 +241,7 @@ function StaysSection({ onJoin }: { onJoin: () => void }) {
       <div className="mx-auto max-w-6xl">
         <p className="text-sm font-bold text-[#A12444]">Hostel & Hotel POS · pilot</p>
         <h2 className="font-brand mt-2 text-[2.6rem] leading-none md:text-6xl">PMS and channel manager, one software</h2>
-        <p className="mt-4 max-w-[60ch] text-[#1F2230]/75">Built at XTSY Travellers Hostel, where dorm beds, private rooms and a glass suite sell side by side. The desk, the owner and the booking sites work from one calendar, and it keeps working when the Wi-Fi doesn't.</p>
+        <p className="mt-4 max-w-[60ch] text-[#1F2230]/75">Built for properties where dorm beds, private rooms and suites sell side by side. The desk, the owner and the booking sites work from one calendar, and it keeps working when the Wi-Fi doesn't.</p>
         <div className="mt-10 grid gap-5 lg:grid-cols-[1.25fr_1fr]">
           <figure className="overflow-hidden rounded-2xl border border-[#1F2230]/15 bg-white shadow-sm">
             <img src="/site/stays-rates.jpg" alt="Hostel & Hotel POS rates and availability calendar with suggested rates" width={1440} height={900} loading="lazy" className="block h-auto w-full" />
