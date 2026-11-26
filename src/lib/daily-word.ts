@@ -1,21 +1,18 @@
 import { businessDayKey, DAY_OPENS_HOUR } from "./business-day";
 
 /*
- * The opening word on POS Billdesk: one verse a day, the Bible and the Quran taking turns,
- * shown once per device at the first opening of each business day (from 6 am).
- * Texts are public-domain translations: King James Version (Bible) and
- * Marmaduke Pickthall, 1930 (Quran).
+ * The opening word on POS Billdesk: one Bible verse a day (King James Version, public
+ * domain), shown once per device at the first opening of each business day (from 6 am).
  */
 
 export type DailyWord = {
   text: string;
   source: string;
-  book: "Bible" | "Quran";
+  book: "Bible";
   translation: string;
 };
 
 const KJV = "King James Version";
-const PICKTHALL = "Pickthall translation";
 
 export const BIBLE_WORDS: DailyWord[] = [
   { text: "And whatsoever ye do, do it heartily, as to the Lord, and not unto men;", source: "Colossians 3:23", book: "Bible", translation: KJV },
@@ -25,15 +22,12 @@ export const BIBLE_WORDS: DailyWord[] = [
   { text: "Commit thy works unto the LORD, and thy thoughts shall be established.", source: "Proverbs 16:3", book: "Bible", translation: KJV },
   { text: "A soft answer turneth away wrath: but grievous words stir up anger.", source: "Proverbs 15:1", book: "Bible", translation: KJV },
   { text: "Whatsoever thy hand findeth to do, do it with thy might;", source: "Ecclesiastes 9:10", book: "Bible", translation: KJV },
-];
-
-export const QURAN_WORDS: DailyWord[] = [
-  { text: "But lo! with hardship goeth ease, lo! with hardship goeth ease;", source: "Quran 94:5–6", book: "Quran", translation: PICKTHALL },
-  { text: "O ye who believe! Seek help in steadfastness and prayer. Lo! Allah is with the steadfast.", source: "Quran 2:153", book: "Quran", translation: PICKTHALL },
-  { text: "Allah tasketh not a soul beyond its scope.", source: "Quran 2:286", book: "Quran", translation: PICKTHALL },
-  { text: "Is the reward of goodness aught save goodness?", source: "Quran 55:60", book: "Quran", translation: PICKTHALL },
-  { text: "And whosoever putteth his trust in Allah, He will suffice him.", source: "Quran 65:3", book: "Quran", translation: PICKTHALL },
-  { text: "Spend your wealth for the cause of Allah, and be not cast by your own hands to ruin; and do good. Lo! Allah loveth the beneficent.", source: "Quran 2:195", book: "Quran", translation: PICKTHALL },
+  { text: "I can do all things through Christ which strengtheneth me.", source: "Philippians 4:13", book: "Bible", translation: KJV },
+  { text: "Trust in the LORD with all thine heart; and lean not unto thine own understanding.", source: "Proverbs 3:5", book: "Bible", translation: KJV },
+  { text: "Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest.", source: "Joshua 1:9", book: "Bible", translation: KJV },
+  { text: "His compassions fail not. They are new every morning: great is thy faithfulness.", source: "Lamentations 3:22–23", book: "Bible", translation: KJV },
+  { text: "By love serve one another.", source: "Galatians 5:13", book: "Bible", translation: KJV },
+  { text: "And let the beauty of the LORD our God be upon us: and establish thou the work of our hands upon us.", source: "Psalm 90:17", book: "Bible", translation: KJV },
 ];
 
 export const DAILY_WORD_KEY = "xtsy-daily-word";
@@ -44,12 +38,10 @@ function dayNumber(key: string): number {
   return Math.round(Date.UTC(y, m - 1, d) / 86_400_000);
 }
 
-/** The verse for the business day that `at` falls in: even days Bible, odd days Quran. */
+/** The verse for the business day that `at` falls in, going through the list a day at a time. */
 export function wordFor(at: number): DailyWord {
   const n = dayNumber(businessDayKey(at));
-  const half = Math.floor(n / 2);
-  const list = n % 2 === 0 ? BIBLE_WORDS : QURAN_WORDS;
-  return list[half % list.length] ?? BIBLE_WORDS[0]!;
+  return BIBLE_WORDS[n % BIBLE_WORDS.length] ?? BIBLE_WORDS[0]!;
 }
 
 /**

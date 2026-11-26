@@ -7,7 +7,7 @@ import { XtsyMark } from "./LaunchSplash";
 
 /**
  * The opening word on POS Billdesk: the first time the counter opens each business day
- * (from 6 am), a short verse — the Bible and the Quran taking turns — before the shift starts.
+ * (from 6 am), a short Bible verse before the shift starts.
  * Sits just under the launch splash, so it's there when the splash fades.
  */
 export function DailyWelcome() {
@@ -43,7 +43,7 @@ export function DailyWelcome() {
           “{word.text}”
         </blockquote>
         <p className="mt-5 font-semibold text-[#e9b949]">{word.source}</p>
-        <p className="mt-1 text-xs text-[#c4c4ca]">{word.book === "Quran" ? word.translation : `Bible · ${word.translation}`}</p>
+        <p className="mt-1 text-xs text-[#c4c4ca]">{word.book} · {word.translation}</p>
         <p className="mx-auto mt-7 max-w-[38ch] text-[15px] text-[#c4c4ca]">
           Every guest today is welcomed by you. Thank you for opening up.
         </p>

@@ -28,6 +28,7 @@ import { isSupportSession } from "@/lib/support-session";
 import { SupportBanner } from "./SupportBanner";
 import { LaunchSplash, XtsyLoader } from "./LaunchSplash";
 import { DailyWelcome } from "./DailyWelcome";
+import { CloudStuckNotice } from "./CloudStuckNotice";
 import { APP_DEVICES, APPS, APP_LINKS, accessProblem, appsFor, type AppKind } from "@/lib/staff-login-logic";
 import { isTestBrowser } from "@/lib/test-browser";
 import { SyncConflictAlert } from "@/components/SyncConflictAlert";
@@ -359,7 +360,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   if (staffApp && user && rid && terminal === "pending" && !support && !isTestBrowser() && !isLovablePreview()) {
     return <TerminalWaiting restaurantId={rid} app={pathname.startsWith("/waiter") ? "waiter" : app} device={currentDevice()} />;
   }
-  const gates = staffApp ? <><LaunchSplash />{support ? null : <DailyWelcome />}<SupportBanner /><PolicySync /><PinGate /></> : null;
+  const gates = staffApp ? <><LaunchSplash />{support ? null : <DailyWelcome />}<CloudStuckNotice /><SupportBanner /><PolicySync /><PinGate /></> : null;
   if (!framed) return <>{gates}{children}</>;
   return <FrameContext.Provider value={setTone}>{gates}<Frame tone={tone}>{children}</Frame></FrameContext.Provider>;
 }

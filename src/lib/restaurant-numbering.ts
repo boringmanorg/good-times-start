@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getDb } from "./db";
 import { getDeviceId } from "./terminal-actions";
 import { nextOfflineNumber, parseSequence, readClaims, type OfflineClaim } from "./counter-offline-numbering";
+import { reportIfStuck, STUCK_MESSAGE } from "./cloud-health";
 import { consumeReservedNumber, NUMBER_RESERVE_TARGET, readNumberCache, type ReservedNumber } from "./offline-numbering";
 
 export type RestaurantNumberSeries = "POS" | "KOT";
@@ -47,10 +48,11 @@ async function cloudNumber(restaurantId: string, series: RestaurantNumberSeries,
 
 /** How long a bill waits for the cloud number before using a spare offline number. */
 const CLOUD_NUMBER_WAIT_MS = 15000;
+const TIMEOUT_MESSAGE = "The cloud took too long to give a number.";
 
 function withinWait<T>(work: Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("The cloud took too long to give a number.")), CLOUD_NUMBER_WAIT_MS);
+    const timer = setTimeout(() => reject(new Error(TIMEOUT_MESSAGE)), CLOUD_NUMBER_WAIT_MS);
     work.then((value) => { clearTimeout(timer); resolve(value); }, (error: unknown) => { clearTimeout(timer); reject(error); });
   });
 }
@@ -96,7 +98,12 @@ export async function allocateRestaurantNumber(series: RestaurantNumberSeries, r
   // The designated counter continues the series offline; its numbers are claimed on reconnect.
   const offline = await counterOfflineNumber(restaurantId, series, requestId);
   if (offline) return offline;
-  if (cloudFailure && online()) throw cloudFailure;
+  if (cloudFailure && online()) {
+    // Timed out with the internet up: if the cloud answers a plain request, this app's own
+    // connection is stuck, and a reload (the shell offers "Reconnect") fixes it.
+    if (cloudFailure instanceof Error && cloudFailure.message === TIMEOUT_MESSAGE && await reportIfStuck()) throw new Error(STUCK_MESSAGE);
+    throw cloudFailure;
+  }
   throw new Error("Only the counter set as the bill printer can give bill and KOT numbers without internet. Your items are saved; send from the counter or try again when the internet is back.");
 }
 
