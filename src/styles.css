@@ -234,8 +234,8 @@
   --success: #2f4a3f;         /* pine */
   --gold: #a65a00;            /* amber: "waiting" and "needs attention" (4.6:1 on cream) */
   --gold-foreground: #ffffff;
-  --border: #e4d9c8;          /* sand line */
-  --input: #e4d9c8;
+  --border: #e4d9c8;          /* sand line: soft card edges */
+  --input: #958a78;           /* field outline: 3.2:1 on cream, 3.4:1 on white (WCAG 1.4.11) */
   --ring: #a12444;
   --sidebar: #1f2230;         /* night header */
   --sidebar-foreground: #f4efe8;
@@ -293,21 +293,6 @@
 .theme-xtsy button[data-slot="button"]:not(.rounded-2xl):not(.rounded-xl),
 .theme-xtsy a[data-slot="button"] { border-radius: 9999px; font-weight: 800; }
 
-/* ---------------- Staff screens: XTSY brand touches on classic black ---------------- */
-/* Page titles in the XTSY display face. */
-html:not(.theme-xtsy) main h1 {
-  font-family: var(--font-brand);
-  font-weight: 400;
-  letter-spacing: 0.035em;
-  line-height: 1.05;
-}
-/* Thin gold rule under the top bar, as on xtsy.one's night header. */
-html:not(.theme-xtsy) header.glass-dark {
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-primary) 28%, transparent);
-}
-/* Native date/time pickers and scrollbars follow the black theme. */
-html:not(.theme-xtsy) ::-webkit-scrollbar-thumb { background: #3b3b41; border-radius: 9999px; }
-html:not(.theme-xtsy) ::-webkit-scrollbar-track { background: transparent; }
 
 /*
  * Finger targets. A counter is worked by hand, often quickly and not always with dry fingers,
@@ -349,20 +334,12 @@ html:not(.theme-xtsy) ::-webkit-scrollbar-track { background: transparent; }
    Their screens and font rendering make grey text and thin type fade, so lift the
    secondary text and borders and give body text a little more weight. Staff screens only;
    guest pages (.theme-xtsy) keep their own palette. Modern browsers never read this. */
+/* Old counter browsers (Windows 7, Chrome 109 — no color-mix) sit on dim screens: slightly
+   heavier text and darker secondary text in the light look. */
 @supports not (color: color-mix(in lab, red, red)) {
-  html:not(.theme-xtsy) {
-    --muted-foreground: #e4e4e8;
-    --muted-foreground-rgb: 228 228 232;
-    --border: #4a4a52;
-    --border-rgb: 74 74 82;
-    --input: #5a5a62;
-  }
-  html:not(.theme-xtsy) body {
-    font-weight: 500;
-  }
-  html:not(.theme-xtsy) ::placeholder {
-    color: #9a9aa2;
-  }
+  html.theme-xtsy body { font-weight: 500; }
+  html.theme-xtsy { --muted-foreground: #3f4557; }  /* the ink bars keep their own (.theme-xtsy .dark is more specific) */
+  html.theme-xtsy ::placeholder { color: #6b6f7d; }
 }
 
 /* ---------------- XTSY launch animation (LaunchSplash, XtsyLoader) ---------------- */

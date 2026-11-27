@@ -356,7 +356,7 @@ function PosPage() {
                         <span className="w-14 text-right text-[13px] font-semibold tabular-nums">{formatINR(l.price * pending, 0)}</span>
                       </div>
                       <input placeholder="Add note" aria-label={`Note for ${l.name}`} value={l.note ?? ""} onChange={(e) => cart.setNote(l.itemId, e.target.value)}
-                        className="ml-8 mt-0.5 w-[calc(100%-2rem)] border-0 bg-transparent px-0 py-0.5 text-[11px] text-muted-foreground placeholder:text-muted-foreground/60 focus-visible:shadow-none focus-visible:text-foreground" />
+                        className="ml-8 mt-0.5 w-[calc(100%-2rem)] border-0 bg-transparent px-0 py-0.5 text-[11px] text-muted-foreground placeholder:text-muted-foreground focus-visible:shadow-none focus-visible:text-foreground" />
                     </li>
                   );
                 })}

@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/site/LegalPage";
+import { APP_ORIGIN } from "@/lib/site-config";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy policy — XTSY POS" }, { name: "description", content: "What XTSY POS collects, why, who can see it and how to have it corrected or deleted." }] }),
+  head: () => ({ links: [{ rel: "canonical", href: `${APP_ORIGIN}/privacy` }], meta: [{ title: "Privacy policy — XTSY POS" }, { name: "description", content: "What XTSY POS collects, why, who can see it and how to have it corrected or deleted." }] }),
   component: Privacy,
 });
 

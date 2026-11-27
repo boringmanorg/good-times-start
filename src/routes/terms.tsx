@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalPage } from "@/components/site/LegalPage";
+import { APP_ORIGIN } from "@/lib/site-config";
 
 export const Route = createFileRoute("/terms")({
-  head: () => ({ meta: [{ title: "Terms of service — XTSY POS" }, { name: "description", content: "The terms on which XTSY Ventures Private Limited provides XTSY POS to restaurants." }] }),
+  head: () => ({ links: [{ rel: "canonical", href: `${APP_ORIGIN}/terms` }], meta: [{ title: "Terms of service — XTSY POS" }, { name: "description", content: "The terms on which XTSY Ventures Private Limited provides XTSY POS to restaurants." }] }),
   component: Terms,
 });
 

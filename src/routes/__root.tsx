@@ -9,16 +9,15 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth-context";
-import { LiveSync } from "@/components/LiveSync";
-import { PrintHost, IncomingKotWatcher, CounterPrintWatcher } from "@/components/PrintHost";
-import { AppInstall } from "@/components/AppInstall";
-import { PersistentFrame } from "@/components/AppShell";
-import { PreloadScreens } from "@/components/PreloadScreens";
+import { isPublicPath } from "@/lib/public-paths";
+
+/** The staff layer (sync, printing, the POS frame) as its own chunk: public pages never download it. */
+const StaffLayer = lazy(() => import("@/components/StaffLayer"));
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -140,6 +139,7 @@ function isStaleChunkError(error: unknown) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const publicPage = isPublicPath(useRouterState({ select: (s) => s.location.pathname }));
   useEffect(() => {
     const onPreload = (e: Event) => { e.preventDefault(); reloadOnceForStaleChunk(); };
     const onRejection = (e: PromiseRejectionEvent) => {
@@ -158,17 +158,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <LiveSync />
-        <PrintHost />
-        <IncomingKotWatcher />
-        <CounterPrintWatcher />
-        <AppInstall />
-        <PreloadScreens />
-        <Toaster position="top-center" richColors closeButton />
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <PersistentFrame><Outlet /></PersistentFrame>
-      </AuthProvider>
+      <Toaster position="top-center" richColors closeButton />
+      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+      {publicPage ? <AuthProvider><Outlet /></AuthProvider> : <Suspense fallback={null}><StaffLayer><Outlet /></StaffLayer></Suspense>}
     </QueryClientProvider>
   );
 }

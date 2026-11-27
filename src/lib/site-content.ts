@@ -2,9 +2,9 @@ import { PUBLIC_PLANS, type PublicPlan } from "./plans";
 
 /** Words for the XTSY POS website, kept apart from the layout so structured data reuses them. */
 
-export const SITE_TITLE = "XTSY POS: POS subscriptions for restaurants, hostels, hotels, resorts and tours";
+export const SITE_TITLE = "XTSY POS: POS for restaurants, hostels, hotels and tours";
 export const SITE_DESCRIPTION =
-  "One XTSY subscription for the counter, the front desk and the bookings. Restaurant POS is live from ₹199 a month per outlet; Hostel POS (PMS and channel manager in one) is in its pilot; Hotel, Resort and Tourism POS are coming next.";
+  "One XTSY subscription for the counter, front desk and bookings. Restaurant POS is live, Hostel POS is in its pilot, and Hotel, Resort and Tourism POS come next.";
 
 /** The demo videos on the website: real XTSY POS screens, recorded with TAB Bistro's menu. */
 export interface Demo { id: string; title: string; text: string; app: string; device: "computer" | "phone"; sample?: boolean }

@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/site/LegalPage";
+import { APP_ORIGIN } from "@/lib/site-config";
 
 export const Route = createFileRoute("/refunds")({
-  head: () => ({ meta: [{ title: "Refund and cancellation policy — XTSY POS" }, { name: "description", content: "How cancelling an XTSY POS plan works, and when XTSY refunds a payment." }] }),
+  head: () => ({ links: [{ rel: "canonical", href: `${APP_ORIGIN}/refunds` }], meta: [{ title: "Refund and cancellation policy — XTSY POS" }, { name: "description", content: "How cancelling an XTSY POS plan works, and when XTSY refunds a payment." }] }),
   component: Refunds,
 });
 

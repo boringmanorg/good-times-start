@@ -63,7 +63,7 @@ export const SITE_MODELS: SiteModel[] = [
       { q: "Do Swiggy and Zomato orders come into the POS?", a: "Not yet. The connection works in a test sandbox and goes live once Swiggy and Zomato approve partner access. Until then, bill those orders on the POS as Swiggy or Zomato orders." },
     ],
     cta: "Start Restaurant POS",
-    seo: { title: "Restaurant POS by XTSY: billing, KOT, QR ordering and accounts", description: "Restaurant billing software for restaurants, cafés, fine dine and cloud kitchens: KOTs, UPI and GST bills, guest QR ordering, a waiter app, purchases and accounts. Keeps billing when the internet drops." },
+    seo: { title: "Restaurant POS by XTSY: billing, KOT, QR ordering and accounts", description: "Billing for restaurants, cafés and cloud kitchens: KOTs, UPI and GST bills, QR ordering, a waiter app, purchases and accounts. Works offline." },
   },
   {
     id: "hostel_pos", path: "/hostel-pos", name: "Hostel POS", short: "Hostel", status: "pilot",
@@ -87,7 +87,7 @@ export const SITE_MODELS: SiteModel[] = [
       { q: "Can dorm beds and private rooms sell together?", a: "Yes. Each room type is sold by the bed or by the room, with its own rate and calendar. Groups go into one room where they fit." },
     ],
     cta: "Join the pilot",
-    seo: { title: "Hostel POS by XTSY: PMS and channel manager for hostels", description: "Property management for hostels, backpacker stays and homestays: beds and rooms, rates per night, bookings from every channel, front desk with stay GST folios, housekeeping and a channel manager in one." },
+    seo: { title: "Hostel POS by XTSY: PMS and channel manager for hostels", description: "PMS for hostels and homestays: beds and rooms, nightly rates, bookings from every channel, front desk with stay GST folios and a channel manager." },
   },
   {
     id: "hotel_pos", path: "/hotel-pos", name: "Hotel POS", short: "Hotel", status: "soon",

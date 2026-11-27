@@ -496,7 +496,7 @@ export function useCart(initialTableId?: string) {
       return false;
     }
     return latest;
-  }, [activeOrder, customer, guestCount, lines, storedKots, submitted, tableId]);
+  }, [activeOrder, customer, guestCount, lines, orderType, storedKots, submitted, tableId]);
 
   const settle = useCallback(async (
     payment: PaymentMode | Payment[],
