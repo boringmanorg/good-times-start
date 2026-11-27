@@ -18,7 +18,7 @@ export const PRODUCTS: Product[] = [
   { id: "restaurant_pos", name: "Restaurant POS", status: "live", blurb: "Billing, KOTs, tables, QR ordering, purchases and the POS Manager, Billdesk and Waiter Pro apps.", models: "Restaurants, fine dine, cafés, cloud kitchens" },
   { id: "hotel_pos", name: "Hotel POS", status: "soon", blurb: "Front desk, rate plans, room service and the restaurant on one folio, with the channel manager.", models: "Hotels, boutique stays, hotel groups" },
   { id: "resort_pos", name: "Resort POS", status: "soon", blurb: "Stays, activities and packages across several outlets on one property.", models: "Resorts, glamping" },
-  { id: "hostel_pos", name: "Hostel POS", status: "pilot", blurb: "PMS and channel manager in one: beds and rooms, rates, OTA and website bookings, front desk, café and room bills.", models: "Hostels, backpacker stays, homestays" },
+  { id: "hostel_pos", name: "Hostel POS", status: "pilot", blurb: "PMS, channel manager and booking engine in one: beds and rooms, rates, OTA and website bookings, front desk and folios.", models: "Hostels, backpacker stays, homestays" },
   { id: "tourism_pos", name: "Tourism POS", status: "soon", blurb: "Tours, rentals and transfers with bookings, drivers and payments.", models: "Tour operators, rentals" },
 ];
 

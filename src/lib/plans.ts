@@ -57,22 +57,19 @@ export const FEATURE_NAMES: Record<Feature, string> = {
  * property. Stay plans are the `stay_` rows in the catalogue.
  */
 export const STAY_FEATURES: Feature[] = [
-  "pms", "billing", "menu", "gst_reports", "manager_app", "insights",
-  "purchases", "vendors", "loyalty", "admin_approval", "qr_ordering", "marketing", "feedback",
+  "pms", "gst_reports", "manager_app", "insights",
+  "purchases", "vendors", "loyalty", "admin_approval", "marketing", "feedback",
   "accounting", "audit_log",
 ];
 export const RESTAURANT_FEATURES: Feature[] = FEATURES.filter((f) => f !== "pms");
 export const featuresFor = (stay: boolean): Feature[] => (stay ? STAY_FEATURES : RESTAURANT_FEATURES);
 
 const STAY_NAMES: Partial<Record<Feature, string>> = {
-  pms: "PMS: rooms and beds, rates, bookings and the front desk",
-  billing: "Café billing and room bills",
-  menu: "Café menu",
-  gst_reports: "GST folios, bills and reports",
+  pms: "PMS: rooms and beds, rates, bookings, front desk, channel manager and booking engine",
+  gst_reports: "GST folios and reports",
   manager_app: "Property Manager app",
   insights: "Dashboard, occupancy and rate suggestions",
   loyalty: "Returning-guest loyalty",
-  qr_ordering: "Room and café QR ordering",
   feedback: "Guest feedback",
   accounting: "Accounting and bookkeeping",
 };
@@ -84,7 +81,7 @@ export const isStayPlan = (id: string): boolean => /^(stay|hostel|hotel|resort)_
 /** What a new plan starts with in the console, per kind of product. */
 export const STARTER_FEATURES: Record<"restaurant" | "stay" | "tourism", Feature[]> = {
   restaurant: ["billing", "menu", "gst_reports", "manager_app", "insights"],
-  stay: ["pms", "billing", "menu", "gst_reports", "manager_app", "insights"],
+  stay: ["pms", "gst_reports", "manager_app", "insights"],
   tourism: ["billing", "gst_reports", "manager_app", "insights"],
 };
 

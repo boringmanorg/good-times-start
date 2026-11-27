@@ -429,6 +429,7 @@ export type Database = {
           paid_at: string | null
           pay_proof: string | null
           pay_state: string
+          ready_notified_at: string | null
           payment: string
           pickup_at: string | null
           platform: string | null
@@ -467,6 +468,7 @@ export type Database = {
           paid_at?: string | null
           pay_proof?: string | null
           pay_state?: string
+          ready_notified_at?: string | null
           payment?: string
           pickup_at?: string | null
           platform?: string | null
@@ -505,6 +507,7 @@ export type Database = {
           paid_at?: string | null
           pay_proof?: string | null
           pay_state?: string
+          ready_notified_at?: string | null
           payment?: string
           pickup_at?: string | null
           platform?: string | null

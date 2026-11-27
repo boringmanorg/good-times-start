@@ -106,7 +106,8 @@ const APP_SCREENS: Record<AppKind, NavPath[]> = {
  */
 const STAY_SCREENS: Record<AppKind, NavPath[]> = {
   manager: ["/stays", "/stays/rates", "/stays/bookings", "/front-desk", "/stays/reports", "/stays/property", "/customers", "/settings"],
-  pos: ["/front-desk", "/stays/bookings", "/stays/rates", "/stays", "/tables", "/customers", "/menu", "/settings"],
+  // Hostel POS is a PMS with its channel manager and booking engine, not a restaurant platform (owner, 27 Nov 2026): no café screens.
+  pos: ["/front-desk", "/stays/bookings", "/stays/rates", "/stays", "/customers", "/settings"],
   waiter: ["/waiter"],
 };
 

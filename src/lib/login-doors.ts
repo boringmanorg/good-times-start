@@ -35,10 +35,10 @@ export const DOORS: Record<Door, DoorInfo> = {
     apps: ["manager", "pos"],
     appNames: {
       manager: { name: "Property Manager", for: "Owner and manager · rates, bookings, reports and the channel manager" },
-      pos: { name: "Front Desk", for: "Reception · check-ins, folios, housekeeping and the café bill" },
+      pos: { name: "Front Desk", for: "Reception · check-ins, folios and housekeeping" },
     },
     pitch: "Your property, one desk.",
-    pitchBody: "Rooms and beds, rates, bookings from every channel, check-in to check-out and the café bill, in one place. Keeps working when the Wi-Fi doesn't.",
+    pitchBody: "Rooms and beds, rates, bookings from every channel and your own website, check-in to check-out, in one place. Keeps working when the Wi-Fi doesn't.",
   },
 };
 

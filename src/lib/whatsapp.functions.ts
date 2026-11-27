@@ -103,6 +103,11 @@ export const sendOrderReadyMessage = createServerFn({ method: "POST" })
     const m = ((rest as { marketing?: Record<string, unknown> } | null)?.marketing ?? {}) as { auto?: boolean; readyTemplate?: string; language?: string };
     const keys = whatsappKeys();
     if (!keys || !m.auto || !m.readyTemplate) return { sent: false, reason: "Automatic order updates are off." };
+    // One "order ready" message per order: claim it first. The database lets ready_notified_at be
+    // set once and never cleared (guard_guest_order_origin), so repeats and races can't resend.
+    const { data: claimed } = await ctx.supabase.from("guest_orders").update({ ready_notified_at: new Date().toISOString() })
+      .eq("id", data.guestOrderId).is("ready_notified_at", null).select("id");
+    if (!claimed?.length) return { sent: false, reason: "The ready message was already sent for this order." };
     const sent = await sendTemplate(keys, { to, template: m.readyTemplate, language: m.language || "en", bodyParams: [o.customer_name.split(/\s+/)[0] || "there", o.code] });
     return sent.ok ? { sent: true, reason: "" } : { sent: false, reason: sent.error };
   });

@@ -45,6 +45,17 @@ function safeStringify(value: unknown): string {
   }
 }
 
+/**
+ * Server logs are kept, so personal details never reach them: email addresses become [email]
+ * and Indian mobile numbers (10 digits starting 6-9, optionally +91 / 91) become [phone].
+ * Longer digit runs (timestamps, ids) are left alone.
+ */
+export function redactPersonal(text: string): string {
+  return text
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[email]")
+    .replace(/(?<![\d])(?:\+?91[\s-]?)?[6-9]\d{9}(?![\d])/g, "[phone]");
+}
+
 function isErrorLike(value: unknown): value is Error {
   return value instanceof Error;
 }
@@ -55,9 +66,10 @@ function isErrorLike(value: unknown): value is Error {
 const originalConsoleError = console.error.bind(console);
 console.error = (...args: unknown[]) => {
   const expanded = args.map((arg) => {
-    if (!isErrorLike(arg)) return arg;
-    record(arg);
-    return describeError(arg);
+    if (isErrorLike(arg)) { record(arg); return redactPersonal(describeError(arg)); }
+    if (typeof arg === "string") return redactPersonal(arg);
+    if (arg && typeof arg === "object") return redactPersonal(safeStringify(arg));
+    return arg;
   });
   originalConsoleError(...expanded);
 };

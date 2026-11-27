@@ -58,9 +58,10 @@ describe("per-product console and features", () => {
   });
   it("feature sets don't cross products", () => {
     expect(RESTAURANT_FEATURES).not.toContain("pms");
-    for (const f of ["aggregators", "waiter_app", "kds", "recipes", "bookings", "gift_cards", "online_ordering"] as const) expect(STAY_FEATURES).not.toContain(f);
+    // Hostel POS is a PMS + channel manager + booking engine, not a restaurant platform: no café either.
+    for (const f of ["aggregators", "waiter_app", "kds", "recipes", "bookings", "gift_cards", "online_ordering", "billing", "menu", "qr_ordering"] as const) expect(STAY_FEATURES).not.toContain(f);
     expect(STAY_FEATURES[0]).toBe("pms");
-    expect(featureName("billing", true)).toBe("Café billing and room bills");
+    expect(featureName("pms", true)).toMatch(/channel manager and booking engine/);
     expect(featureName("billing", false)).toBe("Billing, KOTs and tables");
     expect(isStayPlan("stay_pilot")).toBe(true);
     expect(isStayPlan("pro")).toBe(false);
