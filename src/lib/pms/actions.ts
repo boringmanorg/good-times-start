@@ -6,6 +6,7 @@ import { getDb, markDirty } from "../db";
 import { newUid } from "../sync-core";
 import { localDate } from "./dates";
 import { pickUnits, unitsFreeFor } from "./inventory";
+import { autoAssign, stayReference } from "./assign";
 import { bookingProblems, canCancel, canCheckIn, canCheckOut, canMarkNoShow } from "./stay-flow";
 import type { Housekeeping, PayMode, Stay, StayGuest, StayLine, Unit, UnitType } from "./types";
 
@@ -95,12 +96,7 @@ export async function setHousekeeping(
 
 /* ---------------- Stays ---------------- */
 
-/** STY-261201-4F7K: date of arrival plus four letters, unique without a cloud call. */
-export function stayReference(checkIn: string, random: () => number = Math.random): string {
-  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const tail = Array.from({ length: 4 }, () => abc[Math.floor(random() * abc.length)]).join("");
-  return `STY-${checkIn.slice(2).replace(/-/g, "")}-${tail}`;
-}
+export { stayReference } from "./assign";
 
 export interface NewStay {
   source: Stay["source"];
@@ -160,25 +156,7 @@ export async function createStay(input: NewStay, by: string): Promise<Stay> {
   return stay;
 }
 
-/** Fill each line's missing beds/rooms by the hostel rule (whole group in one room when it fits). */
-export function autoAssign(stay: Stay, units: Unit[], stays: Stay[]): Stay {
-  const others = stays.filter((s) => s.id !== stay.id);
-  const taken = new Set<string>();
-  const lines = stay.lines.map((l) => {
-    if (l.unitIds.length >= l.units) {
-      l.unitIds.forEach((id) => taken.add(id));
-      return l;
-    }
-    const free = unitsFreeFor(l.typeId, units, others, stay.checkIn, stay.checkOut).filter(
-      (u) => !taken.has(u.id) && !l.unitIds.includes(u.id),
-    );
-    const picked = pickUnits(free, l.units - l.unitIds.length) ?? [];
-    const unitIds = [...l.unitIds, ...picked.map((u) => u.id)];
-    unitIds.forEach((id) => taken.add(id));
-    return { ...l, unitIds };
-  });
-  return { ...stay, lines };
-}
+export { autoAssign } from "./assign";
 
 async function update(id: string, change: (s: Stay) => Stay): Promise<Stay> {
   const db = getDb();

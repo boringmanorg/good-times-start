@@ -195,6 +195,8 @@ export interface RestaurantSettings {
   name: string;
   /** Hostel POS: extras sold on the folio (bike, breakfast, laundry…). */
   pmsExtras?: import("./pms/types").StayExtra[];
+  /** Booking engine this property pulls room types and sold nights from on each sync (pms/engine-sync.ts). */
+  pmsEngine?: { url: string; lastSyncAt?: number; lastResult?: string };
   businessType?: "hotel" | "restaurant";
   legalName?: string;
   address?: string;

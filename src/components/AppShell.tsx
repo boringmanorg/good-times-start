@@ -104,6 +104,7 @@ import {
   type Feature,
 } from "@/lib/plans";
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
+import { EngineAutoSync } from "./pms/EngineSync";
 import { TerminalWaiting } from "./TerminalApproval";
 import { SubscriptionExpired } from "./SubscriptionExpired";
 import { signInPath } from "@/lib/login-doors";
@@ -965,6 +966,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
             <InstallButton />
             <SyncChip />
             <AppUpdateWatcher />
+            {stay ? <EngineAutoSync /> : null}
           </div>
         </header>
         {planNotice && plan ? (

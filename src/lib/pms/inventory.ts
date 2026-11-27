@@ -35,7 +35,8 @@ export function occupancy(stays: Stay[], from: IsoDate, to: IsoDate): Map<string
 export function freeByNight(type: UnitType, units: Unit[], stays: Stay[], from: IsoDate, to: IsoDate, ignoreStayId?: string): Map<IsoDate, number> {
   const capacity = units.filter((u) => u.typeId === type.id && sellable(u)).length;
   const out = new Map<IsoDate, number>();
-  for (const night of nightsOf(from, to)) out.set(night, capacity);
+  // Nights already sold outside Hostel POS (booking engine feed) come off first.
+  for (const night of nightsOf(from, to)) out.set(night, capacity - Math.max(0, type.calendar?.[night]?.held ?? 0));
   for (const s of stays) {
     if (!HOLDS_NIGHTS(s) || s.id === ignoreStayId) continue;
     const taken = s.lines.filter((l) => l.typeId === type.id).reduce((n, l) => n + l.units, 0);

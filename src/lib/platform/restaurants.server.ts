@@ -25,6 +25,8 @@ export interface OnboardRestaurant {
   ownerPassword: string;
   /** XTSY product (products.ts); none means Restaurant POS. */
   product?: string | undefined;
+  /** A stay test property for the integration sandbox (never a real one). */
+  sandbox?: boolean | undefined;
 }
 
 export interface Onboarded { restaurantId: string; accountId: string; ownerUserId: string; ownerEmail: string }
@@ -60,7 +62,7 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
     billing_email: cleanEmail(input.billingEmail).slice(0, 120),
     notes: "",
     // A stay property gets the front desk (PMS by XTSY); no plan carries it yet.
-    ...(stays ? { feature_overrides: { pms: true } } : {}),
+    ...(stays ? { feature_overrides: input.sandbox ? { pms: true, sandbox: true } : { pms: true } } : {}),
   }).select("id").single();
   if (aErr || !account) throw new Error(`Couldn't create the account: ${aErr?.message ?? "unknown error"}`);
   const accountId = (account as { id: string }).id;
@@ -98,7 +100,7 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
   await admin().from("account_events").insert({
     account_id: accountId,
     kind: "onboarded",
-    detail: { restaurant: restaurantId, model, product, plan: input.plan, owner: owner.email },
+    detail: { restaurant: restaurantId, model, product, plan: input.plan, owner: owner.email, ...(stays && input.sandbox ? { sandbox: true } : {}) },
     by_user: by,
   });
   return { restaurantId, accountId, ownerUserId: owner.userId, ownerEmail: owner.email };

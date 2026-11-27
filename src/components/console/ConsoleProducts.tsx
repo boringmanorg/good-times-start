@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Failed, Loading, Stat } from "./ConsoleBits";
 import { ConsoleOnboard } from "./ConsoleOnboard";
 import { ConsoleChannel } from "./ConsoleChannel";
+import { ConsoleSandbox } from "./ConsoleSandbox";
 import { ConsoleLogins } from "./ConsoleLogins";
 import { ConsoleIntegrations } from "./ConsoleIntegrations";
 import { ConsoleActivity } from "./ConsoleActivity";
@@ -225,6 +226,7 @@ function RestaurantDetail({ r, plans, model, route, go, stays, product }: { r: R
         {section === "devices" ? <DevicesSection r={r} product={product} /> : null}
         {section === "integrations" && !stays ? <ConsoleIntegrations r={r} plan={plan} /> : null}
         {section === "channel" && stays ? <ConsoleChannel name={r.name} /> : null}
+        {section === "sandbox" && stays ? <ConsoleSandbox restaurantId={r.id} name={r.name} /> : null}
         {section === "activity" ? <ConsoleActivity restaurantId={r.id} /> : null}
       </div>
     </div>

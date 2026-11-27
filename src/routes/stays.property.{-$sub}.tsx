@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { DeskSetup } from "@/components/pms/DeskSetup";
+import { EngineSyncCard } from "@/components/pms/EngineSync";
 import { ExtrasEditor, RatePlans } from "@/components/pms/PlansAndExtras";
 import { usePms } from "@/lib/pms/use-pms";
 import { isAdmin, useStaff } from "@/lib/staff";
@@ -29,6 +30,7 @@ function PropertyPage() {
         </header>
         {isAdmin(user) ? (
           <>
+            <EngineSyncCard />
             <DeskSetup types={types} units={units} />
             {types.length ? <RatePlans types={types} /> : null}
             <ExtrasEditor />

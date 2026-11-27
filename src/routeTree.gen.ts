@@ -63,6 +63,7 @@ import { Route as TourismLoginChar123SubChar125RouteImport } from './routes/tour
 import { Route as BistroTabBistroGiftCardsChar123SubChar125RouteImport } from './routes/_bistro.tab-bistro.gift-cards.{-$sub}'
 import { Route as BistroTabBistroMenuChar123SubChar125RouteImport } from './routes/_bistro.tab-bistro.menu.{-$sub}'
 import { Route as BistroTabBistroVisitChar123SubChar125RouteImport } from './routes/_bistro.tab-bistro.visit.{-$sub}'
+import { Route as ApiSandboxV1SplatRouteImport } from './routes/api.sandbox.v1.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -360,6 +361,11 @@ const BistroTabBistroVisitChar123SubChar125Route =
     path: '/tab-bistro/visit/{-$sub}',
     getParentRoute: () => BistroRoute,
   } as any)
+const ApiSandboxV1SplatRoute = ApiSandboxV1SplatRouteImport.update({
+  id: '/api/sandbox/v1/$',
+  path: '/api/sandbox/v1/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -415,6 +421,7 @@ export interface FileRoutesByFullPath {
   '/tab-bistro/gift-cards/{-$sub}': typeof BistroTabBistroGiftCardsChar123SubChar125Route
   '/tab-bistro/menu/{-$sub}': typeof BistroTabBistroMenuChar123SubChar125Route
   '/tab-bistro/visit/{-$sub}': typeof BistroTabBistroVisitChar123SubChar125Route
+  '/api/sandbox/v1/$': typeof ApiSandboxV1SplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -470,6 +477,7 @@ export interface FileRoutesByTo {
   '/tab-bistro/gift-cards/{-$sub}': typeof BistroTabBistroGiftCardsChar123SubChar125Route
   '/tab-bistro/menu/{-$sub}': typeof BistroTabBistroMenuChar123SubChar125Route
   '/tab-bistro/visit/{-$sub}': typeof BistroTabBistroVisitChar123SubChar125Route
+  '/api/sandbox/v1/$': typeof ApiSandboxV1SplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -527,6 +535,7 @@ export interface FileRoutesById {
   '/_bistro/tab-bistro/gift-cards/{-$sub}': typeof BistroTabBistroGiftCardsChar123SubChar125Route
   '/_bistro/tab-bistro/menu/{-$sub}': typeof BistroTabBistroMenuChar123SubChar125Route
   '/_bistro/tab-bistro/visit/{-$sub}': typeof BistroTabBistroVisitChar123SubChar125Route
+  '/api/sandbox/v1/$': typeof ApiSandboxV1SplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -584,6 +593,7 @@ export interface FileRouteTypes {
     | '/tab-bistro/gift-cards/{-$sub}'
     | '/tab-bistro/menu/{-$sub}'
     | '/tab-bistro/visit/{-$sub}'
+    | '/api/sandbox/v1/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -639,6 +649,7 @@ export interface FileRouteTypes {
     | '/tab-bistro/gift-cards/{-$sub}'
     | '/tab-bistro/menu/{-$sub}'
     | '/tab-bistro/visit/{-$sub}'
+    | '/api/sandbox/v1/$'
   id:
     | '__root__'
     | '/'
@@ -695,6 +706,7 @@ export interface FileRouteTypes {
     | '/_bistro/tab-bistro/gift-cards/{-$sub}'
     | '/_bistro/tab-bistro/menu/{-$sub}'
     | '/_bistro/tab-bistro/visit/{-$sub}'
+    | '/api/sandbox/v1/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -748,6 +760,7 @@ export interface RootRouteChildren {
   StaysRatesChar123SubChar125Route: typeof StaysRatesChar123SubChar125Route
   StaysReportsChar123SubChar125Route: typeof StaysReportsChar123SubChar125Route
   TourismLoginChar123SubChar125Route: typeof TourismLoginChar123SubChar125Route
+  ApiSandboxV1SplatRoute: typeof ApiSandboxV1SplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1130,6 +1143,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BistroTabBistroVisitChar123SubChar125RouteImport
       parentRoute: typeof BistroRoute
     }
+    '/api/sandbox/v1/$': {
+      id: '/api/sandbox/v1/$'
+      path: '/api/sandbox/v1/$'
+      fullPath: '/api/sandbox/v1/$'
+      preLoaderRoute: typeof ApiSandboxV1SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1204,6 +1224,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaysRatesChar123SubChar125Route: StaysRatesChar123SubChar125Route,
   StaysReportsChar123SubChar125Route: StaysReportsChar123SubChar125Route,
   TourismLoginChar123SubChar125Route: TourismLoginChar123SubChar125Route,
+  ApiSandboxV1SplatRoute: ApiSandboxV1SplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

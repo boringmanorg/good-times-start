@@ -21,6 +21,7 @@ export const onboardPlatformRestaurant = createServerFn({ method: "POST" })
     ownerName: z.string().max(60),
     ownerPassword: z.string().min(8).max(72),
     product: z.string().max(20).optional(),
+    sandbox: z.boolean().optional(),
   }).parse(input))
   .handler(async ({ data }) => {
     const { superAdminFromToken } = await import("./platform/logins.server");

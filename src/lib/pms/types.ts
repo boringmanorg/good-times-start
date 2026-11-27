@@ -32,6 +32,10 @@ export interface UnitType {
   calendar?: Record<IsoDate, NightPlan>;
   /** Rate plans sold on top of the room: room only, with breakfast, non-refundable… (rates.ts). */
   plans?: RatePlan[];
+  /** The booking engine's id for this type (xtsy.one): set when the type came from the engine's feed. */
+  engineRef?: string;
+  /** Shown under the name ("Without lockers"). */
+  descriptor?: string;
 }
 
 /** What a rate plan includes. */
@@ -65,6 +69,11 @@ export interface NightPlan {
   /** Closed to arrival / departure: online stays may not start / end on this night. */
   cta?: boolean;
   ctd?: boolean;
+  /**
+   * Beds/rooms already sold outside Hostel POS that night (the booking engine's count: website,
+   * booking sites, the owner's sheet). Taken off what the desk and channels can sell.
+   */
+  held?: number;
 }
 
 export type Housekeeping = "clean" | "dirty" | "inspect" | "out_of_order";
@@ -84,6 +93,8 @@ export interface Unit {
   /** When it was last made clean. */
   cleanedAt?: number;
   archived?: boolean;
+  /** Came from the booking engine's feed (kept in step with it on each sync). */
+  fromEngine?: boolean;
 }
 
 export type StaySource = "walk_in" | "phone" | "website" | "ota";

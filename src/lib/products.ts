@@ -52,7 +52,7 @@ export function productOf(stored: string | null | undefined): ProductId {
   return isProductId(stored) ? stored : "restaurant_pos";
 }
 
-export type Section = "overview" | "subscription" | "users" | "devices" | "integrations" | "channel" | "activity";
+export type Section = "overview" | "subscription" | "users" | "devices" | "integrations" | "channel" | "sandbox" | "activity";
 export const SECTIONS: { v: Section; l: string }[] = [
   { v: "overview", l: "Overview" },
   { v: "subscription", l: "Plan & billing" },
@@ -60,6 +60,7 @@ export const SECTIONS: { v: Section; l: string }[] = [
   { v: "devices", l: "Devices" },
   { v: "integrations", l: "Swiggy & Zomato" },
   { v: "channel", l: "Channel manager" },
+  { v: "sandbox", l: "Sandbox" },
   { v: "activity", l: "Activity" },
 ];
 const isSection = (v: unknown): v is Section => SECTIONS.some((s) => s.v === v);
@@ -67,7 +68,7 @@ const isSection = (v: unknown): v is Section => SECTIONS.some((s) => s.v === v);
 /** An outlet's console sections follow its product: Swiggy & Zomato for restaurants, the channel manager for stays. */
 export function sectionsFor(product: ProductId): { v: Section; l: string }[] {
   const stay = STAY_PRODUCTS.includes(product);
-  return SECTIONS.filter((s) => (s.v === "integrations" ? !stay : s.v === "channel" ? stay : true));
+  return SECTIONS.filter((s) => (s.v === "integrations" ? !stay : s.v === "channel" || s.v === "sandbox" ? stay : true));
 }
 
 export type ConsoleTab = "overview" | "products" | "activity" | "plans" | "infra" | "seo";

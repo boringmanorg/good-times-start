@@ -20,6 +20,8 @@ export function quoteRate(t: UnitType, checkIn: IsoDate, checkOut: IsoDate): num
 }
 
 export interface GridCell {
+  /** Sold outside Hostel POS (booking engine, booking sites, the owner's sheet). */
+  held?: number;
   night: IsoDate;
   free: number;
   sold: number;
@@ -61,6 +63,7 @@ export function rateGrid(
           ...(plan?.minStay ? { minStay: plan.minStay } : {}),
           ...(plan?.cta ? { cta: true } : {}),
           ...(plan?.ctd ? { ctd: true } : {}),
+          ...(plan?.held ? { held: plan.held } : {}),
         };
       }),
     };
@@ -102,7 +105,7 @@ export function applyRange(
       if (change.closed) next.closed = true;
       else delete next.closed;
     }
-    if (next.rate === undefined && !next.closed && !next.minStay && !next.cta && !next.ctd)
+    if (next.rate === undefined && !next.closed && !next.minStay && !next.cta && !next.ctd && !next.held)
       delete cal[night];
     else cal[night] = next;
   }

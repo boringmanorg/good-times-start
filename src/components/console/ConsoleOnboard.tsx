@@ -38,6 +38,7 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
   const [ownerName, setOwnerName] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sandbox, setSandbox] = useState(false);
 
   const effectiveSlug = slugTouched ? cleanSlug(slug) : slugFrom(name);
   const effectiveOwner = ownerEmailTouched ? ownerEmail : (name ? `admin@${domainFrom(effectiveSlug)}` : "");
@@ -46,7 +47,7 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
   const reset = () => {
     setName(""); setModel("restaurant"); setSlug(""); setSlugTouched(false); setCity("");
     setPlan("basic"); setPhone(""); setBillingEmail(""); setOwnerEmail(""); setOwnerEmailTouched(false);
-    setOwnerName(""); setPassword("");
+    setOwnerName(""); setPassword(""); setSandbox(false);
   };
 
   const submit = async () => {
@@ -57,6 +58,7 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
         token: await consoleToken(), product, name: name.trim(), model, slug: effectiveSlug, city, plan,
         billingPhone: phone, billingEmail, ownerEmail: effectiveOwner,
         ownerName: ownerName.trim() || "Admin", ownerPassword: password,
+        ...(isStayProduct(product) && sandbox ? { sandbox: true } : {}),
       } });
       toast.success(`${name.trim()} onboarded — owner login ${r.ownerEmail}`);
       reset();
@@ -142,6 +144,13 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
           </label>
         </div>
       </div>
+
+      {isStayProduct(product) ? (
+        <label className="mt-4 flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm">
+          <input type="checkbox" className="mt-1" checked={sandbox} onChange={(e) => setSandbox(e.target.checked)} />
+          <span><b>Sandbox test property.</b> For trying booking sites, the website and partner integrations: its Console → Sandbox sends test bookings and gives partners test keys. Never tick this for a real property; it can&apos;t be switched on later.</span>
+        </label>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button onClick={submit} disabled={busy || !!problem}>{busy ? "Onboarding…" : "Onboard outlet"}</Button>

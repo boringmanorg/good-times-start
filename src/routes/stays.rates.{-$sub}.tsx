@@ -155,10 +155,13 @@ function RatesPage() {
                             ? "bg-destructive/10 text-destructive"
                             : "bg-accent text-accent-foreground",
                         )}
-                        title="Left to sell"
+                        title={c.held ? `Left to sell · ${c.held} sold on the booking engine or booking sites` : "Left to sell"}
                       >
                         {c.free}
                       </span>
+                      {c.held ? (
+                        <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">{c.held} sold online</span>
+                      ) : null}
                     </td>
                   ))}
                 </tr>,

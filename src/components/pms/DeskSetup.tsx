@@ -25,7 +25,7 @@ export function DeskSetup({ types, units }: { types: UnitType[]; units: Unit[] }
         <ul className="mt-2 divide-y divide-border">
           {types.map((x) => (
             <li key={x.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-              <span>{x.name}{x.femaleOnly ? " · women only" : ""}<br /><span className="text-xs text-muted-foreground">{units.filter((v) => v.typeId === x.id).length} {x.soldAs === "bed" ? "beds" : "rooms"} · GST {stayGstPct(x.rate, x.gst)}%</span></span>
+              <span>{x.name}{x.descriptor ? <span className="text-muted-foreground"> · {x.descriptor}</span> : null}{x.femaleOnly ? " · women only" : ""}<br /><span className="text-xs text-muted-foreground">{units.filter((v) => v.typeId === x.id).length} {x.soldAs === "bed" ? "beds" : "rooms"} · GST {stayGstPct(x.rate, x.gst)}%{x.engineRef ? " · from the booking engine" : ""}{x.channelRef ? ` · channel id ${x.channelRef}` : ""}</span></span>
               <span className="tabular-nums">{formatINR(x.rate, 0)}/night</span>
             </li>
           ))}
