@@ -96,7 +96,7 @@ function WaiterApp() {
   };
 
   return (
-    <div className="dark flex h-screen flex-col overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] shadow-[inset_0_-1px_0_color-mix(in_srgb,var(--color-primary)_28%,transparent)]">
         <div className="min-w-0">
           <div className="font-brand truncate text-[17px] leading-tight sm:text-[19px]">{settings.name || "Waiter Pro"}</div>

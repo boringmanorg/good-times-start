@@ -43,12 +43,12 @@ export function LaunchSplash() {
   return (
     <div role="presentation" onPointerDown={() => { startedAt = -Infinity; setLeaving(true); window.setTimeout(() => setShow(false), 250); }}
       style={{ ["--xl-t" as string]: `${offset}ms` }}
-      className={`xl-splash fixed inset-0 z-[200] grid place-items-center bg-black text-white ${leaving ? "xl-leave" : ""}`}>
+      className={`xl-splash fixed inset-0 z-[200] grid place-items-center bg-[#1f2230] text-[#faf7f2] ${leaving ? "xl-leave" : ""}`}>
       <div className="flex flex-col items-center">
         <XtsyMark size={132} />
         <p className="xl-word mt-7 overflow-hidden font-brand text-[3.4rem] leading-none tracking-[0.06em] sm:text-7xl"><span>XTSY POS</span></p>
-        <div className="xl-rule mt-4 h-px w-48 bg-[#e9b949]" aria-hidden="true" />
-        <p className="xl-by mt-3 text-sm font-bold uppercase tracking-[0.42em] text-[#e9b949]">POS by XTSY</p>
+        <div className="xl-rule mt-4 h-px w-48 bg-[#e8b4c0]" aria-hidden="true" />
+        <p className="xl-by mt-3 text-sm font-bold uppercase tracking-[0.42em] text-[#e8b4c0]">POS by XTSY</p>
       </div>
       <span className="sr-only">XTSY POS is opening</span>
     </div>
@@ -63,7 +63,7 @@ export function XtsyMark({ size = 72, loop = false }: { size?: number; loop?: bo
     <span className={`xl-mark relative inline-grid place-items-center ${loop ? "xl-loop" : ""}`} style={{ width: size, height: size }}>
       <svg viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
         <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(233,185,73,.16)" strokeWidth="1.5" />
-        <circle className="xl-ring" cx="50" cy="50" r={r} fill="none" stroke="#e9b949" strokeWidth="2" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c} style={{ ["--xl-c" as string]: String(c) }} />
+        <circle className="xl-ring" cx="50" cy="50" r={r} fill="none" stroke="#e8b4c0" strokeWidth="2" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c} style={{ ["--xl-c" as string]: String(c) }} />
       </svg>
       <img src={logo} alt="" width={size} height={size} className="xl-logo relative rounded-[22%]" style={{ width: size * 0.62, height: size * 0.62 }} />
     </span>
@@ -73,10 +73,10 @@ export function XtsyMark({ size = 72, loop = false }: { size?: number; loop?: bo
 /** Loading screen for the staff apps: the breathing mark and the product name. */
 export function XtsyLoader() {
   return (
-    <div className="grid min-h-screen place-items-center bg-black">
+    <div className="grid min-h-screen place-items-center bg-[#1f2230]">
       <div className="flex flex-col items-center gap-4">
         <XtsyMark size={84} loop />
-        <p className="text-xs font-bold uppercase tracking-[0.42em] text-[#e9b949]">POS by XTSY</p>
+        <p className="text-xs font-bold uppercase tracking-[0.42em] text-[#e8b4c0]">POS by XTSY</p>
       </div>
     </div>
   );

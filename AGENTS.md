@@ -625,3 +625,11 @@ turned solid (orange text on solid orange, solid red alerts). Fixed at build tim
 - Names: Hostel POS (pilot) and Hotel POS (coming soon) are separate models again; the stay sign-in door says "Hostel POS".
 - Pricing per model lives in the one catalogue, told apart by plan-id prefix (`PLAN_PREFIX`, `planProduct`, `newPlanId` in products.ts): restaurant plans unprefixed, `hostel_*` (+ the internal `stay_pilot`), `hotel_*`, `resort_*`, `tourism_*`. Console → Plans has a tab per model and "Add a … plan" (`platform_save_plan` upserts; new plans start with `STARTER_FEATURES`). A model with no public plans shows "Prices on request" / pilot / waitlist on its page. `planFitsProduct` lets onboarding use a stay product's own plans.
 - The Swiggy/Zomato "own your brand" story is gone from the website (owner, 27 Nov): don't position QR ordering against aggregators ("no commission") in public copy.
+
+## Every app in the xtsy.one look (27 Nov 2026, owner: "make it live")
+- Supersedes "Classic black brand theme": RootShell puts `theme-xtsy` on <html> for EVERY page (staff apps, console, guest pages, website); nothing adds or removes it any more (the AppShell, /order and /book toggles are gone). Waiter Pro no longer forces `.dark`.
+- Night bars: the top bar and phone tab bar keep `className="dark glass-dark"`; inside the light look `.theme-xtsy .dark` is an ink palette (ink #1f2230 / #2b2f40 surfaces, cream text, rose #e8b4c0 accent, amber #f0b45a waiting). `glass-dark` is ink with a solid fallback first (Chrome 109 lacks color-mix).
+- `--gold` in the light palette is amber #a65a00 with white foreground ("waiting" / "needs attention", 4.6:1 on cream); on a light gold tint use `text-warning`, never `text-gold-foreground`.
+- Veg / non-veg marks use fixed colours (#12893c / #b3261e), not theme tokens, on VegMark and the counter's dish tiles.
+- Launch splash and the opening word are ink with rose accents. Install manifests use ink #1f2230. Share image `public/og-xtsy-pos.png` redrawn (cream, five models).
+- Demo videos re-recorded in the new look; DemoVideo appends `?v=${VIDEO_VERSION}` — bump it whenever the recordings change.

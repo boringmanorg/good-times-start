@@ -31,24 +31,24 @@ export function DailyWelcome() {
   const date = new Date(now).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="dw-title"
-      className="dw-in fixed inset-0 z-[190] grid place-items-center overflow-y-auto bg-black/95 p-5 text-white">
-      <div className="w-full max-w-xl rounded-[28px] border border-[#e9b949]/60 bg-black px-6 py-9 text-center shadow-[0_0_80px_rgba(233,185,73,.12)] sm:px-10">
+      className="dw-in fixed inset-0 z-[190] grid place-items-center overflow-y-auto bg-[#1f2230]/95 p-5 text-[#faf7f2]">
+      <div className="w-full max-w-xl rounded-[28px] border border-[#e8b4c0]/50 bg-[#1f2230] px-6 py-9 text-center shadow-[0_0_80px_rgba(233,185,73,.12)] sm:px-10">
         <XtsyMark size={64} />
         <p className="mt-5 text-sm text-[#c4c4ca]">{date}</p>
         <h2 id="dw-title" className="mt-1 font-brand text-4xl tracking-[0.04em] sm:text-5xl">
           {greetingFor(now)}{first ? `, ${first}` : ""}
         </h2>
         <p className="mt-2 text-[15px] text-[#c4c4ca]">A word to start the day</p>
-        <blockquote className="mx-auto mt-7 max-w-[34ch] text-balance text-[1.35rem] leading-relaxed text-white sm:text-2xl">
+        <blockquote className="mx-auto mt-7 max-w-[34ch] text-balance text-[1.35rem] leading-relaxed text-[#faf7f2] sm:text-2xl">
           “{word.text}”
         </blockquote>
-        <p className="mt-5 font-semibold text-[#e9b949]">{word.source}</p>
+        <p className="mt-5 font-semibold text-[#e8b4c0]">{word.source}</p>
         <p className="mt-1 text-xs text-[#c4c4ca]">{word.book} · {word.translation}</p>
         <p className="mx-auto mt-7 max-w-[38ch] text-[15px] text-[#c4c4ca]">
           Every guest today is welcomed by you. Thank you for opening up.
         </p>
         <button type="button" autoFocus onClick={close}
-          className="mt-7 inline-flex h-12 items-center rounded-full bg-[#e9b949] px-8 text-base font-bold text-black outline-none ring-offset-2 ring-offset-black focus-visible:ring-2 focus-visible:ring-[#e9b949]">
+          className="mt-7 inline-flex h-12 items-center rounded-full bg-[#e8b4c0] px-8 text-base font-bold text-[#1f2230] outline-none ring-offset-2 ring-offset-[#1f2230] focus-visible:ring-2 focus-visible:ring-[#e8b4c0]">
           Start the day
         </button>
       </div>

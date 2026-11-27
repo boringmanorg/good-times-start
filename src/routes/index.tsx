@@ -513,7 +513,7 @@ function PosPage() {
               const offHours = outsideHours(i);
               return (
                 <button key={i.id} onClick={() => pick(i)} disabled={soldOut || !!cart.hold} title={offHours && i.hours ? `Served ${i.hours.from}–${i.hours.to}` : i.name}
-                  className={`relative flex min-h-[4.75rem] flex-col justify-between overflow-hidden rounded-lg border-l-[3px] bg-card py-2 pl-2.5 pr-2 text-left shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-border/70 transition-[transform,box-shadow] hover:shadow-md active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${i.veg ? "border-l-success" : "border-l-destructive"} ${offHours ? "opacity-60" : ""}`}>
+                  className={`relative flex min-h-[4.75rem] flex-col justify-between overflow-hidden rounded-lg border-l-[3px] bg-card py-2 pl-2.5 pr-2 text-left shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-border/70 transition-[transform,box-shadow] hover:shadow-md active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${i.veg ? "border-l-[#12893c]" : "border-l-[#b3261e]"} ${offHours ? "opacity-60" : ""}`}>
                   {inCart ? <span className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{inCart}</span> : null}
                   <span className="line-clamp-2 pr-5 text-[13px] font-semibold leading-snug">{i.name}</span>
                   <span className="mt-1.5 flex items-end justify-between gap-1.5 text-[11px]">

@@ -179,7 +179,9 @@
 
 /* Frosted bars, as in iOS navigation and tab bars. */
 @utility glass-dark {
-  background: color-mix(in srgb, #000000 86%, transparent);
+  /* Ink top bar (xtsy.one night header). Solid first for Chrome 109 counters, which lack color-mix. */
+  background: #1f2230;
+  background: color-mix(in srgb, #1f2230 95%, transparent);
   color: oklch(0.97 0 0);
   backdrop-filter: saturate(180%) blur(20px);
 }
@@ -230,8 +232,8 @@
   --accent: #eaf0ea;          /* pine tint */
   --accent-foreground: #2f4a3f;
   --success: #2f4a3f;         /* pine */
-  --gold: #f4efe8;
-  --gold-foreground: #1f2230;
+  --gold: #a65a00;            /* amber: "waiting" and "needs attention" (4.6:1 on cream) */
+  --gold-foreground: #ffffff;
   --border: #e4d9c8;          /* sand line */
   --input: #e4d9c8;
   --ring: #a12444;
@@ -241,6 +243,34 @@
   --font-sans: Manrope, "Helvetica Neue", Arial, system-ui, sans-serif;
   color-scheme: light;
 }
+/* Night bars inside the light look (top bar, phone tab bar, any .dark island): ink, not black,
+   with cream text and a rose accent, as on xtsy.one. */
+.theme-xtsy .dark {
+  --background: #1f2230;
+  --foreground: #faf7f2;
+  --card: #2b2f40;
+  --card-foreground: #faf7f2;
+  --popover: #2b2f40;
+  --popover-foreground: #faf7f2;
+  --secondary: #2b2f40;
+  --secondary-foreground: #faf7f2;
+  --muted: #2b2f40;
+  --muted-foreground: #c9c3d0;
+  --raised: #3a3f52;
+  --border: #3a3f52;
+  --input: #3a3f52;
+  --primary: #e8b4c0;
+  --primary-foreground: #1f2230;
+  --primary-hover: #f0c8d1;
+  --primary-tint: #3a2a33;
+  --ring: #e8b4c0;
+  --gold: #f0b45a;
+  --gold-foreground: #1f2230;
+  --warning: #f0b45a;
+  --success: #7fcf9a;
+  color-scheme: dark;
+}
+
 .theme-xtsy body { font-family: var(--font-sans); background: var(--background); }
 /* In the base layer, so a page's own size and leading classes (utilities) win. */
 @layer base {

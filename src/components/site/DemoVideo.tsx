@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Bump when the recordings change, so browsers fetch the new files (27 Nov 2026: xtsy.one look). */
+const VIDEO_VERSION = "2";
+
 /**
  * One recorded demo (public/videos/<id>.mp4, poster <id>.jpg). Muted, looping and silent, it
  * plays only while on screen and loads nothing until it gets close. Visitors who ask for reduced
@@ -40,8 +43,8 @@ export function DemoVideo({ id, title, phone = false, className, eager = false }
         key={id}
         ref={ref}
         className="block h-auto w-full"
-        src={`/videos/${id}.mp4`}
-        poster={`/videos/${id}.jpg`}
+        src={`/videos/${id}.mp4?v=${VIDEO_VERSION}`}
+        poster={`/videos/${id}.jpg?v=${VIDEO_VERSION}`}
         muted
         loop
         playsInline

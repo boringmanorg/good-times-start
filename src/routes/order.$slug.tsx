@@ -119,13 +119,7 @@ function GuestOrderPage() {
 function Frame({ store, children }: { store?: Storefront; children: ReactNode }) {
   const brand = store?.branding ?? {};
   const xtsy = guestTheme(brand) === "xtsy";
-  // XTSY look: xtsy.one palette and type on the whole page, dialogs included (they render in portals).
-  useEffect(() => {
-    if (!xtsy) return;
-    const root = document.documentElement;
-    root.classList.add("theme-xtsy");
-    return () => root.classList.remove("theme-xtsy");
-  }, [xtsy]);
+  // The xtsy.one palette is on <html> for every page (RootShell).
   // Classic look: the owner's brand colour becomes this page's accent; text stays readable (see brandPalette).
   const palette = xtsy ? null : brandPalette(brand.color);
   return (
@@ -267,7 +261,7 @@ function Menu({ store, channel, publicType, tableId, tableLabel, source, stay = 
               ) : null}
             </div>
           </div>
-          {store.paused ? <p role="status" className="mt-3 rounded-lg bg-gold/20 px-3 py-2 text-xs font-semibold text-gold-foreground">The kitchen isn't taking orders here for a little while. You can still look at the menu.</p> : null}
+          {store.paused ? <p role="status" className="mt-3 rounded-lg bg-gold/15 px-3 py-2 text-xs font-semibold text-warning">The kitchen isn't taking orders here for a little while. You can still look at the menu.</p> : null}
           {store.branding?.welcome ? <p className="mt-3 text-sm">{store.branding.welcome}</p> : null}
           {store.message ? <p className="mt-3 text-sm">{store.message}</p> : null}
           {placed.length ? (

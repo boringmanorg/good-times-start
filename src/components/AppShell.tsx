@@ -431,13 +431,6 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   useEffect(() => {
     if (stay && current && !allowed.includes(current.to) && home !== current.to) void navigateTo({ to: home, replace: true });
   }, [stay, current?.to, home]); // eslint-disable-line react-hooks/exhaustive-deps -- allowed/navigateTo follow the same inputs
-  // Stay properties wear the xtsy.one look (cream, ink, crimson); restaurants stay black for now.
-  useEffect(() => {
-    if (!stay) return;
-    const root = document.documentElement;
-    root.classList.add("theme-xtsy");
-    return () => root.classList.remove("theme-xtsy");
-  }, [stay]);
   useEffect(() => {
     if (plan && current?.to === "/dashboard" && notInPlan("/dashboard") && home !== "/dashboard") void navigateTo({ to: home, replace: true });
   }, [plan, current?.to, home]); // eslint-disable-line react-hooks/exhaustive-deps -- notInPlan/navigateTo are stable for this check

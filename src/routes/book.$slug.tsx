@@ -37,7 +37,6 @@ interface Draft { arrival: string; hours: number; name: string; phone: string; p
 function BookingPage() {
   const { slug } = Route.useParams();
   const initial = Route.useLoaderData();
-  useEffect(() => { const root = document.documentElement; root.classList.add("theme-xtsy"); return () => root.classList.remove("theme-xtsy"); }, []);
   const [arrival, setArrival] = useState(defaultArrival);
   const [ready, setReady] = useState(false);
   const [hours, setHours] = useState(2);
