@@ -1,5 +1,5 @@
 import { Check, X } from "lucide-react";
-import { FEATURE_NAMES, PUBLIC_FEATURES, SEAT_NAMES, STAY_FEATURES, featureName, priceText, type Feature, type PublicPlan, type SeatApp } from "@/lib/plans";
+import { FEATURE_NAMES, PUBLIC_FEATURES, SEAT_NAMES, STAY_FEATURES, featureName, priceText, type Feature, type PublicPlan, type SeatApp, seatAppsFor } from "@/lib/plans";
 import type { SiteModel } from "@/lib/site-models";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ const rule = <div className="my-3 border-t border-dashed border-[#1F2230]/35" ar
 
 function PlanBill({ model, plan: p, before, onPick }: { model: SiteModel; plan: PublicPlan; before?: PublicPlan | undefined; onPick: () => void }) {
   const adds = listed(model).filter((f) => p.features.includes(f) && !before?.features.includes(f));
-  const seats: SeatApp[] = model.id === "restaurant_pos" ? ["pos", "manager", "waiter"] : ["pos", "manager"];
+  const seats = seatAppsFor(model.id);
   return (
     <Slip highlight={p.highlight}>
       <div className="flex items-start justify-between gap-2">
@@ -46,8 +46,8 @@ function PlanBill({ model, plan: p, before, onPick }: { model: SiteModel; plan: 
       {p.tagline ? <p className="mt-1.5 text-xs leading-snug">{p.tagline}</p> : null}
       {rule}
       <dl className="space-y-1 text-[13px]">
-        {seats.map((a) => (
-          <div key={a} className="flex justify-between gap-2"><dt>{a === "pos" && model.id !== "restaurant_pos" ? "Front desk / counter" : SEAT_NAMES[a]} users</dt><dd className="tabular-nums">{p.seats[a] === null ? "Unlimited" : p.seats[a] === 0 ? "—" : p.seats[a]}</dd></div>
+        {seats.map(([a, label]) => (
+          <div key={a} className="flex justify-between gap-2"><dt>{label} devices</dt><dd className="tabular-nums">{p.seats[a] === null ? "Unlimited" : p.seats[a] === 0 ? "—" : p.seats[a]}</dd></div>
         ))}
       </dl>
       {rule}
@@ -87,7 +87,7 @@ function PricesOnRequest({ model, onPick }: { model: SiteModel; onPick: () => vo
 /** Every plan beside every feature, so nothing hides behind "contact us". */
 export function PlanComparison({ model, plans }: { model: SiteModel; plans: PublicPlan[] }) {
   if (plans.length < 2) return null;
-  const seats: [SeatApp, string][] = model.id === "restaurant_pos" ? [["pos", SEAT_NAMES.pos], ["manager", SEAT_NAMES.manager], ["waiter", SEAT_NAMES.waiter]] : [["pos", "Front desk / counter"], ["manager", SEAT_NAMES.manager]];
+  const seats = seatAppsFor(model.id);
   const features = listed(model).filter((f) => plans.some((p) => p.features.includes(f)));
   return (
     <div className="mt-12">
@@ -109,7 +109,7 @@ export function PlanComparison({ model, plans }: { model: SiteModel; plans: Publ
           <tbody className="divide-y divide-[#1F2230]/10">
             {seats.map(([app, label]) => (
               <tr key={app}>
-                <th scope="row" className="sticky left-0 bg-white p-3 font-semibold">{label} users</th>
+                <th scope="row" className="sticky left-0 bg-white p-3 font-semibold">{label} devices</th>
                 {plans.map((p) => { const n = p.seats[app]; return <td key={p.id} className={cn("p-3 text-center tabular-nums", p.highlight && "bg-[#A12444]/5", n === 0 && "text-muted-foreground")}>{n === null ? "Unlimited" : n === 0 ? "—" : n}</td>; })}
               </tr>
             ))}

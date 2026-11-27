@@ -204,7 +204,7 @@ function RestaurantDetail({ r, plans, model, route, go, stays, product }: { r: R
               <Stat label={stays ? "Café & room QR orders · 7 days" : "QR orders · 7 days"} value={r.guestOrders7d} />
               <Stat label="Paid until" value={r.account?.complimentary ? "Complimentary" : r.account?.paidUntil ? new Date(r.account.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "No end"} tone={r.account?.live ? undefined : "bad"} />
             </div>
-            <SeatsSummary r={r} />
+            <SeatsSummary r={r} product={product} />
             <RestaurantInfo key={r.id} r={r} />
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => pick("users")}><Building2 />Users and Sign in as</Button>
@@ -214,7 +214,7 @@ function RestaurantDetail({ r, plans, model, route, go, stays, product }: { r: R
         ) : null}
         {section === "subscription" ? <SubscriptionSection key={r.id} r={r} plans={plans} product={product} /> : null}
         {section === "users" ? <ConsoleLogins restaurantId={r.id} restaurantName={r.name} /> : null}
-        {section === "devices" ? <DevicesSection r={r} /> : null}
+        {section === "devices" ? <DevicesSection r={r} product={product} /> : null}
         {section === "integrations" && !stays ? <ConsoleIntegrations r={r} plan={plan} /> : null}
         {section === "channel" && stays ? <ConsoleChannel name={r.name} /> : null}
         {section === "activity" ? <ConsoleActivity restaurantId={r.id} /> : null}

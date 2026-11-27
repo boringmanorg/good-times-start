@@ -68,3 +68,12 @@ describe("per-product console and features", () => {
   });
 });
 
+
+describe("each model has its own device seats", () => {
+  it("only Restaurant POS has Waiter Pro", async () => {
+    const { seatAppsFor } = await import("./plans");
+    expect(seatAppsFor("restaurant_pos").map(([a]) => a)).toEqual(["pos", "waiter", "manager"]);
+    expect(seatAppsFor("hostel_pos")).toEqual([["pos", "Front Desk"], ["manager", "Property Manager"]]);
+    expect(seatAppsFor("tourism_pos").map(([, n]) => n)).toEqual(["Booking desk", "Tour Manager"]);
+  });
+});

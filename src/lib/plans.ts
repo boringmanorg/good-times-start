@@ -105,6 +105,24 @@ export const PUBLIC_FEATURES: Feature[] = FEATURES.filter((f) => !NOT_ON_PRICE_C
 export const SEAT_NAMES: Record<SeatApp, string> = { manager: "Admin / Manager", pos: "Billdesk", waiter: "Waiter" };
 export const SEAT_APPS: Record<SeatApp, string> = { manager: "POS Manager", pos: "POS Billdesk", waiter: "Waiter Pro" };
 
+/**
+ * Each POS model has its own apps, so its own device seats. Restaurant POS: POS Manager, POS
+ * Billdesk, Waiter Pro. Stay products (Hostel/Hotel/Resort POS): Property Manager and Front Desk,
+ * no waiter. Tourism POS: Tour Manager and Booking desk. The catalogue keeps one set of columns
+ * (admin_seats = the manager app, billdesk_seats = the counter/desk app, waiter_seats = Waiter Pro).
+ */
+export type SeatModel = "restaurant" | "stay" | "tourism";
+export const seatModelOf = (product: string | null | undefined): SeatModel =>
+  product === "hostel_pos" || product === "hotel_pos" || product === "resort_pos" ? "stay" : product === "tourism_pos" ? "tourism" : "restaurant";
+export const SEAT_APPS_BY_MODEL: Record<SeatModel, Partial<Record<SeatApp, string>>> = {
+  restaurant: SEAT_APPS,
+  stay: { pos: "Front Desk", manager: "Property Manager" },
+  tourism: { pos: "Booking desk", manager: "Tour Manager" },
+};
+/** The seat apps a model has, in display order, with their names. */
+export const seatAppsFor = (product: string | null | undefined): [SeatApp, string][] =>
+  (["pos", "waiter", "manager"] as SeatApp[]).flatMap((a) => { const n = SEAT_APPS_BY_MODEL[seatModelOf(product)][a]; return n ? [[a, n] as [SeatApp, string]] : []; });
+
 export interface PublicPlan {
   id: PlanId;
   name: string;

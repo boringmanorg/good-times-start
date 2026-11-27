@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { setAppMode } from "@/lib/app-mode";
 import { useStaff } from "@/lib/staff";
 import logo from "@/assets/logo.png";
+import { signInPath } from "@/lib/login-doors";
 
 /** Where POS Manager opens: marks this window as POS Manager, then goes to the dashboard. */
 export const Route = createFileRoute("/manager")({
@@ -16,7 +17,7 @@ function ManagerStart() {
   useEffect(() => {
     setAppMode("manager");
     if (loading) return;
-    void navigate({ to: user ? "/dashboard" : "/login", replace: true });
+    void navigate({ to: user ? "/dashboard" : signInPath(), replace: true });
   }, [user, loading, navigate]);
   return <div className="grid min-h-screen place-items-center bg-background"><img src={logo} alt="POS Manager" width={44} height={44} className="rounded-xl opacity-80" /></div>;
 }

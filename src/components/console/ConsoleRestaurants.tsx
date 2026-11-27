@@ -4,7 +4,7 @@ import { Ban, Check, History, IndianRupee, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ago, loadPayments, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
-import { featureName, featuresFor, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
+import { featureName, featuresFor, SEAT_APPS, seatAppsFor, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { field } from "./ConsoleBits";
 import { planProduct, STAY_PRODUCTS, type ProductId } from "@/lib/products";
@@ -135,13 +135,14 @@ function Renewal({ r, price }: { r: RestaurantRow; price: number }) {
 }
 
 /** Device seats in use per app, from the plan (or its overrides). */
-export function SeatsSummary({ r }: { r: RestaurantRow }) {
+export function SeatsSummary({ r, product }: { r: RestaurantRow; product?: string | undefined }) {
+  const names = Object.fromEntries(seatAppsFor(product)) as Partial<Record<SeatApp, string>>;
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      {(["pos", "waiter", "manager"] as SeatApp[]).map((app) => {
+      {seatAppsFor(product).map(([app]) => {
         const s = r.seats[app];
         const full = s.limit !== null && s.used >= s.limit && s.limit > 0;
-        return <div key={app} className="rounded-xl bg-secondary p-3"><p className="text-xs text-muted-foreground">{SEAT_APPS[app]} devices</p>
+        return <div key={app} className="rounded-xl bg-secondary p-3"><p className="text-xs text-muted-foreground">{names[app]} devices</p>
           <p className={cn("text-xl font-bold tabular-nums", full && "text-warning")}>{s.limit === 0 ? "Not in plan" : seatUseText(s)}</p></div>;
       })}
     </div>
@@ -196,9 +197,9 @@ export function SubscriptionSection({ r, plans, product = "restaurant_pos" }: { 
         <fieldset>
           <legend className="text-sm font-medium">Device seats <span className="font-normal text-muted-foreground">(blank = plan's)</span></legend>
           <div className="mt-1 grid grid-cols-3 gap-2">
-            {(["pos", "waiter", "manager"] as SeatApp[]).map((app) => {
+            {seatAppsFor(stays ? "hostel_pos" : "restaurant_pos").map(([app, label]) => {
               const planSeats = app === "pos" ? planRow?.billdesk_seats : app === "waiter" ? planRow?.waiter_seats : planRow?.admin_seats;
-              return <label key={app} className="text-xs text-muted-foreground">{SEAT_APPS[app]}
+              return <label key={app} className="text-xs text-muted-foreground">{label}
                 <input inputMode="numeric" value={seats[app] ?? ""} placeholder={planSeats === null || planSeats === undefined ? "any" : String(planSeats)}
                   onChange={(e) => setSeats((s) => ({ ...s, [app]: e.target.value.replace(/\D/g, "").slice(0, 4) }))} className={field} /></label>;
             })}
@@ -237,7 +238,8 @@ export function SubscriptionSection({ r, plans, product = "restaurant_pos" }: { 
 }
 
 /** The restaurant's devices: activate, block or release each one. */
-export function DevicesSection({ r }: { r: RestaurantRow }) {
+export function DevicesSection({ r, product }: { r: RestaurantRow; product?: string | undefined }) {
+  const appName = (a: string) => (Object.fromEntries(seatAppsFor(product)) as Record<string, string>)[a] ?? SEAT_APPS[a as SeatApp] ?? "—";
   const queryClient = useQueryClient();
   const device = async (id: string, action: "active" | "blocked" | "release") => {
     try { await setTerminal(r.id, id, action); toast.success(action === "release" ? "Device released" : action === "blocked" ? "Device blocked" : "Device activated"); await queryClient.invalidateQueries({ queryKey: ["console"] }); }
@@ -245,7 +247,7 @@ export function DevicesSection({ r }: { r: RestaurantRow }) {
   };
   return (
     <div className="space-y-4">
-      <SeatsSummary r={r} />
+      <SeatsSummary r={r} product={product} />
       <div className="overflow-x-auto rounded-xl border border-border px-3">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="text-xs text-muted-foreground"><tr><th className="py-2 pr-3">Device</th><th className="pr-3">App</th><th className="pr-3">Login</th><th className="pr-3">Last seen</th><th className="pr-3">Status</th><th /></tr></thead>
@@ -253,7 +255,7 @@ export function DevicesSection({ r }: { r: RestaurantRow }) {
             {r.devices.map((d) => (
               <tr key={d.deviceId}>
                 <td className="py-2 pr-3"><span className="font-medium">{d.description || d.series || d.deviceId.slice(0, 8)}</span><span className="block text-xs text-muted-foreground">{d.kind}{d.location ? ` · ${d.location}` : ""}</span></td>
-                <td className="pr-3">{SEAT_APPS[d.app as SeatApp] ?? "—"}</td>
+                <td className="pr-3">{appName(d.app)}</td>
                 <td className="pr-3 text-muted-foreground">{d.login.replace("@xtsy.pos", "")}</td>
                 <td className="pr-3 text-muted-foreground">{ago(d.lastSeen)}</td>
                 <td className="pr-3"><span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", d.status === "active" ? "bg-success/15 text-success" : d.status === "blocked" ? "bg-destructive/15 text-destructive" : "bg-gold/15 text-warning")}>

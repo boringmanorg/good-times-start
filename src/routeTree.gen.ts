@@ -43,7 +43,10 @@ import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
 import { Route as HostelLoginRouteImport } from './routes/hostel.login'
+import { Route as HotelLoginRouteImport } from './routes/hotel.login'
 import { Route as OrderSlugRouteImport } from './routes/order.$slug'
+import { Route as ResortLoginRouteImport } from './routes/resort.login'
+import { Route as RestaurantLoginRouteImport } from './routes/restaurant.login'
 import { Route as StaysIndexRouteImport } from './routes/stays.index'
 import { Route as StaysBookingsRouteImport } from './routes/stays.bookings'
 import { Route as StaysPropertyRouteImport } from './routes/stays.property'
@@ -53,6 +56,7 @@ import { Route as TabBistroIndexRouteImport } from './routes/tab-bistro.index'
 import { Route as TabBistroGiftCardsRouteImport } from './routes/tab-bistro.gift-cards'
 import { Route as TabBistroMenuRouteImport } from './routes/tab-bistro.menu'
 import { Route as TabBistroVisitRouteImport } from './routes/tab-bistro.visit'
+import { Route as TourismLoginRouteImport } from './routes/tourism.login'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -224,9 +228,24 @@ const HostelLoginRoute = HostelLoginRouteImport.update({
   path: '/hostel/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HotelLoginRoute = HotelLoginRouteImport.update({
+  id: '/hotel/login',
+  path: '/hotel/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderSlugRoute = OrderSlugRouteImport.update({
   id: '/order/$slug',
   path: '/order/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResortLoginRoute = ResortLoginRouteImport.update({
+  id: '/resort/login',
+  path: '/resort/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RestaurantLoginRoute = RestaurantLoginRouteImport.update({
+  id: '/restaurant/login',
+  path: '/restaurant/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StaysIndexRoute = StaysIndexRouteImport.update({
@@ -274,6 +293,11 @@ const TabBistroVisitRoute = TabBistroVisitRouteImport.update({
   path: '/visit',
   getParentRoute: () => TabBistroRoute,
 } as any)
+const TourismLoginRoute = TourismLoginRouteImport.update({
+  id: '/tourism/login',
+  path: '/tourism/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -310,7 +334,10 @@ export interface FileRoutesByFullPath {
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/hostel/login': typeof HostelLoginRoute
+  '/hotel/login': typeof HotelLoginRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/resort/login': typeof ResortLoginRoute
+  '/restaurant/login': typeof RestaurantLoginRoute
   '/stays/bookings': typeof StaysBookingsRoute
   '/stays/property': typeof StaysPropertyRoute
   '/stays/rates': typeof StaysRatesRoute
@@ -318,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
   '/tab-bistro/menu': typeof TabBistroMenuRoute
   '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/tourism/login': typeof TourismLoginRoute
   '/stays/': typeof StaysIndexRoute
   '/tab-bistro/': typeof TabBistroIndexRoute
 }
@@ -355,7 +383,10 @@ export interface FileRoutesByTo {
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/hostel/login': typeof HostelLoginRoute
+  '/hotel/login': typeof HotelLoginRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/resort/login': typeof ResortLoginRoute
+  '/restaurant/login': typeof RestaurantLoginRoute
   '/stays/bookings': typeof StaysBookingsRoute
   '/stays/property': typeof StaysPropertyRoute
   '/stays/rates': typeof StaysRatesRoute
@@ -363,6 +394,7 @@ export interface FileRoutesByTo {
   '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
   '/tab-bistro/menu': typeof TabBistroMenuRoute
   '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/tourism/login': typeof TourismLoginRoute
   '/stays': typeof StaysIndexRoute
   '/tab-bistro': typeof TabBistroIndexRoute
 }
@@ -402,7 +434,10 @@ export interface FileRoutesById {
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
   '/hostel/login': typeof HostelLoginRoute
+  '/hotel/login': typeof HotelLoginRoute
   '/order/$slug': typeof OrderSlugRoute
+  '/resort/login': typeof ResortLoginRoute
+  '/restaurant/login': typeof RestaurantLoginRoute
   '/stays/bookings': typeof StaysBookingsRoute
   '/stays/property': typeof StaysPropertyRoute
   '/stays/rates': typeof StaysRatesRoute
@@ -410,6 +445,7 @@ export interface FileRoutesById {
   '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
   '/tab-bistro/menu': typeof TabBistroMenuRoute
   '/tab-bistro/visit': typeof TabBistroVisitRoute
+  '/tourism/login': typeof TourismLoginRoute
   '/stays/': typeof StaysIndexRoute
   '/tab-bistro/': typeof TabBistroIndexRoute
 }
@@ -450,7 +486,10 @@ export interface FileRouteTypes {
     | '/xtsy-pos'
     | '/book/$slug'
     | '/hostel/login'
+    | '/hotel/login'
     | '/order/$slug'
+    | '/resort/login'
+    | '/restaurant/login'
     | '/stays/bookings'
     | '/stays/property'
     | '/stays/rates'
@@ -458,6 +497,7 @@ export interface FileRouteTypes {
     | '/tab-bistro/gift-cards'
     | '/tab-bistro/menu'
     | '/tab-bistro/visit'
+    | '/tourism/login'
     | '/stays/'
     | '/tab-bistro/'
   fileRoutesByTo: FileRoutesByTo
@@ -495,7 +535,10 @@ export interface FileRouteTypes {
     | '/xtsy-pos'
     | '/book/$slug'
     | '/hostel/login'
+    | '/hotel/login'
     | '/order/$slug'
+    | '/resort/login'
+    | '/restaurant/login'
     | '/stays/bookings'
     | '/stays/property'
     | '/stays/rates'
@@ -503,6 +546,7 @@ export interface FileRouteTypes {
     | '/tab-bistro/gift-cards'
     | '/tab-bistro/menu'
     | '/tab-bistro/visit'
+    | '/tourism/login'
     | '/stays'
     | '/tab-bistro'
   id:
@@ -541,7 +585,10 @@ export interface FileRouteTypes {
     | '/xtsy-pos'
     | '/book/$slug'
     | '/hostel/login'
+    | '/hotel/login'
     | '/order/$slug'
+    | '/resort/login'
+    | '/restaurant/login'
     | '/stays/bookings'
     | '/stays/property'
     | '/stays/rates'
@@ -549,6 +596,7 @@ export interface FileRouteTypes {
     | '/tab-bistro/gift-cards'
     | '/tab-bistro/menu'
     | '/tab-bistro/visit'
+    | '/tourism/login'
     | '/stays/'
     | '/tab-bistro/'
   fileRoutesById: FileRoutesById
@@ -588,11 +636,15 @@ export interface RootRouteChildren {
   XtsyPosRoute: typeof XtsyPosRoute
   BookSlugRoute: typeof BookSlugRoute
   HostelLoginRoute: typeof HostelLoginRoute
+  HotelLoginRoute: typeof HotelLoginRoute
   OrderSlugRoute: typeof OrderSlugRoute
+  ResortLoginRoute: typeof ResortLoginRoute
+  RestaurantLoginRoute: typeof RestaurantLoginRoute
   StaysBookingsRoute: typeof StaysBookingsRoute
   StaysPropertyRoute: typeof StaysPropertyRoute
   StaysRatesRoute: typeof StaysRatesRoute
   StaysReportsRoute: typeof StaysReportsRoute
+  TourismLoginRoute: typeof TourismLoginRoute
   StaysIndexRoute: typeof StaysIndexRoute
 }
 
@@ -836,11 +888,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HostelLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hotel/login': {
+      id: '/hotel/login'
+      path: '/hotel/login'
+      fullPath: '/hotel/login'
+      preLoaderRoute: typeof HotelLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order/$slug': {
       id: '/order/$slug'
       path: '/order/$slug'
       fullPath: '/order/$slug'
       preLoaderRoute: typeof OrderSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resort/login': {
+      id: '/resort/login'
+      path: '/resort/login'
+      fullPath: '/resort/login'
+      preLoaderRoute: typeof ResortLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant/login': {
+      id: '/restaurant/login'
+      path: '/restaurant/login'
+      fullPath: '/restaurant/login'
+      preLoaderRoute: typeof RestaurantLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stays/': {
@@ -906,6 +979,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabBistroVisitRouteImport
       parentRoute: typeof TabBistroRoute
     }
+    '/tourism/login': {
+      id: '/tourism/login'
+      path: '/tourism/login'
+      fullPath: '/tourism/login'
+      preLoaderRoute: typeof TourismLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -962,11 +1042,15 @@ const rootRouteChildren: RootRouteChildren = {
   XtsyPosRoute: XtsyPosRoute,
   BookSlugRoute: BookSlugRoute,
   HostelLoginRoute: HostelLoginRoute,
+  HotelLoginRoute: HotelLoginRoute,
   OrderSlugRoute: OrderSlugRoute,
+  ResortLoginRoute: ResortLoginRoute,
+  RestaurantLoginRoute: RestaurantLoginRoute,
   StaysBookingsRoute: StaysBookingsRoute,
   StaysPropertyRoute: StaysPropertyRoute,
   StaysRatesRoute: StaysRatesRoute,
   StaysReportsRoute: StaysReportsRoute,
+  TourismLoginRoute: TourismLoginRoute,
   StaysIndexRoute: StaysIndexRoute,
 }
 export const routeTree = rootRouteImport

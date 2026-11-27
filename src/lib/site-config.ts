@@ -18,7 +18,8 @@ export const MARKETING_HOSTS: string[] = ["xtsypos.test"];
 export const SITE_PATH = "/xtsy-pos";
 
 /** Staff sign-in (POS Manager, POS Billdesk, Waiter Pro). Never linked from the website. */
-export const STAFF_LOGIN_PATH = "/login";
+/** Restaurant POS sign-in. Every model has its own door (login-doors.ts); /login still opens Restaurant POS. */
+export const STAFF_LOGIN_PATH = "/restaurant/login";
 
 /**
  * On the app's own address the bare home page ("/", no query) is the website; "/?table=…" etc. stay

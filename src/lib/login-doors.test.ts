@@ -1,34 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { DOORS, doorOf, doorPathFor, doorsFor, homeFor, wrongDoorMessage } from "./login-doors";
+import { DOORS, DOOR_LIST, doorOf, doorPathFor, doorsFor, homeFor, wrongDoorMessage } from "./login-doors";
+import { PRODUCTS } from "./products";
 
-describe("login doors", () => {
-  it("sends stay products to the hostel door and everything else to /login", () => {
-    expect(doorOf("hostel_pos")).toBe("stay");
-    expect(doorOf("hotel_pos")).toBe("stay");
-    expect(doorOf("resort_pos")).toBe("stay");
-    expect(doorOf("restaurant_pos")).toBe("restaurant");
-    expect(doorOf(undefined)).toBe("restaurant");
-    expect(doorOf("nonsense")).toBe("restaurant");
+describe("one sign-in per POS model", () => {
+  it("every product has its own door and path", () => {
+    expect(DOOR_LIST.map((d) => d.product).sort()).toEqual(PRODUCTS.map((p) => p.id).sort());
+    expect(new Set(DOOR_LIST.map((d) => d.path)).size).toBe(DOOR_LIST.length);
+    expect(doorPathFor("restaurant_pos")).toBe("/restaurant/login");
     expect(doorPathFor("hostel_pos")).toBe("/hostel/login");
-    expect(doorPathFor(null)).toBe("/login");
+    expect(doorPathFor("hotel_pos")).toBe("/hotel/login");
+    expect(doorPathFor("resort_pos")).toBe("/resort/login");
+    expect(doorPathFor("tourism_pos")).toBe("/tourism/login");
+    expect(doorOf(undefined)).toBe("restaurant_pos");
+    expect(doorOf("nonsense")).toBe("restaurant_pos");
+  });
+  it("only launched models take sign-ins", () => {
+    expect(DOOR_LIST.filter((d) => d.open).map((d) => d.product).sort()).toEqual(["hostel_pos", "restaurant_pos"]);
   });
   it("opens each app on its own home", () => {
-    expect(homeFor("stay", "manager")).toBe("/stays");
-    expect(homeFor("stay", "pos")).toBe("/front-desk");
-    expect(homeFor("restaurant", "pos")).toBe("/tables");
-    expect(homeFor("restaurant", "waiter")).toBe("/waiter");
-    expect(homeFor("restaurant", "manager")).toBe("/dashboard");
+    expect(homeFor("hostel_pos", "manager")).toBe("/stays");
+    expect(homeFor("hostel_pos", "pos")).toBe("/front-desk");
+    expect(homeFor("restaurant_pos", "pos")).toBe("/tables");
+    expect(homeFor("restaurant_pos", "waiter")).toBe("/waiter");
+    expect(homeFor("restaurant_pos", "manager")).toBe("/dashboard");
   });
-  it("stay door offers no waiter app", () => {
-    expect(DOORS.stay.apps).not.toContain("waiter");
+  it("stay doors offer no waiter app", () => {
+    expect(DOORS.hostel_pos.apps).not.toContain("waiter");
   });
-  it("refuses the wrong door and names the right one", () => {
-    expect(wrongDoorMessage("stay", ["hostel_pos"])).toBeNull();
-    expect(wrongDoorMessage("restaurant", [null])).toBeNull();
-    expect(wrongDoorMessage("restaurant", ["hostel_pos"])).toBe("This login is for Hostel POS. Sign in at /hostel/login instead.");
-    expect(wrongDoorMessage("stay", ["restaurant_pos"])).toBe("This login is for Restaurant POS. Sign in at /login instead.");
-    // A person in both kinds of outlet may use either door; a brand-new login with none too.
-    expect(doorsFor(["hostel_pos", null]).sort()).toEqual(["restaurant", "stay"]);
-    expect(wrongDoorMessage("stay", [])).toBeNull();
+  it("refuses another product's door and names the right one", () => {
+    expect(wrongDoorMessage("hostel_pos", ["hostel_pos"])).toBeNull();
+    expect(wrongDoorMessage("restaurant_pos", [null])).toBeNull();
+    expect(wrongDoorMessage("restaurant_pos", ["hostel_pos"])).toBe("This login is for Hostel POS. Sign in at /hostel/login instead.");
+    expect(wrongDoorMessage("hostel_pos", ["restaurant_pos"])).toBe("This login is for Restaurant POS. Sign in at /restaurant/login instead.");
+    // Hostel and Hotel are separate products now: a hostel login can't use the hotel door.
+    expect(wrongDoorMessage("hotel_pos", ["hostel_pos"])).toMatch(/Hostel POS/);
+    expect(doorsFor(["hostel_pos", null]).sort()).toEqual(["hostel_pos", "restaurant_pos"]);
+    expect(wrongDoorMessage("hostel_pos", [])).toBeNull();
   });
 });

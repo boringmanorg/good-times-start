@@ -6,31 +6,35 @@ import { Button } from "@/components/ui/button";
 import { setAppMode, syncAppModeFromUrl, useChosenApp } from "@/lib/app-mode";
 import { useStaff } from "@/lib/staff";
 import { APPS, LOGINS, appsFor, emailFromInput, loginForEmail, type AppKind } from "@/lib/staff-login-logic";
-import { DOORS, doorOf, homeFor, rememberDoor, wrongDoorMessage, type Door } from "@/lib/login-doors";
+import { DOORS, DOOR_LIST, doorOf, homeFor, isStayDoor, rememberDoor, wrongDoorMessage, type Door } from "@/lib/login-doors";
+import { freeDeviceFor } from "@/lib/device-switch";
+import { productById } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 
-const APP_ICONS: Record<Door, Record<AppKind, typeof Store>> = {
+const APP_ICONS: Record<"restaurant" | "stay", Record<AppKind, typeof Store>> = {
   restaurant: { manager: LayoutDashboard, pos: Store, waiter: Tablet },
   stay: { manager: BedDouble, pos: Users, waiter: Tablet },
 };
 const input = "mt-1 w-full rounded-xl border border-input bg-card px-3.5 py-3 text-base";
 
-/** The products of the outlets a just-signed-in person belongs to. */
-async function productsOf(userId: string): Promise<(string | null)[]> {
-  const { data, error } = await supabase.from("restaurant_members").select("restaurants(branding)").eq("user_id", userId);
+/** The outlets (id and product) a just-signed-in person belongs to. */
+async function outletsOf(userId: string): Promise<{ id: string; product: string | null }[]> {
+  const { data, error } = await supabase.from("restaurant_members").select("restaurant_id, restaurants(branding)").eq("user_id", userId);
   if (error) throw error;
   return (data ?? []).map((row) => {
-    const b = (row as { restaurants?: { branding?: unknown } | null }).restaurants?.branding;
+    const r = row as { restaurant_id: string; restaurants?: { branding?: unknown } | null };
+    const b = r.restaurants?.branding;
     const p = b && typeof b === "object" ? (b as { product?: unknown }).product : undefined;
-    return typeof p === "string" ? p : null;
+    return { id: r.restaurant_id, product: typeof p === "string" ? p : null };
   });
 }
 
 /** One sign-in page per XTSY POS model; `door` picks the product, its apps and its look. */
 export function SignInScreen({ door }: { door: Door }) {
   const info = DOORS[door];
-  const stay = door === "stay";
+  const stay = isStayDoor(door);
+  const [elsewhere, setElsewhere] = useState<Door | null>(null);
   const navigate = useNavigate();
   const { user, loading, refresh } = useStaff();
   useEffect(() => { syncAppModeFromUrl(); }, []);
@@ -43,7 +47,8 @@ export function SignInScreen({ door }: { door: Door }) {
   useEffect(() => {
     if (loading || !user || submitting) return;
     const own = doorOf(user.product);
-    if (user.restaurantId && own !== door) { window.location.replace(DOORS[own].path); return; }
+    // Signed in to another product on this device: say so and offer to sign out, never bounce silently.
+    if (user.restaurantId && own !== door) { setElsewhere(own); return; }
     const apps = appsFor(user.login, user.role === "unknown" ? null : user.role).filter((a) => info.apps.includes(a));
     const target: AppKind = chosen && apps.includes(chosen) ? chosen : apps[0] ?? chosen ?? "manager";
     setAppMode(target);
@@ -79,9 +84,12 @@ export function SignInScreen({ door }: { door: Door }) {
         return;
       }
       // Each product has its own door: a restaurant login can't open the property app, and back.
-      const products = await productsOf(result.data.user.id).catch(() => null);
-      const wrong = products ? wrongDoorMessage(door, products) : null;
+      const outlets = await outletsOf(result.data.user.id).catch(() => null);
+      const wrong = outlets ? wrongDoorMessage(door, outlets.map((o) => o.product)) : null;
       if (wrong) { await supabase.auth.signOut(); setMessage(wrong); return; }
+      // This device may still hold another outlet's copy (e.g. the preview after TAB Bistro): clear it if safe.
+      const blocked = outlets?.length ? await freeDeviceFor(outlets.map((o) => o.id)) : null;
+      if (blocked) { await supabase.auth.signOut(); setMessage(blocked); return; }
       const internal = loginForEmail(email);
       const own = appsFor(internal, null);
       if (app && internal && !own.includes(app)) {
@@ -100,9 +108,15 @@ export function SignInScreen({ door }: { door: Door }) {
     }
   };
 
-  const AppIcon = app ? APP_ICONS[door][app] : stay ? BedDouble : Store;
-  const brand = stay ? "Hostel POS" : "XTSY POS";
-  const sub = stay ? "PMS + channel manager by XTSY" : "POS by XTSY";
+  const AppIcon = app ? APP_ICONS[stay ? "stay" : "restaurant"][app] : stay ? BedDouble : Store;
+  const brand = info.name;
+  const sub = stay ? "PMS · channel manager · booking engine" : door === "tourism_pos" ? "Tours and rentals by XTSY" : "POS by XTSY";
+  const others = DOOR_LIST.filter((d) => d.product !== door && d.open);
+  const otherLinks = <>{others.map((d, i) => <span key={d.product}>{i ? " · " : ""}<a className="underline" href={d.path}>{d.name} sign-in</a></span>)}</>;
+  const signOutHere = async () => {
+    setBusy(true);
+    try { await supabase.auth.signOut(); } finally { window.location.replace(info.path); }
+  };
   return (
     <main className={cn("grid min-h-screen bg-background lg:grid-cols-[1fr_minmax(26rem,34rem)]", stay && "theme-xtsy")}>
       <aside className={cn("hidden flex-col justify-between p-10 lg:flex", stay ? "bg-[#1F2230] text-[#FAF7F2]" : "bg-sidebar text-sidebar-foreground")}>
@@ -112,7 +126,7 @@ export function SignInScreen({ door }: { door: Door }) {
           <p className="mt-4 opacity-75">{app ? nameOf(app).for : info.pitchBody}</p>
         </div>
         <div className="flex items-center justify-between text-xs opacity-60">
-          <span>{stay ? <>Running a restaurant? <a className="underline" href={DOORS.restaurant.path}>Restaurant POS sign-in</a></> : <>Running a hostel? <a className="underline" href={DOORS.stay.path}>Hostel POS sign-in</a></>}</span>
+          <span>Other XTSY POS models: {otherLinks}</span>
           <span>Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by XTSY</span>
         </div>
       </aside>
@@ -125,14 +139,29 @@ export function SignInScreen({ door }: { door: Door }) {
             <span className="grid size-11 place-items-center rounded-2xl bg-primary-tint text-primary"><AppIcon className="size-5" /></span>
             <div>
               <h1 className="text-2xl font-bold leading-tight">Sign in</h1>
-              <p className="text-sm text-muted-foreground">{app ? nameOf(app).name : `${info.name} · choose your screen`}</p>
+              <p className="text-sm text-muted-foreground">{!info.open ? `${info.name} · coming soon` : app ? nameOf(app).name : `${info.name} · choose your screen`}</p>
             </div>
           </div>
 
-          {!app ? (
+          {elsewhere ? (
+            <div className="mt-6 rounded-2xl border border-border bg-card p-4" role="status">
+              <p className="font-semibold">This device is signed in to {user?.restaurantName ?? "another outlet"} on {productById(elsewhere).name}.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Each XTSY POS model has its own sign-in. To use {info.name} here, sign out first; nothing that has reached the cloud is lost.</p>
+              <div className="mt-4 grid gap-2">
+                <Button disabled={busy} onClick={() => void signOutHere()}>{busy ? "Signing out…" : `Sign out and use ${info.name}`}</Button>
+                <a href={DOORS[elsewhere].path} className="inline-flex h-10 items-center justify-center rounded-full border border-border text-sm font-semibold hover:bg-secondary">Open {productById(elsewhere).name} instead</a>
+              </div>
+            </div>
+          ) : !info.open ? (
+            <div className="mt-6 rounded-2xl border border-border bg-card p-4">
+              <p className="font-semibold">{info.name} is coming soon.</p>
+              <p className="mt-1 text-sm text-muted-foreground">{info.pitchBody.replace(/ Coming soon\.$/, "")} Sign-in opens here when it launches.</p>
+              <a href={`${info.site}#enquire`} className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground hover:bg-primary-hover">Join the waitlist</a>
+            </div>
+          ) : !app ? (
             <div className="mt-5 grid gap-2" role="radiogroup" aria-label="Screen">
               {info.apps.map((a) => {
-                const Icon = APP_ICONS[door][a];
+                const Icon = APP_ICONS[stay ? "stay" : "restaurant"][a];
                 return (
                   <button key={a} type="button" role="radio" aria-checked={false} onClick={() => pickApp(a)}
                     className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-left hover:border-primary">
@@ -161,9 +190,9 @@ export function SignInScreen({ door }: { door: Door }) {
               </div>
             </form>
           )}
-          <p className="mt-8 text-center text-xs text-muted-foreground">Once signed in, this device stays signed in and keeps working offline.</p>
+          {info.open ? <p className="mt-8 text-center text-xs text-muted-foreground">Once signed in, this device stays signed in and keeps working offline.</p> : null}
           <p className="mt-3 text-center text-xs text-muted-foreground lg:hidden">
-            {stay ? <a className="underline" href={DOORS.restaurant.path}>Restaurant POS sign-in</a> : <a className="underline" href={DOORS.stay.path}>Hostel POS sign-in</a>}
+            {otherLinks}
           </p>
         </section>
       </div>

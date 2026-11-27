@@ -39,7 +39,7 @@ import { applyAppUpdate, checkForAppUpdate, currentBuildId } from "@/lib/app-upd
 import { broadcastSyncAll } from "@/lib/terminal-signal";
 import { isFramedPath } from "@/lib/framed-paths";
 import { useEntitlements } from "@/lib/use-entitlements";
-import { SEAT_APPS, featureOn, subscriptionText, whatsappLink, type Feature } from "@/lib/plans";
+import { SEAT_APPS, featureOn, seatAppsFor, subscriptionText, whatsappLink, type Feature } from "@/lib/plans";
 import { AppUpdateWatcher } from "./AppUpdateWatcher";
 import { TerminalWaiting } from "./TerminalApproval";
 import { SubscriptionExpired } from "./SubscriptionExpired";
@@ -359,7 +359,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   // Beyond the plan's device seats for this app: wait for a seat (the owner's own devices never wait).
   if (staffApp && user && terminal === "over_plan") {
     const seatApp = pathname.startsWith("/waiter") ? "waiter" : app;
-    return <AccessBlocked problem={`${plan ? `Your ${plan.planName} plan` : "Your plan"} has no free ${SEAT_APPS[seatApp]} device left. Ask the admin to release an old device in Settings → Terminals, or contact XTSY to add more.`} own={null} />;
+    return <AccessBlocked problem={`${plan ? `Your ${plan.planName} plan` : "Your plan"} has no free ${(Object.fromEntries(seatAppsFor(user.product)) as Record<string, string>)[seatApp] ?? SEAT_APPS[seatApp]} device left. Ask the admin to release an old device in Settings → Terminals, or contact XTSY to add more.`} own={null} />;
   }
   // Waiter Pro comes with Pro and Enterprise / Brand.
   if (staffApp && user && pathname.startsWith("/waiter") && !featureOn(plan, "waiter_app")) {

@@ -8,8 +8,8 @@ export const Route = createFileRoute("/login")({
     meta: [
       { title: "Sign in — Restaurant POS by XTSY" },
       { name: "description", content: description },
-      { name: "robots", content: "noindex" }, { property: "og:title", content: "Sign in — Restaurant POS by XTSY" }, { property: "og:description", content: description }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },
+      { name: "robots", content: "noindex" }, { property: "og:title", content: "Sign in — Restaurant POS by XTSY" }, { property: "og:description", content: description }, { property: "og:type", content: "website" },
     ],
   }),
-  component: () => <SignInScreen door="restaurant" />,
+  component: () => <SignInScreen door="restaurant_pos" />,
 });

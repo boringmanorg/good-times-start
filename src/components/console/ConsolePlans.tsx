@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { loadPlans, savePlan, type PlanRow } from "@/lib/console-api";
 import { featureName, featuresFor, isStayPlan, STARTER_FEATURES, type Feature } from "@/lib/plans";
 import { newPlanId, planProduct, productById, PRODUCTS, type ProductId } from "@/lib/products";
+import { seatAppsFor } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Panel, field } from "./ConsoleBits";
 import { CatalogueDriftBanner } from "./ConsoleActivity";
@@ -87,13 +88,15 @@ function PlanEditor({ p }: { p: PlanRow }) {
   const [quote, setQuote] = useState(p.quote);
   const [tagline, setTagline] = useState(p.tagline);
   const [seats, setSeats] = useState({ pos: p.billdesk_seats === null ? "" : String(p.billdesk_seats), waiter: p.waiter_seats === null ? "" : String(p.waiter_seats), manager: p.admin_seats === null ? "" : String(p.admin_seats) });
+  // Models without Waiter Pro (stays, tourism) always save 0 waiter seats.
+  const hasWaiter = seatAppsFor(planProduct(p.id)).some(([a]) => a === "waiter");
   const [features, setFeatures] = useState<Partial<Record<Feature, boolean>>>(p.features);
   const [busy, setBusy] = useState(false);
   const num = (s: string) => (s === "" ? null : Number(s));
   const save = async () => {
     setBusy(true);
     try {
-      await savePlan({ id: p.id, name: name.trim() || p.name, monthly: Number(price) || 0, billdesk: num(seats.pos), waiter: num(seats.waiter), admin: num(seats.manager), features, active: true, quote, tagline });
+      await savePlan({ id: p.id, name: name.trim() || p.name, monthly: Number(price) || 0, billdesk: num(seats.pos), waiter: hasWaiter ? num(seats.waiter) : 0, admin: num(seats.manager), features, active: true, quote, tagline });
       toast.success(`${name} saved`);
       await queryClient.invalidateQueries({ queryKey: ["console"] });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the plan"); }
@@ -108,7 +111,7 @@ function PlanEditor({ p }: { p: PlanRow }) {
         <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={quote} onChange={(e) => setQuote(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />Call for quote</label>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
-        {([["pos", "Billdesk"], ["waiter", "Waiter"], ["manager", "Admin / Manager"]] as const).map(([k, l]) => (
+        {seatAppsFor(planProduct(p.id)).map(([k, l]) => (
           <label key={k} className="text-xs text-muted-foreground">{l} seats<input inputMode="numeric" placeholder="any" value={seats[k]} onChange={(e) => setSeats((s) => ({ ...s, [k]: e.target.value.replace(/\D/g, "").slice(0, 4) }))} className={field} /></label>
         ))}
       </div>
