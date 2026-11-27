@@ -166,7 +166,7 @@ function HomePage() {
         <EnquiryForm product={product} setProduct={setProduct} plan={plan} setPlan={setPlan} plansByModel={plansByModel} />
       </SiteSection>
 
-      <ClosingCta title="Your next bill is waiting." text="Restaurant POS is live from ₹199 a month per outlet. Hostels can join the pilot; hotels, resorts and tour desks can join the waitlist." href="#enquire" label="Start a plan" />
+      <ClosingCta title="Your next bill is waiting." text="Restaurant POS is live from ₹449 a month per outlet, and Hostel POS starts at ₹2,299 a month per property. Hotels, resorts and tour desks can join the waitlist." href="#enquire" label="Start a plan" />
     </SiteShell>
   );
 }

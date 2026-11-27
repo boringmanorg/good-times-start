@@ -3,6 +3,10 @@ import { useState, type ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { SITE_MODELS, STATUS_LABEL } from "@/lib/site-models";
 import { cn } from "@/lib/utils";
+import { PUBLIC_PLANS } from "@/lib/plans";
+
+/** Lowest Restaurant POS price, from the standby copy of the catalogue (kept in step by plans.test). */
+const FROM_PRICE = Math.min(...PUBLIC_PLANS.map((p) => p.price ?? Infinity));
 import logo from "@/assets/logo.png";
 
 /*
@@ -26,7 +30,7 @@ function AnnouncementBar() {
   return (
     <div className="bg-[#1F2230] px-4 py-2 text-center text-xs font-semibold text-[#FAF7F2] sm:text-[13px]">
       <span>DPIIT-recognised startup</span><span className="mx-2 opacity-50" aria-hidden="true">·</span>
-      <span>Restaurant POS from ₹199 a month</span><span className="mx-2 hidden opacity-50 sm:inline" aria-hidden="true">·</span>
+      <span>Restaurant POS from ₹{FROM_PRICE.toLocaleString("en-IN")} a month</span><span className="mx-2 hidden opacity-50 sm:inline" aria-hidden="true">·</span>
       <span className="hidden sm:inline">Support 7 days a week</span>
     </div>
   );

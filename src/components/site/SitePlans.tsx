@@ -69,7 +69,7 @@ function PlanBill({ model, plan: p, before, onPick }: { model: SiteModel; plan: 
         <span className="text-[1.9rem] font-bold leading-none tabular-nums">{p.price === null ? "Quote" : `₹${p.price.toLocaleString("en-IN")}`}</span>
       </div>
       <p className="mt-1 text-right text-xs">{p.price === null ? "call us" : model.id === "restaurant_pos" ? "a month, per outlet" : (p.maxProperties ?? 1) > 1 ? `a month, up to ${p.maxProperties} properties` : "a month, one property"}</p>
-      {isStay(model) && roomPriceText(p) ? <p className="mt-1 text-right text-xs font-bold">{roomPriceText(p)}</p> : null}
+      {isStay(model) && p.includedRooms != null ? <p className="mt-1 text-right text-xs font-bold">{roomPriceText(p)}</p> : null}
       <button type="button" onClick={onPick} className={cn("mt-5 w-full rounded-full py-3 font-sans text-sm font-extrabold text-white", p.highlight ? "bg-[#A12444] hover:bg-[#8a1d3a]" : "bg-[#1F2230] hover:bg-black")}>
         {p.price === null ? "Ask for a quote" : `Choose ${p.name}`}
       </button>
