@@ -24,6 +24,9 @@ export interface PlanCatalogueRow {
   features: Record<string, boolean> | null;
   active: boolean | null;
   sort: number | null;
+  max_outlets?: number | null;
+  included_rooms?: number | null;
+  extra_room_price?: number | null;
 }
 
 /** The plans offered to the public, in ladder order. Other catalogue rows are internal. */
@@ -42,6 +45,8 @@ export function planFromRow(row: PlanCatalogueRow, highlightId: string = "pro"):
     tagline: row.tagline || fallback?.tagline || "",
     seats: { pos: row.billdesk_seats, waiter: row.waiter_seats, manager: row.admin_seats },
     features: FEATURES.filter((f) => row.features?.[f] === true) as Feature[],
+    ...(row.included_rooms !== undefined ? { includedRooms: row.included_rooms, extraRoomPrice: row.extra_room_price ?? null } : {}),
+    ...(row.max_outlets != null ? { maxProperties: row.max_outlets } : {}),
     ...(row.id === highlightId ? { highlight: true } : {}),
   };
 }
@@ -71,7 +76,7 @@ export async function loadPublicPlans(): Promise<PublicPlan[]> {
   try {
     const { data, error } = await supabase
       .from("plans")
-      .select("id, name, monthly_price, quote, tagline, billdesk_seats, waiter_seats, admin_seats, features, active, sort");
+      .select("id, name, monthly_price, quote, tagline, billdesk_seats, waiter_seats, admin_seats, features, active, sort, max_outlets, included_rooms, extra_room_price");
     if (error || !data) return PUBLIC_PLANS;
     return publicPlansFrom(data as unknown as PlanCatalogueRow[]);
   } catch {
@@ -84,7 +89,7 @@ export async function loadCatalogue(): Promise<PlanCatalogueRow[]> {
   try {
     const { data, error } = await supabase
       .from("plans")
-      .select("id, name, monthly_price, quote, tagline, billdesk_seats, waiter_seats, admin_seats, features, active, sort");
+      .select("id, name, monthly_price, quote, tagline, billdesk_seats, waiter_seats, admin_seats, features, active, sort, max_outlets, included_rooms, extra_room_price");
     if (error || !data) return [];
     return (data as unknown as PlanCatalogueRow[]).filter((r) => r.active !== false);
   } catch {

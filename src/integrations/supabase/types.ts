@@ -809,7 +809,9 @@ export type Database = {
           admin_seats: number | null
           billdesk_seats: number | null
           features: Json
+          extra_room_price: number | null
           id: string
+          included_rooms: number | null
           max_outlets: number
           max_staff: number
           monthly_price: number
@@ -841,7 +843,9 @@ export type Database = {
           admin_seats?: number | null
           billdesk_seats?: number | null
           features?: Json
+          extra_room_price?: number | null
           id?: string
+          included_rooms?: number | null
           max_outlets?: number
           max_staff?: number
           monthly_price?: number

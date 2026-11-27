@@ -88,7 +88,7 @@ describe("each POS model has its own features and prices (27 Nov 2026)", async (
   });
   it("approved prices, and the hostel ladder only adds as you go up", () => {
     expect(PUBLIC_PLANS.map((p) => p.price)).toEqual([449, 899, 1299, 1999]);
-    expect(HOSTEL_PLANS.map((p) => p.price)).toEqual([1299, 2299, 3999]);
+    expect(HOSTEL_PLANS.map((p) => p.price)).toEqual([2299, 2899, 7999]);
     for (let i = 1; i < HOSTEL_PLANS.length; i++) for (const f of HOSTEL_PLANS[i - 1]!.features) expect(HOSTEL_PLANS[i]!.features).toContain(f);
   });
   it("the restaurant link is an add-on on no plan, off unless switched on; unshipped features are labelled", () => {
@@ -96,5 +96,24 @@ describe("each POS model has its own features and prices (27 Nov 2026)", async (
     expect(DEFAULT_OFF).toContain("restaurant_link");
     expect(STAY_FEATURE_STATE.channel_manager).toBe("Rolling out");
     expect(STAY_FEATURE_STATE.booking_engine).toBe("Rolling out");
+  });
+});
+
+describe("Hostel POS room pricing (owner, 27 Nov 2026)", async () => {
+  const { HOSTEL_PLANS, stayPlanTotal, roomPriceText } = await import("./plans");
+  const [essential, connect, group] = HOSTEL_PLANS;
+  it("base price covers the included rooms; each room above adds ₹300", () => {
+    expect(stayPlanTotal(essential!, 8)).toBe(2299);
+    expect(stayPlanTotal(essential!, 10)).toBe(2899);
+    expect(stayPlanTotal(connect!, 15)).toBe(2899);
+    expect(stayPlanTotal(connect!, 20)).toBe(4399);
+    expect(stayPlanTotal(essential!, 3)).toBe(2299);
+  });
+  it("Group is one price for up to 5 properties, 2 Property Manager devices each", () => {
+    expect(stayPlanTotal(group!, 60)).toBe(7999);
+    expect(group!.maxProperties).toBe(5);
+    expect(group!.seats.manager).toBe(2);
+    expect(roomPriceText(group!)).toBe("Up to 5 properties");
+    expect(roomPriceText(essential!)).toBe("Up to 8 rooms · ₹300 a month per extra room");
   });
 });

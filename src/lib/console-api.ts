@@ -36,6 +36,8 @@ export interface RestaurantRow {
 export interface PlanRow {
   id: string; name: string; monthly_price: number; billdesk_seats: number | null; waiter_seats: number | null; admin_seats: number | null;
   features: Partial<Record<Feature, boolean>>; active: boolean; quote: boolean; tagline: string; sort: number;
+  /** Hostel POS room pricing: rooms in the base price and ₹ per extra room a month. */
+  included_rooms?: number | null; extra_room_price?: number | null; max_outlets?: number;
 }
 
 export interface PaymentRow { at: string; detail: { amount: number; months: number; method: string; reference: string; from: string | null; until: string; planAtPayment: string } }

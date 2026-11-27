@@ -1,5 +1,5 @@
 import { Check, X } from "lucide-react";
-import { FEATURE_NAMES, PUBLIC_FEATURES, STAY_ADDONS, STAY_FEATURES, STAY_FEATURE_STATE, featureName, priceText, type Feature, type PublicPlan, seatAppsFor } from "@/lib/plans";
+import { FEATURE_NAMES, PUBLIC_FEATURES, STAY_ADDONS, STAY_FEATURES, STAY_FEATURE_STATE, featureName, priceText, roomPriceText, type Feature, type PublicPlan, seatAppsFor } from "@/lib/plans";
 import type { SiteModel } from "@/lib/site-models";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +57,7 @@ function PlanBill({ model, plan: p, before, onPick }: { model: SiteModel; plan: 
       {rule}
       <dl className="space-y-1 text-[13px]">
         {seats.map(([a, label]) => (
-          <div key={a} className="flex justify-between gap-2"><dt>{label} devices</dt><dd className="tabular-nums">{p.seats[a] === null ? "Unlimited" : p.seats[a] === 0 ? "—" : p.seats[a]}</dd></div>
+          <div key={a} className="flex justify-between gap-2"><dt>{label} devices</dt><dd className="tabular-nums">{p.seats[a] === null ? "Unlimited" : p.seats[a] === 0 ? "—" : `${p.seats[a]}${isStay(model) && (p.maxProperties ?? 1) > 1 ? " per property" : ""}`}</dd></div>
         ))}
       </dl>
       {rule}
@@ -68,7 +68,8 @@ function PlanBill({ model, plan: p, before, onPick }: { model: SiteModel; plan: 
         <span className="text-sm font-bold">TOTAL</span>
         <span className="text-[1.9rem] font-bold leading-none tabular-nums">{p.price === null ? "Quote" : `₹${p.price.toLocaleString("en-IN")}`}</span>
       </div>
-      <p className="mt-1 text-right text-xs">{p.price === null ? "call us" : model.id === "restaurant_pos" ? "a month, per outlet" : "a month, per property"}</p>
+      <p className="mt-1 text-right text-xs">{p.price === null ? "call us" : model.id === "restaurant_pos" ? "a month, per outlet" : (p.maxProperties ?? 1) > 1 ? `a month, up to ${p.maxProperties} properties` : "a month, one property"}</p>
+      {isStay(model) && roomPriceText(p) ? <p className="mt-1 text-right text-xs font-bold">{roomPriceText(p)}</p> : null}
       <button type="button" onClick={onPick} className={cn("mt-5 w-full rounded-full py-3 font-sans text-sm font-extrabold text-white", p.highlight ? "bg-[#A12444] hover:bg-[#8a1d3a]" : "bg-[#1F2230] hover:bg-black")}>
         {p.price === null ? "Ask for a quote" : `Choose ${p.name}`}
       </button>

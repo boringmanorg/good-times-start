@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
-import { featureName, type PublicPlan, STAY_FEATURE_STATE } from "@/lib/plans";
+import { featureName, type PublicPlan, roomPriceText, STAY_FEATURE_STATE, stayPlanTotal } from "@/lib/plans";
 import { SITE_MODELS, STATUS_LABEL } from "@/lib/site-models";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,10 @@ export function PlanBuilder({ plansByModel, onStart }: { plansByModel: Record<st
   const plan = plans.find((p) => p.id === planId) ?? plans.find((p) => p.highlight) ?? plans[0];
   const [outlets, setOutlets] = useState(1);
   const stay = model.id !== "restaurant_pos" && model.id !== "tourism_pos";
-  const total = plan?.price != null ? plan.price * outlets : null;
+  // Stays: room-priced plans cover one property and charge per extra room; Group is one price for its properties.
+  const [rooms, setRooms] = useState(8);
+  const roomPriced = stay && plan?.includedRooms != null;
+  const total = plan?.price == null ? null : stay ? (roomPriced ? stayPlanTotal(plan, rooms) : plan.price) : plan.price * outlets;
   return (
     <div className="rounded-[28px] bg-[#1F2230] p-5 text-[#FAF7F2] shadow-[0_40px_80px_-40px_rgba(31,34,48,0.8)] sm:p-7">
       <p className="xt-eyebrow text-[#E8B4C0]">Build your plan</p>
@@ -53,18 +56,31 @@ export function PlanBuilder({ plansByModel, onStart }: { plansByModel: Record<st
             );
           })() : null}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-[#FAF7F2]/15 pt-5">
+            {stay ? (
+              roomPriced ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm">Rooms<span className="block text-[11px] opacity-75">{plan ? roomPriceText(plan) : ""}</span></span>
+                  <div className="flex items-center rounded-full ring-1 ring-[#FAF7F2]/25">
+                    <button type="button" aria-label="One room fewer" className="grid size-9 place-items-center disabled:opacity-30" disabled={rooms <= 1} onClick={() => setRooms((n) => Math.max(1, n - 1))}><Minus className="size-4" /></button>
+                    <span className="w-8 text-center font-bold tabular-nums" aria-live="polite">{rooms}</span>
+                    <button type="button" aria-label="One room more" className="grid size-9 place-items-center disabled:opacity-30" disabled={rooms >= 200} onClick={() => setRooms((n) => Math.min(200, n + 1))}><Plus className="size-4" /></button>
+                  </div>
+                </div>
+              ) : <p className="text-sm opacity-80">{plan ? roomPriceText(plan) || "One property" : ""}</p>
+            ) : (
             <div className="flex items-center gap-3">
-              <span className="text-sm">{model.id === "restaurant_pos" ? "Outlets" : "Properties"}</span>
+              <span className="text-sm">Outlets</span>
               <div className="flex items-center rounded-full ring-1 ring-[#FAF7F2]/25">
                 <button type="button" aria-label="One fewer" className="grid size-9 place-items-center disabled:opacity-30" disabled={outlets <= 1} onClick={() => setOutlets((n) => Math.max(1, n - 1))}><Minus className="size-4" /></button>
                 <span className="w-7 text-center font-bold tabular-nums" aria-live="polite">{outlets}</span>
                 <button type="button" aria-label="One more" className="grid size-9 place-items-center disabled:opacity-30" disabled={outlets >= 50} onClick={() => setOutlets((n) => Math.min(50, n + 1))}><Plus className="size-4" /></button>
               </div>
             </div>
+            )}
             <p className="text-right"><span className="font-brand block text-4xl leading-none tabular-nums">{total == null ? "On quote" : `₹${total.toLocaleString("en-IN")}`}</span><span className="text-xs opacity-75">{total == null ? "the team prices it with you" : "a month, before GST"}</span></p>
           </div>
           <button type="button" onClick={() => onStart(model.name, plan?.name ?? "")} className="mt-5 w-full rounded-full bg-[#FAF7F2] py-3.5 font-extrabold text-[#1F2230] hover:bg-white">
-            Start {plan?.name ?? model.name}{outlets > 1 ? ` for ${outlets}` : ""}
+            Start {plan?.name ?? model.name}{stay ? (roomPriced ? ` for ${rooms} rooms` : "") : outlets > 1 ? ` for ${outlets}` : ""}
           </button>
         </>
       ) : (

@@ -4,7 +4,7 @@ import { Ban, Check, History, IndianRupee, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ago, loadPayments, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
-import { featureName, featuresFor, SEAT_APPS, seatAppsFor, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
+import { featureName, featuresFor, SEAT_APPS, seatAppsFor, seatUseText, stayPlanTotal, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { field } from "./ConsoleBits";
 import { planProduct, STAY_PRODUCTS, type ProductId } from "@/lib/products";
@@ -63,9 +63,13 @@ export function RestaurantInfo({ r }: { r: RestaurantRow }) {
  * Recording a payment moves the paid-until date forward (never losing time already paid for) and
  * makes the account live again.
  */
-function Renewal({ r, price }: { r: RestaurantRow; price: number }) {
+function Renewal({ r, price, plan }: { r: RestaurantRow; price: number; plan?: PlanRow | undefined }) {
   const queryClient = useQueryClient();
   const a = r.account!;
+  // Hostel POS plans priced by rooms: the monthly amount follows the property's room count.
+  const roomPriced = plan?.included_rooms != null && !!plan.extra_room_price;
+  const [rooms, setRooms] = useState(String(plan?.included_rooms ?? ""));
+  const monthly = roomPriced ? stayPlanTotal({ price, includedRooms: plan!.included_rooms ?? null, extraRoomPrice: plan!.extra_room_price ?? null }, Number(rooms || 0)) ?? price : price;
   const [amount, setAmount] = useState(String(price));
   const [months, setMonths] = useState(1);
   const [method, setMethod] = useState("upi");
@@ -93,6 +97,12 @@ function Renewal({ r, price }: { r: RestaurantRow; price: number }) {
         <span className="font-normal text-muted-foreground">· only XTSY can renew; restaurants cannot pay themselves in</span></h3>
       {!a.live ? <p className="mt-1 text-xs font-semibold text-warning">This restaurant is stopped right now. Recording a payment switches it back on at once.</p> : null}
       <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {roomPriced ? (
+          <label className="text-sm font-medium">Rooms at the property
+            <input value={rooms} inputMode="numeric" onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, "").slice(0, 4); setRooms(v); setAmount(String(stayPlanTotal({ price, includedRooms: plan!.included_rooms ?? null, extraRoomPrice: plan!.extra_room_price ?? null }, Number(v || 0)) ?? price)); }} className={cn(field, "tabular-nums")} />
+            <span className="mt-1 block text-xs font-normal text-muted-foreground">{plan!.included_rooms} rooms included · ₹{plan!.extra_room_price} per extra room · ₹{monthly.toLocaleString("en-IN")} a month</span>
+          </label>
+        ) : null}
         <label className="text-sm font-medium">Amount received (₹)
           <input value={amount} inputMode="decimal" onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, "").slice(0, 9))} className={cn(field, "tabular-nums")} />
         </label>
@@ -232,7 +242,7 @@ export function SubscriptionSection({ r, plans, product = "restaurant_pos" }: { 
         </ul>
       </fieldset>
       <div className="lg:col-span-2"><Button disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save subscription"}</Button></div>
-      <div className="lg:col-span-2"><Renewal key={planRow?.monthly_price ?? 0} r={r} price={planRow?.monthly_price ?? 0} /></div>
+      <div className="lg:col-span-2"><Renewal key={`${planRow?.id}-${planRow?.monthly_price ?? 0}`} r={r} price={planRow?.monthly_price ?? 0} plan={planRow} /></div>
     </div>
   );
 }

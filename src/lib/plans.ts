@@ -162,6 +162,29 @@ export interface PublicPlan {
   seats: Record<SeatApp, number | null>;
   features: Feature[];
   highlight?: boolean;
+  /** Hostel POS: rooms in the base price per property (null = no room limit) and ₹ a month per room above it. */
+  includedRooms?: number | null;
+  extraRoomPrice?: number | null;
+  /** How many properties (or outlets) one subscription covers at this price. */
+  maxProperties?: number;
+}
+
+/**
+ * A stay plan's monthly price for a property with this many rooms: the base price covers
+ * `includedRooms`, each room above it adds `extraRoomPrice`. Plans without a room limit are flat.
+ */
+export function stayPlanTotal(plan: Pick<PublicPlan, "price" | "includedRooms" | "extraRoomPrice">, rooms: number): number | null {
+  if (plan.price === null) return null;
+  const included = plan.includedRooms ?? null;
+  if (included === null || !plan.extraRoomPrice) return plan.price;
+  return plan.price + Math.max(0, Math.floor(rooms) - included) * plan.extraRoomPrice;
+}
+
+/** "Up to 8 rooms · ₹300 a month per extra room", "Up to 5 properties", or "". */
+export function roomPriceText(plan: Pick<PublicPlan, "includedRooms" | "extraRoomPrice" | "maxProperties">): string {
+  if (plan.includedRooms != null) return `Up to ${plan.includedRooms} rooms${plan.extraRoomPrice ? ` · ₹${plan.extraRoomPrice.toLocaleString("en-IN")} a month per extra room` : ""}`;
+  if ((plan.maxProperties ?? 1) > 1) return `Up to ${plan.maxProperties} properties`;
+  return "";
 }
 
 const BASIC: Feature[] = ["billing", "menu", "gst_reports", "manager_app", "insights"];
@@ -185,7 +208,9 @@ export const PUBLIC_PLANS: PublicPlan[] = [
 ];
 
 /**
- * Hostel POS plans (per property per month; owner approved 27 Nov 2026, benchmarked against eZee,
+ * Hostel POS plans (owner, 27 Nov 2026: Essential ₹2,299 up to 8 rooms and Connect ₹2,899 up to 15
+ * rooms, one property each, ₹300 a month per extra room; Group ₹7,999 for up to 5 properties; first
+ * benchmarked, benchmarked against eZee,
  * Stayflexi, Aiosell and Djubo). The cloud `hostel_*` rows are the truth; this is the ladder the
  * console's drift check compares them with. Restaurant link is an add-on, on no plan.
  */
@@ -193,12 +218,13 @@ const HOSTEL_ESSENTIAL: Feature[] = ["pms", "gst_reports", "manager_app", "insig
 const HOSTEL_CONNECT: Feature[] = [...HOSTEL_ESSENTIAL, "channel_manager", "rate_suggestions", "loyalty", "admin_approval", "audit_log"];
 const HOSTEL_GROUP: Feature[] = [...HOSTEL_CONNECT, "multi_property", "accounting", "purchases", "vendors"];
 export const HOSTEL_PLANS: PublicPlan[] = [
-  { id: "hostel_essential" as PlanId, name: "Essential", price: 1299, tagline: "PMS and your own booking engine",
-    seats: { pos: 2, waiter: 0, manager: 1 }, features: HOSTEL_ESSENTIAL },
-  { id: "hostel_connect" as PlanId, name: "Connect", price: 2299, tagline: "Adds the channel manager and smart rates", highlight: true,
-    seats: { pos: 4, waiter: 0, manager: 2 }, features: HOSTEL_CONNECT },
-  { id: "hostel_group" as PlanId, name: "Group", price: 3999, tagline: "Several properties, accounts and purchases",
-    seats: { pos: null, waiter: 0, manager: 4 }, features: HOSTEL_GROUP },
+  { id: "hostel_essential" as PlanId, name: "Essential", price: 2299, tagline: "PMS and your own booking engine, up to 8 rooms",
+    seats: { pos: 2, waiter: 0, manager: 1 }, features: HOSTEL_ESSENTIAL, includedRooms: 8, extraRoomPrice: 300, maxProperties: 1 },
+  { id: "hostel_connect" as PlanId, name: "Connect", price: 2899, tagline: "Adds the channel manager and smart rates, up to 15 rooms", highlight: true,
+    seats: { pos: 4, waiter: 0, manager: 2 }, features: HOSTEL_CONNECT, includedRooms: 15, extraRoomPrice: 300, maxProperties: 1 },
+  // Group: one price for up to 5 properties; Property Manager seats count per property (2 each).
+  { id: "hostel_group" as PlanId, name: "Group", price: 7999, tagline: "Up to 5 properties, accounts and purchases",
+    seats: { pos: null, waiter: 0, manager: 2 }, features: HOSTEL_GROUP, includedRooms: null, extraRoomPrice: null, maxProperties: 5 },
 ];
 
 /** "₹199 / month", or "Call for quote". */
