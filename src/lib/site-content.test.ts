@@ -7,7 +7,7 @@ import { marketingPath } from "./site-config";
 describe("website content", () => {
   it("quotes prices from the plan list it is given, never a stale copy", () => {
     const plans = PUBLIC_PLANS.map((p) => ({ ...p, price: p.price === null ? null : p.price + 1 }));
-    const answer = faqFor(plans).find((f) => f.q === "Is the price per outlet?")!.a;
+    const answer = faqFor(plans).find((f) => f.q === "How much does a subscription cost?")!.a;
     for (const p of plans) if (p.price !== null) expect(answer).toContain(`${p.name} ₹${p.price}`);
     expect(answer).not.toMatch(/₹149|₹299|₹499/);
   });
@@ -34,7 +34,8 @@ describe("website content", () => {
 describe("no property names in public copy", () => {
   it("never names the pilot hostel or its location", async () => {
     const mod = await import("./site-content");
-    const text = JSON.stringify([mod.SITE_PRODUCTS, mod.STAY_FEATURE_BLOCKS, mod.STATUS, mod.faqFor([]), mod.SITE_DESCRIPTION]);
+    const models = await import("./site-models");
+    const text = JSON.stringify([models.SITE_MODELS, mod.STATUS, mod.faqFor([]), mod.SITE_DESCRIPTION]);
     expect(text).not.toMatch(/Travellers Hostel|Experience by XTSY|Shillong|Meghalaya/i);
   });
 });

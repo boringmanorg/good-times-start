@@ -31,7 +31,7 @@ export const DOORS: Record<Door, DoorInfo> = {
   },
   stay: {
     path: "/hostel/login",
-    name: "Hostel & Hotel POS",
+    name: "Hostel POS",
     apps: ["manager", "pos"],
     appNames: {
       manager: { name: "Property Manager", for: "Owner and manager · rates, bookings, reports and the channel manager" },

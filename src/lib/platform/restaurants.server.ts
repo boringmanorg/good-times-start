@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createLogin } from "./logins.server";
 import { cleanEmail } from "@/lib/platform-login-logic";
 import { isProductId, STAY_PRODUCTS, type ProductId } from "@/lib/products";
-import { cleanSlug, isBusinessModel, nameProblem, onboardingPlansFor, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
+import { cleanSlug, isBusinessModel, nameProblem, planFitsProduct, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const admin = () => supabaseAdmin as unknown as { from: (t: string) => any };
@@ -39,7 +39,7 @@ export async function onboardRestaurant(by: string, input: OnboardRestaurant): P
   const slug = cleanSlug(input.slug);
   const problem = nameProblem(name) ?? slugProblem(slug)
     ?? (isBusinessModel(input.model) ? null : "Choose the business model.")
-    ?? (onboardingPlansFor(input.product).includes(input.plan) ? null : "Choose a plan.")
+    ?? (planFitsProduct(input.plan, input.product) ? null : "Choose a plan.")
     ?? (input.product === undefined || isProductId(input.product) ? null : "Choose the product.");
   if (problem) throw new Error(problem);
   const model = input.model as BusinessModel;

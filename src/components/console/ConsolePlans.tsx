@@ -1,34 +1,82 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Save } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { loadPlans, savePlan, type PlanRow } from "@/lib/console-api";
-import { featureName, featuresFor, isStayPlan, type Feature } from "@/lib/plans";
+import { featureName, featuresFor, isStayPlan, STARTER_FEATURES, type Feature } from "@/lib/plans";
+import { newPlanId, planProduct, productById, PRODUCTS, type ProductId } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import { Failed, Loading, Panel, field } from "./ConsoleBits";
 import { CatalogueDriftBanner } from "./ConsoleActivity";
 
 export function ConsolePlans() {
   const q = useQuery({ queryKey: ["console", "plans"], queryFn: loadPlans });
+  const [model, setModel] = useState<ProductId>("restaurant_pos");
   if (q.isLoading) return <Loading what="plans" />;
   if (q.error || !q.data) return <Failed error={q.error} />;
   const live = q.data.filter((p) => p.active);
   const old = q.data.filter((p) => !p.active);
+  const mine = live.filter((p) => planProduct(p.id) === model);
+  const info = productById(model);
   return (
     <div className="space-y-5">
       <div>
         <h1 className="font-brand text-3xl">Plans</h1>
-        <p className="text-sm text-muted-foreground">Prices, device seats and features for each plan. Changes apply to every restaurant on that plan at once, show on the website straight away, and are recorded in Activity.</p>
+        <p className="text-sm text-muted-foreground">One console, a price list per POS model. Prices, device seats and features apply to every outlet on that plan at once, show on that model's page on the website straight away, and are recorded in Activity.</p>
       </div>
       <CatalogueDriftBanner />
-      <h2 className="font-brand text-2xl">Restaurant POS</h2>
-      <div className="grid gap-5 xl:grid-cols-2">{live.filter((p) => !isStayPlan(p.id)).map((p) => <PlanEditor key={p.id} p={p} />)}</div>
-      <h2 className="font-brand text-2xl">Hostel & Hotel POS</h2>
-      <p className="-mt-3 text-sm text-muted-foreground">PMS with the channel manager. Pilot only: these plans never reach the website until stay prices are set.</p>
-      <div className="grid gap-5 xl:grid-cols-2">{live.filter((p) => isStayPlan(p.id)).map((p) => <PlanEditor key={p.id} p={p} />)}</div>
+      <nav className="no-scrollbar flex gap-1.5 overflow-x-auto" aria-label="POS model">
+        {PRODUCTS.map((m) => {
+          const n = live.filter((p) => planProduct(p.id) === m.id).length;
+          return (
+            <button key={m.id} type="button" onClick={() => setModel(m.id)} aria-pressed={model === m.id}
+              className={cn("shrink-0 rounded-full px-4 py-2 text-sm font-bold ring-1", model === m.id ? "bg-primary text-primary-foreground ring-primary" : "ring-border hover:bg-secondary")}>
+              {m.name} <span className="font-normal opacity-75">· {n}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <p className="text-sm text-muted-foreground">{info.name}: {info.status === "live" ? "live" : info.status === "pilot" ? "in pilot" : "coming soon"}. {mine.length ? `${mine.length} plan${mine.length === 1 ? "" : "s"}.` : "No plans yet: its website page shows \"Prices on request\" until you add one."}</p>
+      <div className="grid gap-5 xl:grid-cols-2">{mine.map((p) => <PlanEditor key={p.id} p={p} />)}</div>
+      <AddPlan key={model} model={model} taken={q.data.map((p) => p.id)} />
       {old.length ? <p className="text-xs text-muted-foreground">Retired plans kept for history: {old.map((p) => p.name).join(", ")}.</p> : null}
     </div>
+  );
+}
+
+/** A new plan for one model. Its id carries the model's prefix, which is how the catalogue knows whose it is. */
+function AddPlan({ model, taken }: { model: ProductId; taken: string[] }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [quote, setQuote] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const id = name.trim() ? newPlanId(model, name) : "";
+  const kind = model === "restaurant_pos" ? "restaurant" : model === "tourism_pos" ? "tourism" : "stay";
+  const problem = !name.trim() ? "" : !/^[a-z0-9_]{2,24}$/.test(id) ? "Use letters and digits in the name." : taken.includes(id) ? "A plan with this name already exists." : (!quote && !price) ? "Enter a price or tick Call for quote." : "";
+  const add = async () => {
+    setBusy(true);
+    try {
+      await savePlan({ id, name: name.trim(), monthly: Number(price) || 0, billdesk: null, waiter: model === "restaurant_pos" ? 0 : null, admin: 1, active: true, quote, tagline: "",
+        features: Object.fromEntries(STARTER_FEATURES[kind].map((f) => [f, true])) });
+      toast.success(`${name.trim()} added to ${productById(model).name}`);
+      setName(""); setPrice(""); setQuote(false);
+      await queryClient.invalidateQueries({ queryKey: ["console"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't add the plan"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Panel title={`Add a ${productById(model).name} plan`}>
+      <div className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
+        <label className="text-sm font-medium">Plan name<input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="Starter" className={field} /></label>
+        <label className="text-sm font-medium">Price per month (₹)<input inputMode="numeric" value={price} disabled={quote} onChange={(e) => setPrice(e.target.value.replace(/\D/g, "").slice(0, 6))} className={field} /></label>
+        <label className="flex items-center gap-2 pb-2.5 text-sm font-medium"><input type="checkbox" checked={quote} onChange={(e) => setQuote(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />Call for quote</label>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{id ? <>Plan id <span className="font-mono">{id}</span>. </> : null}It starts with the core features; switch the rest on in the plan once added. Seats start at 1 admin, no limit on counters.</p>
+      {problem ? <p className="mt-2 text-sm text-destructive">{problem}</p> : null}
+      <Button className="mt-3" disabled={busy || !id || !!problem} onClick={() => void add()}><Plus />{busy ? "Adding…" : "Add plan"}</Button>
+    </Panel>
   );
 }
 

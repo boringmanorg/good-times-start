@@ -25,7 +25,7 @@ describe("login doors", () => {
   it("refuses the wrong door and names the right one", () => {
     expect(wrongDoorMessage("stay", ["hostel_pos"])).toBeNull();
     expect(wrongDoorMessage("restaurant", [null])).toBeNull();
-    expect(wrongDoorMessage("restaurant", ["hostel_pos"])).toBe("This login is for Hostel & Hotel POS. Sign in at /hostel/login instead.");
+    expect(wrongDoorMessage("restaurant", ["hostel_pos"])).toBe("This login is for Hostel POS. Sign in at /hostel/login instead.");
     expect(wrongDoorMessage("stay", ["restaurant_pos"])).toBe("This login is for Restaurant POS. Sign in at /login instead.");
     // A person in both kinds of outlet may use either door; a brand-new login with none too.
     expect(doorsFor(["hostel_pos", null]).sort()).toEqual(["restaurant", "stay"]);

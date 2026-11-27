@@ -109,7 +109,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   // Staff screens are black; guest pages wear the light XTSY look from the first paint (no black flash).
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const guestPage = pathname.startsWith("/order/") || pathname.startsWith("/book/") || pathname.startsWith("/tab-bistro") || pathname.startsWith("/stays") || pathname.startsWith("/hostel") || pathname.startsWith("/console");
+  const guestPage = pathname.startsWith("/order/") || pathname.startsWith("/book/") || pathname.startsWith("/tab-bistro") || pathname.startsWith("/stays") || pathname.startsWith("/hostel") || pathname.startsWith("/console") || pathname === "/xtsy-pos" || /^\/(restaurant|hostel|hotel|resort|tourism)-pos$/.test(pathname) || pathname === "/privacy" || pathname === "/terms" || pathname === "/refunds";
   return (
     <html lang="en" className={guestPage ? "theme-xtsy" : undefined}>
       <head>

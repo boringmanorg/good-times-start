@@ -212,7 +212,7 @@ function RestaurantDetail({ r, plans, model, route, go, stays, product }: { r: R
             </div>
           </div>
         ) : null}
-        {section === "subscription" ? <SubscriptionSection key={r.id} r={r} plans={plans} stays={stays} /> : null}
+        {section === "subscription" ? <SubscriptionSection key={r.id} r={r} plans={plans} product={product} /> : null}
         {section === "users" ? <ConsoleLogins restaurantId={r.id} restaurantName={r.name} /> : null}
         {section === "devices" ? <DevicesSection r={r} /> : null}
         {section === "integrations" && !stays ? <ConsoleIntegrations r={r} plan={plan} /> : null}

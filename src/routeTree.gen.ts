@@ -17,6 +17,8 @@ import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FrontDeskRouteImport } from './routes/front-desk'
+import { Route as HostelPosRouteImport } from './routes/hostel-pos'
+import { Route as HotelPosRouteImport } from './routes/hotel-pos'
 import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ManagerRouteImport } from './routes/manager'
@@ -25,6 +27,8 @@ import { Route as MenuRouteImport } from './routes/menu'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ResortPosRouteImport } from './routes/resort-pos'
+import { Route as RestaurantPosRouteImport } from './routes/restaurant-pos'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -34,6 +38,7 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as TabBistroRouteImport } from './routes/tab-bistro'
 import { Route as TablesRouteImport } from './routes/tables'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TourismPosRouteImport } from './routes/tourism-pos'
 import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
@@ -89,6 +94,16 @@ const FrontDeskRoute = FrontDeskRouteImport.update({
   path: '/front-desk',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HostelPosRoute = HostelPosRouteImport.update({
+  id: '/hostel-pos',
+  path: '/hostel-pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HotelPosRoute = HotelPosRouteImport.update({
+  id: '/hotel-pos',
+  path: '/hotel-pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KitchenRoute = KitchenRouteImport.update({
   id: '/kitchen',
   path: '/kitchen',
@@ -127,6 +142,16 @@ const RefundsRoute = RefundsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResortPosRoute = ResortPosRouteImport.update({
+  id: '/resort-pos',
+  path: '/resort-pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RestaurantPosRoute = RestaurantPosRouteImport.update({
+  id: '/restaurant-pos',
+  path: '/restaurant-pos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -172,6 +197,11 @@ const TablesRoute = TablesRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TourismPosRoute = TourismPosRouteImport.update({
+  id: '/tourism-pos',
+  path: '/tourism-pos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WaiterRoute = WaiterRouteImport.update({
@@ -254,6 +284,8 @@ export interface FileRoutesByFullPath {
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/front-desk': typeof FrontDeskRoute
+  '/hostel-pos': typeof HostelPosRoute
+  '/hotel-pos': typeof HotelPosRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
@@ -262,6 +294,8 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/refunds': typeof RefundsRoute
   '/reports': typeof ReportsRoute
+  '/resort-pos': typeof ResortPosRoute
+  '/restaurant-pos': typeof RestaurantPosRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
@@ -271,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/tab-bistro': typeof TabBistroRouteWithChildren
   '/tables': typeof TablesRoute
   '/terms': typeof TermsRoute
+  '/tourism-pos': typeof TourismPosRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
@@ -295,6 +330,8 @@ export interface FileRoutesByTo {
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/front-desk': typeof FrontDeskRoute
+  '/hostel-pos': typeof HostelPosRoute
+  '/hotel-pos': typeof HotelPosRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
@@ -303,6 +340,8 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/refunds': typeof RefundsRoute
   '/reports': typeof ReportsRoute
+  '/resort-pos': typeof ResortPosRoute
+  '/restaurant-pos': typeof RestaurantPosRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
@@ -311,6 +350,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/tables': typeof TablesRoute
   '/terms': typeof TermsRoute
+  '/tourism-pos': typeof TourismPosRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
@@ -336,6 +376,8 @@ export interface FileRoutesById {
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/front-desk': typeof FrontDeskRoute
+  '/hostel-pos': typeof HostelPosRoute
+  '/hotel-pos': typeof HotelPosRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
@@ -344,6 +386,8 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/refunds': typeof RefundsRoute
   '/reports': typeof ReportsRoute
+  '/resort-pos': typeof ResortPosRoute
+  '/restaurant-pos': typeof RestaurantPosRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
@@ -353,6 +397,7 @@ export interface FileRoutesById {
   '/tab-bistro': typeof TabBistroRouteWithChildren
   '/tables': typeof TablesRoute
   '/terms': typeof TermsRoute
+  '/tourism-pos': typeof TourismPosRoute
   '/waiter': typeof WaiterRoute
   '/xtsy-pos': typeof XtsyPosRoute
   '/book/$slug': typeof BookSlugRoute
@@ -379,6 +424,8 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/front-desk'
+    | '/hostel-pos'
+    | '/hotel-pos'
     | '/kitchen'
     | '/login'
     | '/manager'
@@ -387,6 +434,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/refunds'
     | '/reports'
+    | '/resort-pos'
+    | '/restaurant-pos'
     | '/robots.txt'
     | '/settings'
     | '/setup'
@@ -396,6 +445,7 @@ export interface FileRouteTypes {
     | '/tab-bistro'
     | '/tables'
     | '/terms'
+    | '/tourism-pos'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
@@ -420,6 +470,8 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/front-desk'
+    | '/hostel-pos'
+    | '/hotel-pos'
     | '/kitchen'
     | '/login'
     | '/manager'
@@ -428,6 +480,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/refunds'
     | '/reports'
+    | '/resort-pos'
+    | '/restaurant-pos'
     | '/robots.txt'
     | '/settings'
     | '/setup'
@@ -436,6 +490,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tables'
     | '/terms'
+    | '/tourism-pos'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
@@ -460,6 +515,8 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/front-desk'
+    | '/hostel-pos'
+    | '/hotel-pos'
     | '/kitchen'
     | '/login'
     | '/manager'
@@ -468,6 +525,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/refunds'
     | '/reports'
+    | '/resort-pos'
+    | '/restaurant-pos'
     | '/robots.txt'
     | '/settings'
     | '/setup'
@@ -477,6 +536,7 @@ export interface FileRouteTypes {
     | '/tab-bistro'
     | '/tables'
     | '/terms'
+    | '/tourism-pos'
     | '/waiter'
     | '/xtsy-pos'
     | '/book/$slug'
@@ -502,6 +562,8 @@ export interface RootRouteChildren {
   CustomersRoute: typeof CustomersRoute
   DashboardRoute: typeof DashboardRoute
   FrontDeskRoute: typeof FrontDeskRoute
+  HostelPosRoute: typeof HostelPosRoute
+  HotelPosRoute: typeof HotelPosRoute
   KitchenRoute: typeof KitchenRoute
   LoginRoute: typeof LoginRoute
   ManagerRoute: typeof ManagerRoute
@@ -510,6 +572,8 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   RefundsRoute: typeof RefundsRoute
   ReportsRoute: typeof ReportsRoute
+  ResortPosRoute: typeof ResortPosRoute
+  RestaurantPosRoute: typeof RestaurantPosRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SettingsRoute: typeof SettingsRoute
   SetupRoute: typeof SetupRoute
@@ -519,6 +583,7 @@ export interface RootRouteChildren {
   TabBistroRoute: typeof TabBistroRouteWithChildren
   TablesRoute: typeof TablesRoute
   TermsRoute: typeof TermsRoute
+  TourismPosRoute: typeof TourismPosRoute
   WaiterRoute: typeof WaiterRoute
   XtsyPosRoute: typeof XtsyPosRoute
   BookSlugRoute: typeof BookSlugRoute
@@ -589,6 +654,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FrontDeskRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hostel-pos': {
+      id: '/hostel-pos'
+      path: '/hostel-pos'
+      fullPath: '/hostel-pos'
+      preLoaderRoute: typeof HostelPosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hotel-pos': {
+      id: '/hotel-pos'
+      path: '/hotel-pos'
+      fullPath: '/hotel-pos'
+      preLoaderRoute: typeof HotelPosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/kitchen': {
       id: '/kitchen'
       path: '/kitchen'
@@ -643,6 +722,20 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resort-pos': {
+      id: '/resort-pos'
+      path: '/resort-pos'
+      fullPath: '/resort-pos'
+      preLoaderRoute: typeof ResortPosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant-pos': {
+      id: '/restaurant-pos'
+      path: '/restaurant-pos'
+      fullPath: '/restaurant-pos'
+      preLoaderRoute: typeof RestaurantPosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -706,6 +799,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tourism-pos': {
+      id: '/tourism-pos'
+      path: '/tourism-pos'
+      fullPath: '/tourism-pos'
+      preLoaderRoute: typeof TourismPosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/waiter': {
@@ -836,6 +936,8 @@ const rootRouteChildren: RootRouteChildren = {
   CustomersRoute: CustomersRoute,
   DashboardRoute: DashboardRoute,
   FrontDeskRoute: FrontDeskRoute,
+  HostelPosRoute: HostelPosRoute,
+  HotelPosRoute: HotelPosRoute,
   KitchenRoute: KitchenRoute,
   LoginRoute: LoginRoute,
   ManagerRoute: ManagerRoute,
@@ -844,6 +946,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   RefundsRoute: RefundsRoute,
   ReportsRoute: ReportsRoute,
+  ResortPosRoute: ResortPosRoute,
+  RestaurantPosRoute: RestaurantPosRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SettingsRoute: SettingsRoute,
   SetupRoute: SetupRoute,
@@ -853,6 +957,7 @@ const rootRouteChildren: RootRouteChildren = {
   TabBistroRoute: TabBistroRouteWithChildren,
   TablesRoute: TablesRoute,
   TermsRoute: TermsRoute,
+  TourismPosRoute: TourismPosRoute,
   WaiterRoute: WaiterRoute,
   XtsyPosRoute: XtsyPosRoute,
   BookSlugRoute: BookSlugRoute,

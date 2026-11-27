@@ -78,8 +78,15 @@ const STAY_NAMES: Partial<Record<Feature, string>> = {
 };
 export const featureName = (f: Feature, stay: boolean): string => (stay ? STAY_NAMES[f] : undefined) ?? FEATURE_NAMES[f];
 
-/** Stay plans (Hostel, Hotel and Resort POS) are the catalogue rows whose id starts with `stay_`. */
-export const isStayPlan = (id: string): boolean => id.startsWith("stay_");
+/** Stay plans (Hostel, Hotel and Resort POS): the pilot row and every hostel_/hotel_/resort_ row. */
+export const isStayPlan = (id: string): boolean => /^(stay|hostel|hotel|resort)_/.test(id);
+
+/** What a new plan starts with in the console, per kind of product. */
+export const STARTER_FEATURES: Record<"restaurant" | "stay" | "tourism", Feature[]> = {
+  restaurant: ["billing", "menu", "gst_reports", "manager_app", "insights"],
+  stay: ["pms", "billing", "menu", "gst_reports", "manager_app", "insights"],
+  tourism: ["billing", "gst_reports", "manager_app", "insights"],
+};
 
 /** Features listed on the website (internal switches like multi_outlet stay off the price cards). */
 /**

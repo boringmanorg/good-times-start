@@ -198,7 +198,7 @@ function ConsoleShell({ email, onSignOut }: { email: string; onSignOut: () => Pr
         <div className="flex items-center justify-between gap-3 pb-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <img src={logo} alt="" width={30} height={30} className="rounded-[8px]" />
-            <div className="min-w-0"><p className="font-brand truncate text-[22px] leading-tight">XTSY Console</p><p className="truncate text-[11px] font-semibold text-primary">Restaurant POS · Hostel & Hotel POS · super admin {email}</p></div>
+            <div className="min-w-0"><p className="font-brand truncate text-[22px] leading-tight">XTSY Console</p><p className="truncate text-[11px] font-semibold text-primary">Every XTSY POS model · super admin {email}</p></div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button size="sm" variant="outline" aria-label="Refresh" onClick={() => void queryClient.invalidateQueries({ queryKey: ["console"] })}><RefreshCw /><span className="hidden sm:inline">Refresh</span></Button>

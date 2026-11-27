@@ -8,7 +8,7 @@ import { onboardPlatformRestaurant } from "@/lib/platform-restaurants.functions"
 import type { ProductId } from "@/lib/products";
 import { emailProblem } from "@/lib/platform-login-logic";
 import { passwordProblem } from "@/lib/staff-login-logic";
-import { BUSINESS_MODELS, cleanSlug, isStayProduct, onboardingPlansFor, nameProblem, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
+import { BUSINESS_MODELS, cleanSlug, isStayProduct, onboardingPlansFor, planFitsProduct, nameProblem, slugProblem, type BusinessModel } from "@/lib/platform-restaurant-logic";
 import type { PlanRow } from "@/lib/console-api";
 import { cn } from "@/lib/utils";
 import { field } from "./ConsoleBits";
@@ -72,7 +72,9 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
     );
   }
 
-  const planRows = onboardingPlansFor(product).map((id) => plans.find((p) => p.id === id)).filter((p): p is PlanRow => !!p);
+  const planRows = isStayProduct(product)
+    ? plans.filter((p) => p.active && planFitsProduct(p.id, product))
+    : onboardingPlansFor(product).map((id) => plans.find((p) => p.id === id)).filter((p): p is PlanRow => !!p);
 
   return (
     <div className="rounded-2xl border border-primary/40 bg-card p-4">

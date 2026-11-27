@@ -242,14 +242,17 @@
   color-scheme: light;
 }
 .theme-xtsy body { font-family: var(--font-sans); background: var(--background); }
+/* In the base layer, so a page's own size and leading classes (utilities) win. */
+@layer base {
 .theme-xtsy .font-display,
-.theme-xtsy h1, .theme-xtsy h2 {
+:where(.theme-xtsy) h1, :where(.theme-xtsy) h2 {
   font-family: Staatliches, Impact, "Arial Narrow", sans-serif;
   font-weight: 400;
   letter-spacing: 0.02em;
   line-height: 1;
 }
-.theme-xtsy h2 { font-size: 1.75rem; }
+:where(.theme-xtsy) h2 { font-size: 1.75rem; }
+}
 .theme-xtsy .xt-eyebrow {
   font-family: Staatliches, Impact, sans-serif;
   letter-spacing: 0.22em;
@@ -362,3 +365,8 @@ html:not(.theme-xtsy) ::-webkit-scrollbar-track { background: transparent; }
 @keyframes dw-in { from { opacity: 0; } to { opacity: 1; } }
 .dw-in { animation: dw-in 600ms ease-out both; }
 @media (prefers-reduced-motion: reduce) { .dw-in { animation: none; } }
+
+/* Website ticker strip (xtsy.one motif): two copies slide left forever; still for reduced motion. */
+.xt-ticker { animation: xt-ticker 48s linear infinite; }
+@keyframes xt-ticker { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .xt-ticker { animation: none; } }

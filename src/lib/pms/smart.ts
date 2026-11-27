@@ -1,5 +1,5 @@
 /**
- * The "smart" layer of Hostel & Hotel POS: rate suggestions and plain-language nudges worked out
+ * The "smart" layer of Hostel POS: rate suggestions and plain-language nudges worked out
  * from the property's own bookings. Pure and tested (smart.test.ts); nothing here changes a rate
  * or a booking by itself — a person applies a suggestion with one tap on Rates.
  *

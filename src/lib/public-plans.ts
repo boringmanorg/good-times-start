@@ -8,6 +8,8 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { FEATURES, PUBLIC_PLANS, type Feature, type PlanId, type PublicPlan } from "./plans";
+import type { ProductId } from "./products";
+import { modelPlanRows, SITE_MODELS } from "./site-models";
 
 /** One row of the cloud catalogue, as the website needs it. */
 export interface PlanCatalogueRow {
@@ -75,4 +77,33 @@ export async function loadPublicPlans(): Promise<PublicPlan[]> {
   } catch {
     return PUBLIC_PLANS;
   }
+}
+
+/** Everything the website needs from the catalogue in one read: every active row, or none on failure. */
+export async function loadCatalogue(): Promise<PlanCatalogueRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from("plans")
+      .select("id, name, monthly_price, quote, tagline, billdesk_seats, waiter_seats, admin_seats, features, active, sort");
+    if (error || !data) return [];
+    return (data as unknown as PlanCatalogueRow[]).filter((r) => r.active !== false);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * One model's public plans from the catalogue rows. Restaurant POS uses its fixed ladder (with the
+ * compiled fallback); every other model shows its own prefixed rows, or nothing ("on request").
+ */
+export function plansForModel(rows: PlanCatalogueRow[], id: ProductId): PublicPlan[] {
+  if (id === "restaurant_pos") return publicPlansFrom(rows);
+  const mine = modelPlanRows(rows, id);
+  const middle = mine.length >= 3 ? mine[Math.floor((mine.length - 1) / 2) + (mine.length % 2 === 0 ? 1 : 0)]?.id : undefined;
+  return mine.map((r) => planFromRow(r, middle ?? "__none__"));
+}
+
+/** Every model's plans, keyed by the model's name, for the plan builder and the enquiry form. */
+export function plansByModelFrom(rows: PlanCatalogueRow[]): Record<string, PublicPlan[]> {
+  return Object.fromEntries(SITE_MODELS.map((m) => [m.name, plansForModel(rows, m.id)]));
 }

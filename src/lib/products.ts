@@ -16,9 +16,9 @@ export interface Product { id: ProductId; name: string; status: "live" | "pilot"
 
 export const PRODUCTS: Product[] = [
   { id: "restaurant_pos", name: "Restaurant POS", status: "live", blurb: "Billing, KOTs, tables, QR ordering, purchases and the POS Manager, Billdesk and Waiter Pro apps.", models: "Restaurants, fine dine, cafés, cloud kitchens" },
-  { id: "hotel_pos", name: "Hotel POS · multi-property", status: "soon", blurb: "Several hotels under one account with central rates and reports. A single hotel runs on Hostel & Hotel POS today.", models: "Hotel groups" },
+  { id: "hotel_pos", name: "Hotel POS", status: "soon", blurb: "Front desk, rate plans, room service and the restaurant on one folio, with the channel manager.", models: "Hotels, boutique stays, hotel groups" },
   { id: "resort_pos", name: "Resort POS", status: "soon", blurb: "Stays, activities and packages across several outlets on one property.", models: "Resorts, glamping" },
-  { id: "hostel_pos", name: "Hostel & Hotel POS", status: "pilot", blurb: "PMS and channel manager in one: beds and rooms, rates, OTA and website bookings, front desk, café and room bills.", models: "Hostels, hotels, homestays" },
+  { id: "hostel_pos", name: "Hostel POS", status: "pilot", blurb: "PMS and channel manager in one: beds and rooms, rates, OTA and website bookings, front desk, café and room bills.", models: "Hostels, backpacker stays, homestays" },
   { id: "tourism_pos", name: "Tourism POS", status: "soon", blurb: "Tours, rentals and transfers with bookings, drivers and payments.", models: "Tour operators, rentals" },
 ];
 
@@ -26,6 +26,25 @@ export const PRODUCTS: Product[] = [
 export const STAY_PRODUCTS: ProductId[] = ["hotel_pos", "resort_pos", "hostel_pos"];
 
 export const isProductId = (v: unknown): v is ProductId => PRODUCTS.some((p) => p.id === v);
+
+/**
+ * Each POS model has its own plans in the one catalogue, told apart by the plan id's prefix:
+ * hostel_* (and the pilot stay_pilot), hotel_*, resort_*, tourism_*. Everything else is a
+ * Restaurant POS plan (basic, pro_lite, pro, enterprise and the internal rows).
+ */
+export const PLAN_PREFIX: Record<ProductId, string> = { restaurant_pos: "", hostel_pos: "hostel_", hotel_pos: "hotel_", resort_pos: "resort_", tourism_pos: "tourism_" };
+export function planProduct(planId: string): ProductId {
+  if (planId === "stay_pilot" || planId.startsWith("hostel_")) return "hostel_pos";
+  if (planId.startsWith("hotel_")) return "hotel_pos";
+  if (planId.startsWith("resort_")) return "resort_pos";
+  if (planId.startsWith("tourism_")) return "tourism_pos";
+  return "restaurant_pos";
+}
+/** A new plan's id for a model: its prefix plus the name, lower case, 2–24 characters. */
+export function newPlanId(product: ProductId, name: string): string {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return `${PLAN_PREFIX[product]}${slug}`.slice(0, 24).replace(/_+$/, "");
+}
 export const productById = (id: ProductId): Product => PRODUCTS.find((p) => p.id === id) ?? PRODUCTS[0]!;
 
 /** The product an outlet runs on: its own setting, else Restaurant POS. */

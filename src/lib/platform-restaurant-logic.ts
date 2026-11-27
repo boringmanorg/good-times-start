@@ -37,6 +37,17 @@ export function onboardingPlansFor(product: string | undefined): readonly string
   return isStayProduct(product) ? [STAY_PILOT_PLAN] : ONBOARDING_PLANS;
 }
 
+/**
+ * May an outlet of this product be onboarded on this plan? Restaurants: the four public plans.
+ * Stay products: the pilot plan (Hostel POS) or any plan of the product's own (hostel_*, hotel_*,
+ * resort_*), so new prices set in the console can be used straight away.
+ */
+export function planFitsProduct(planId: string, product: string | undefined): boolean {
+  if (!isStayProduct(product)) return isOnboardingPlan(planId);
+  const prefix = product === "hotel_pos" ? "hotel_" : product === "resort_pos" ? "resort_" : "hostel_";
+  return (product === "hostel_pos" && planId === STAY_PILOT_PLAN) || planId.startsWith(prefix);
+}
+
 /** The QR address as stored: trimmed, lower case; empty means none yet. */
 export const cleanSlug = (text: string) => text.trim().toLowerCase();
 

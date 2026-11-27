@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
  * so new icons must be checked against the installed lucide-react and added here.
  */
 const KNOWN_ICONS = new Set([
+  "Menu",
   "AlertTriangle", "ArrowDownRight", "ArrowLeft", "ArrowLeftRight", "ArrowRight", "ArrowRightLeft", "ArrowUpRight", "BadgePercent", "Ban",
   "Banknote", "BarChart3", "Bell", "BellRing", "Building2", "Check", "ChefHat", "ChevronDown", "ChevronDownIcon", "ChevronLeft",
   "ChevronLeftIcon", "ChevronRight", "ChevronRightIcon", "ChevronUp", "Circle", "ClipboardList", "Clock", "Combine", "Copy", "CreditCard",

@@ -4,9 +4,10 @@ import { Ban, Check, History, IndianRupee, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ago, loadPayments, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
-import { featureName, featuresFor, isStayPlan, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
+import { featureName, featuresFor, SEAT_APPS, seatUseText, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { field } from "./ConsoleBits";
+import { planProduct, STAY_PRODUCTS, type ProductId } from "@/lib/products";
 
 const STATUSES = [
   { v: "active", l: "Active" }, { v: "trialing", l: "Trial" }, { v: "past_due", l: "Payment due" }, { v: "suspended", l: "Paused" }, { v: "cancelled", l: "Ended" },
@@ -148,7 +149,8 @@ export function SeatsSummary({ r }: { r: RestaurantRow }) {
 }
 
 /** Plan, status, paid-until, seat and feature overrides, then renewal and payments. */
-export function SubscriptionSection({ r, plans, stays = false }: { r: RestaurantRow; plans: PlanRow[]; stays?: boolean }) {
+export function SubscriptionSection({ r, plans, product = "restaurant_pos" }: { r: RestaurantRow; plans: PlanRow[]; product?: ProductId }) {
+  const stays = STAY_PRODUCTS.includes(product);
   const queryClient = useQueryClient();
   const a = r.account;
   const [plan, setPlan] = useState(a?.planId ?? "basic");
@@ -178,7 +180,7 @@ export function SubscriptionSection({ r, plans, stays = false }: { r: Restaurant
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm font-medium">Plan
             <select value={plan} onChange={(e) => setPlan(e.target.value)} className={field}>
-              {plans.filter((p) => ((p.active && isStayPlan(p.id) === stays) || p.id === a.planId)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.quote ? " (quote)" : ` · ₹${p.monthly_price}`}</option>)}
+              {plans.filter((p) => ((p.active && planProduct(p.id) === product) || p.id === a.planId)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.quote ? " (quote)" : ` · ₹${p.monthly_price}`}</option>)}
             </select>
           </label>
           <label className="text-sm font-medium">Status

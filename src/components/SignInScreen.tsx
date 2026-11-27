@@ -101,7 +101,7 @@ export function SignInScreen({ door }: { door: Door }) {
   };
 
   const AppIcon = app ? APP_ICONS[door][app] : stay ? BedDouble : Store;
-  const brand = stay ? "Hostel & Hotel POS" : "XTSY POS";
+  const brand = stay ? "Hostel POS" : "XTSY POS";
   const sub = stay ? "PMS + channel manager by XTSY" : "POS by XTSY";
   return (
     <main className={cn("grid min-h-screen bg-background lg:grid-cols-[1fr_minmax(26rem,34rem)]", stay && "theme-xtsy")}>
@@ -112,7 +112,7 @@ export function SignInScreen({ door }: { door: Door }) {
           <p className="mt-4 opacity-75">{app ? nameOf(app).for : info.pitchBody}</p>
         </div>
         <div className="flex items-center justify-between text-xs opacity-60">
-          <span>{stay ? <>Running a restaurant? <a className="underline" href={DOORS.restaurant.path}>Restaurant POS sign-in</a></> : <>Running a hostel or hotel? <a className="underline" href={DOORS.stay.path}>Hostel & Hotel POS sign-in</a></>}</span>
+          <span>{stay ? <>Running a restaurant? <a className="underline" href={DOORS.restaurant.path}>Restaurant POS sign-in</a></> : <>Running a hostel? <a className="underline" href={DOORS.stay.path}>Hostel POS sign-in</a></>}</span>
           <span>Made with <span role="img" aria-label="love" className="text-[#ff375f]">❤️</span> by XTSY</span>
         </div>
       </aside>
@@ -163,7 +163,7 @@ export function SignInScreen({ door }: { door: Door }) {
           )}
           <p className="mt-8 text-center text-xs text-muted-foreground">Once signed in, this device stays signed in and keeps working offline.</p>
           <p className="mt-3 text-center text-xs text-muted-foreground lg:hidden">
-            {stay ? <a className="underline" href={DOORS.restaurant.path}>Restaurant POS sign-in</a> : <a className="underline" href={DOORS.stay.path}>Hostel & Hotel POS sign-in</a>}
+            {stay ? <a className="underline" href={DOORS.restaurant.path}>Restaurant POS sign-in</a> : <a className="underline" href={DOORS.stay.path}>Hostel POS sign-in</a>}
           </p>
         </section>
       </div>
