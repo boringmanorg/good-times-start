@@ -53,7 +53,7 @@ export function TerminalWaiting({ restaurantId, app, device }: { restaurantId: s
   const signOut = async () => {
     await queryClient.cancelQueries(); queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: silent(signInPath()), replace: true });
+    await navigate({ to: signInPath(), replace: true });
   };
 
   return (

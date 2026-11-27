@@ -11,13 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BistroRouteImport } from './routes/_bistro'
+import { Route as HomepageRouteImport } from './routes/homepage'
 import { Route as HostelPosRouteImport } from './routes/hostel-pos'
+import { Route as HostelposRouteImport } from './routes/hostelpos'
 import { Route as HotelPosRouteImport } from './routes/hotel-pos'
+import { Route as HotelposRouteImport } from './routes/hotelpos'
 import { Route as ResortPosRouteImport } from './routes/resort-pos'
+import { Route as ResortposRouteImport } from './routes/resortpos'
 import { Route as RestaurantPosRouteImport } from './routes/restaurant-pos'
+import { Route as RestaurantposRouteImport } from './routes/restaurantpos'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TourismPosRouteImport } from './routes/tourism-pos'
+import { Route as TourismposRouteImport } from './routes/tourismpos'
 import { Route as AccountsChar123SubChar125RouteImport } from './routes/accounts.{-$sub}'
 import { Route as AuthChar123SubChar125RouteImport } from './routes/auth.{-$sub}'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
@@ -67,9 +73,19 @@ const BistroRoute = BistroRouteImport.update({
   id: '/_bistro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HomepageRoute = HomepageRouteImport.update({
+  id: '/homepage',
+  path: '/homepage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HostelPosRoute = HostelPosRouteImport.update({
   id: '/hostel-pos',
   path: '/hostel-pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HostelposRoute = HostelposRouteImport.update({
+  id: '/hostelpos',
+  path: '/hostelpos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HotelPosRoute = HotelPosRouteImport.update({
@@ -77,14 +93,29 @@ const HotelPosRoute = HotelPosRouteImport.update({
   path: '/hotel-pos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HotelposRoute = HotelposRouteImport.update({
+  id: '/hotelpos',
+  path: '/hotelpos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResortPosRoute = ResortPosRouteImport.update({
   id: '/resort-pos',
   path: '/resort-pos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResortposRoute = ResortposRouteImport.update({
+  id: '/resortpos',
+  path: '/resortpos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RestaurantPosRoute = RestaurantPosRouteImport.update({
   id: '/restaurant-pos',
   path: '/restaurant-pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RestaurantposRoute = RestaurantposRouteImport.update({
+  id: '/restaurantpos',
+  path: '/restaurantpos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -100,6 +131,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const TourismPosRoute = TourismPosRouteImport.update({
   id: '/tourism-pos',
   path: '/tourism-pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TourismposRoute = TourismposRouteImport.update({
+  id: '/tourismpos',
+  path: '/tourismpos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountsChar123SubChar125Route =
@@ -327,13 +363,19 @@ const BistroTabBistroVisitChar123SubChar125Route =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/homepage': typeof HomepageRoute
   '/hostel-pos': typeof HostelPosRoute
+  '/hostelpos': typeof HostelposRoute
   '/hotel-pos': typeof HotelPosRoute
+  '/hotelpos': typeof HotelposRoute
   '/resort-pos': typeof ResortPosRoute
+  '/resortpos': typeof ResortposRoute
   '/restaurant-pos': typeof RestaurantPosRoute
+  '/restaurantpos': typeof RestaurantposRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tourism-pos': typeof TourismPosRoute
+  '/tourismpos': typeof TourismposRoute
   '/accounts/{-$sub}': typeof AccountsChar123SubChar125Route
   '/auth/{-$sub}': typeof AuthChar123SubChar125Route
   '/book/$slug': typeof BookSlugRoute
@@ -376,13 +418,19 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/homepage': typeof HomepageRoute
   '/hostel-pos': typeof HostelPosRoute
+  '/hostelpos': typeof HostelposRoute
   '/hotel-pos': typeof HotelPosRoute
+  '/hotelpos': typeof HotelposRoute
   '/resort-pos': typeof ResortPosRoute
+  '/resortpos': typeof ResortposRoute
   '/restaurant-pos': typeof RestaurantPosRoute
+  '/restaurantpos': typeof RestaurantposRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tourism-pos': typeof TourismPosRoute
+  '/tourismpos': typeof TourismposRoute
   '/accounts/{-$sub}': typeof AccountsChar123SubChar125Route
   '/auth/{-$sub}': typeof AuthChar123SubChar125Route
   '/book/$slug': typeof BookSlugRoute
@@ -427,13 +475,19 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_bistro': typeof BistroRouteWithChildren
+  '/homepage': typeof HomepageRoute
   '/hostel-pos': typeof HostelPosRoute
+  '/hostelpos': typeof HostelposRoute
   '/hotel-pos': typeof HotelPosRoute
+  '/hotelpos': typeof HotelposRoute
   '/resort-pos': typeof ResortPosRoute
+  '/resortpos': typeof ResortposRoute
   '/restaurant-pos': typeof RestaurantPosRoute
+  '/restaurantpos': typeof RestaurantposRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tourism-pos': typeof TourismPosRoute
+  '/tourismpos': typeof TourismposRoute
   '/accounts/{-$sub}': typeof AccountsChar123SubChar125Route
   '/auth/{-$sub}': typeof AuthChar123SubChar125Route
   '/book/$slug': typeof BookSlugRoute
@@ -478,13 +532,19 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/homepage'
     | '/hostel-pos'
+    | '/hostelpos'
     | '/hotel-pos'
+    | '/hotelpos'
     | '/resort-pos'
+    | '/resortpos'
     | '/restaurant-pos'
+    | '/restaurantpos'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/tourism-pos'
+    | '/tourismpos'
     | '/accounts/{-$sub}'
     | '/auth/{-$sub}'
     | '/book/$slug'
@@ -527,13 +587,19 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/homepage'
     | '/hostel-pos'
+    | '/hostelpos'
     | '/hotel-pos'
+    | '/hotelpos'
     | '/resort-pos'
+    | '/resortpos'
     | '/restaurant-pos'
+    | '/restaurantpos'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/tourism-pos'
+    | '/tourismpos'
     | '/accounts/{-$sub}'
     | '/auth/{-$sub}'
     | '/book/$slug'
@@ -577,13 +643,19 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_bistro'
+    | '/homepage'
     | '/hostel-pos'
+    | '/hostelpos'
     | '/hotel-pos'
+    | '/hotelpos'
     | '/resort-pos'
+    | '/resortpos'
     | '/restaurant-pos'
+    | '/restaurantpos'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/tourism-pos'
+    | '/tourismpos'
     | '/accounts/{-$sub}'
     | '/auth/{-$sub}'
     | '/book/$slug'
@@ -628,13 +700,19 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BistroRoute: typeof BistroRouteWithChildren
+  HomepageRoute: typeof HomepageRoute
   HostelPosRoute: typeof HostelPosRoute
+  HostelposRoute: typeof HostelposRoute
   HotelPosRoute: typeof HotelPosRoute
+  HotelposRoute: typeof HotelposRoute
   ResortPosRoute: typeof ResortPosRoute
+  ResortposRoute: typeof ResortposRoute
   RestaurantPosRoute: typeof RestaurantPosRoute
+  RestaurantposRoute: typeof RestaurantposRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TourismPosRoute: typeof TourismPosRoute
+  TourismposRoute: typeof TourismposRoute
   AccountsChar123SubChar125Route: typeof AccountsChar123SubChar125Route
   AuthChar123SubChar125Route: typeof AuthChar123SubChar125Route
   BookSlugRoute: typeof BookSlugRoute
@@ -688,11 +766,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BistroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/homepage': {
+      id: '/homepage'
+      path: '/homepage'
+      fullPath: '/homepage'
+      preLoaderRoute: typeof HomepageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hostel-pos': {
       id: '/hostel-pos'
       path: '/hostel-pos'
       fullPath: '/hostel-pos'
       preLoaderRoute: typeof HostelPosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hostelpos': {
+      id: '/hostelpos'
+      path: '/hostelpos'
+      fullPath: '/hostelpos'
+      preLoaderRoute: typeof HostelposRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hotel-pos': {
@@ -702,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HotelPosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hotelpos': {
+      id: '/hotelpos'
+      path: '/hotelpos'
+      fullPath: '/hotelpos'
+      preLoaderRoute: typeof HotelposRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/resort-pos': {
       id: '/resort-pos'
       path: '/resort-pos'
@@ -709,11 +808,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResortPosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/resortpos': {
+      id: '/resortpos'
+      path: '/resortpos'
+      fullPath: '/resortpos'
+      preLoaderRoute: typeof ResortposRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/restaurant-pos': {
       id: '/restaurant-pos'
       path: '/restaurant-pos'
       fullPath: '/restaurant-pos'
       preLoaderRoute: typeof RestaurantPosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurantpos': {
+      id: '/restaurantpos'
+      path: '/restaurantpos'
+      fullPath: '/restaurantpos'
+      preLoaderRoute: typeof RestaurantposRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -735,6 +848,13 @@ declare module '@tanstack/react-router' {
       path: '/tourism-pos'
       fullPath: '/tourism-pos'
       preLoaderRoute: typeof TourismPosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tourismpos': {
+      id: '/tourismpos'
+      path: '/tourismpos'
+      fullPath: '/tourismpos'
+      preLoaderRoute: typeof TourismposRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accounts/{-$sub}': {
@@ -1036,13 +1156,19 @@ const BistroRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BistroRoute: BistroRouteWithChildren,
+  HomepageRoute: HomepageRoute,
   HostelPosRoute: HostelPosRoute,
+  HostelposRoute: HostelposRoute,
   HotelPosRoute: HotelPosRoute,
+  HotelposRoute: HotelposRoute,
   ResortPosRoute: ResortPosRoute,
+  ResortposRoute: ResortposRoute,
   RestaurantPosRoute: RestaurantPosRoute,
+  RestaurantposRoute: RestaurantposRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TourismPosRoute: TourismPosRoute,
+  TourismposRoute: TourismposRoute,
   AccountsChar123SubChar125Route: AccountsChar123SubChar125Route,
   AuthChar123SubChar125Route: AuthChar123SubChar125Route,
   BookSlugRoute: BookSlugRoute,

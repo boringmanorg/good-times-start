@@ -24,7 +24,7 @@ describe("the public address printed on QR cards", () => {
     for (const host of ["www.posbyxtsy.club", "posbyxtsy.club"]) {
       expect(isMarketingHost(host)).toBe(false);
     }
-    expect(marketingPath("/order/tab-bistro-qr")).toBe("/xtsy-pos"); // only ever on a marketing host
+    expect(marketingPath("/order/tab-bistro-qr")).toBe("/homepage"); // only ever on a marketing host
   });
 
   it("is the only public address written anywhere in the source", () => {

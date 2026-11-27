@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { SITE_PATH, homeToWebsite, isMarketingHost, marketingPath } from "./lib/site-config";
+import { setUrlModel, toInternal, toPublic } from "./lib/public-urls";
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
@@ -29,6 +30,14 @@ export const getRouter = () => {
     rewrite: {
       input: ({ url }) => {
         if (!isMarketingHost(url.hostname)) {
+          // Each model's app lives under its own folder: /restaurant/tables → /tables (public-urls.ts).
+          const app = toInternal(url.pathname, url.search);
+          if (app) {
+            // Set on the server too: the canonical-address check builds the output right after this input.
+            setUrlModel(app.model);
+            url.pathname = app.pathname;
+            return url;
+          }
           // The app's bare home page is the website too ("/?table=…" stays the bill screen).
           const home = homeToWebsite(url.pathname, url.search);
           if (home === null) return undefined;
@@ -41,6 +50,10 @@ export const getRouter = () => {
         return url;
       },
       output: ({ url }) => {
+        if (!isMarketingHost(url.hostname)) {
+          const pub = toPublic(url.pathname, url.search);
+          if (pub) { url.pathname = pub; return url; }
+        }
         if (!url.pathname.startsWith(SITE_PATH)) return undefined;
         if (!isMarketingHost(url.hostname)) {
           if ((url.pathname !== SITE_PATH && url.pathname !== `${SITE_PATH}/`) || url.search) return undefined;

@@ -27,7 +27,7 @@ describe("website content", () => {
   });
   it("a website-only domain still serves the policy pages and the videos", () => {
     for (const p of ["/privacy", "/terms", "/refunds", "/videos/billing.mp4"]) expect(marketingPath(p)).toBeNull();
-    expect(marketingPath("/login")).toBe("/xtsy-pos");
+    expect(marketingPath("/login")).toBe("/homepage");
   });
 });
 

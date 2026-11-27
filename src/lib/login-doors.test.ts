@@ -6,11 +6,11 @@ describe("one sign-in per POS model", () => {
   it("every product has its own door and path", () => {
     expect(DOOR_LIST.map((d) => d.product).sort()).toEqual(PRODUCTS.map((p) => p.id).sort());
     expect(new Set(DOOR_LIST.map((d) => d.path)).size).toBe(DOOR_LIST.length);
-    expect(doorPathFor("restaurant_pos")).toBe("/restaurant/login");
-    expect(doorPathFor("hostel_pos")).toBe("/hostel/login");
-    expect(doorPathFor("hotel_pos")).toBe("/hotel/login");
-    expect(doorPathFor("resort_pos")).toBe("/resort/login");
-    expect(doorPathFor("tourism_pos")).toBe("/tourism/login");
+    expect(doorPathFor("restaurant_pos")).toBe("/restaurantpos");
+    expect(doorPathFor("hostel_pos")).toBe("/hostelpos");
+    expect(doorPathFor("hotel_pos")).toBe("/hotelpos");
+    expect(doorPathFor("resort_pos")).toBe("/resortpos");
+    expect(doorPathFor("tourism_pos")).toBe("/tourismpos");
     expect(doorOf(undefined)).toBe("restaurant_pos");
     expect(doorOf("nonsense")).toBe("restaurant_pos");
   });
@@ -30,8 +30,8 @@ describe("one sign-in per POS model", () => {
   it("refuses another product's door and names the right one", () => {
     expect(wrongDoorMessage("hostel_pos", ["hostel_pos"])).toBeNull();
     expect(wrongDoorMessage("restaurant_pos", [null])).toBeNull();
-    expect(wrongDoorMessage("restaurant_pos", ["hostel_pos"])).toBe("This login is for Hostel POS. Sign in at /hostel/login instead.");
-    expect(wrongDoorMessage("hostel_pos", ["restaurant_pos"])).toBe("This login is for Restaurant POS. Sign in at /restaurant/login instead.");
+    expect(wrongDoorMessage("restaurant_pos", ["hostel_pos"])).toBe("This login is for Hostel POS. Sign in at /hostelpos instead.");
+    expect(wrongDoorMessage("hostel_pos", ["restaurant_pos"])).toBe("This login is for Restaurant POS. Sign in at /restaurantpos instead.");
     // Hostel and Hotel are separate products now: a hostel login can't use the hotel door.
     expect(wrongDoorMessage("hotel_pos", ["hostel_pos"])).toMatch(/Hostel POS/);
     expect(doorsFor(["hostel_pos", null]).sort()).toEqual(["hostel_pos", "restaurant_pos"]);

@@ -1,3 +1,4 @@
+import { internalPath } from "./public-urls";
 /**
  * The three internal logins and the three apps. Pure rules, tested.
  *
@@ -25,7 +26,7 @@ export const APPS: Record<AppKind, { name: string; short: string; home: "/dashbo
 };
 
 /** Where each app opens; the install links. */
-export const APP_LINKS: Record<AppKind, string> = { manager: "/manager", pos: "/tables?app=pos", waiter: "/waiter?app=waiter" };
+export const APP_LINKS: Record<AppKind, string> = { manager: "/restaurant/manager", pos: "/restaurant/tables?app=pos", waiter: "/restaurant/waiter?app=waiter" };
 
 export const DEVICE_LABELS: Record<DeviceKind, string> = { android: "Android phone or tablet", ios: "iPhone or iPad", desktop: "Windows or Mac computer" };
 
@@ -90,7 +91,9 @@ export function accessProblem(input: { login: LoginId | null; role: string | nul
 }
 
 /** Which app this window is: from the install link (?app=) or the page, else the person's own app. */
-export function appFromLocation(pathname: string, search: string): AppKind | null {
+export function appFromLocation(rawPathname: string, search: string): AppKind | null {
+  // The address bar may show the public form (/restaurant/waiter): read it as the internal path.
+  const pathname = internalPath(rawPathname, search);
   const param = new URLSearchParams(search).get("app");
   if (param === "manager" || param === "pos" || param === "waiter") return param;
   if (pathname === "/manager" || pathname.startsWith("/manager/")) return "manager";

@@ -19,7 +19,7 @@ function ManagerStart() {
   useEffect(() => {
     setAppMode("manager");
     if (loading) return;
-    void navigate({ to: silent(user ? "/dashboard" : signInPath()), replace: true });
+    void navigate({ to: user ? silent("/dashboard") : signInPath(), replace: true });
   }, [user, loading, navigate]);
   return <div className="grid min-h-screen place-items-center bg-background"><img src={logo} alt="POS Manager" width={44} height={44} className="rounded-xl opacity-80" /></div>;
 }

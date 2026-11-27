@@ -15,11 +15,11 @@
 export const MARKETING_HOSTS: string[] = ["xtsypos.test"];
 
 /** Where the website lives inside the app. It is also what the bare main address ("/") shows. */
-export const SITE_PATH = "/xtsy-pos";
+export const SITE_PATH = "/homepage";
 
 /** Staff sign-in (POS Manager, POS Billdesk, Waiter Pro). Never linked from the website. */
 /** Restaurant POS sign-in. Every model has its own door (login-doors.ts); /login still opens Restaurant POS. */
-export const STAFF_LOGIN_PATH = "/restaurant/login";
+export const STAFF_LOGIN_PATH = "/restaurantpos";
 
 /**
  * On the app's own address the bare home page ("/", no query) is the website; "/?table=…" etc. stay

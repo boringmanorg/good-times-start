@@ -28,7 +28,7 @@ function BistroLayout() {
     <footer className="border-t border-border bg-accent text-accent-foreground">
       <div className="mx-auto grid max-w-6xl gap-5 px-5 py-10 sm:grid-cols-2">
         <div><p className="font-brand text-3xl">TAB BISTRO</p><p className="mt-1 text-sm">Flavour. Food. Fusion. · New Shillong, Meghalaya</p></div>
-        <div className="text-sm sm:text-right"><Link to="/xtsy-pos/{-$sub}" className="underline underline-offset-4">POS by XTSY™</Link><p className="mt-3">XTSY™ is a trademark of XTSY Ventures Private Limited.</p><p className="mt-1">© {new Date().getFullYear()} XTSY Ventures Private Limited.</p></div>
+        <div className="text-sm sm:text-right"><Link to="/homepage" className="underline underline-offset-4">POS by XTSY™</Link><p className="mt-3">XTSY™ is a trademark of XTSY Ventures Private Limited.</p><p className="mt-1">© {new Date().getFullYear()} XTSY Ventures Private Limited.</p></div>
       </div>
     </footer>
   </div>;

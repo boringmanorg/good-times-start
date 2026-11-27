@@ -1,10 +1,10 @@
 /**
  * Every XTSY POS model has its own sign-in page ("door"), keyed by product:
- *   Restaurant POS  /restaurant/login  (and /login, kept for installed counter apps)
- *   Hostel POS      /hostel/login
- *   Hotel POS       /hotel/login       (coming soon: waitlist, no form)
- *   Resort POS      /resort/login      (coming soon)
- *   Tourism POS     /tourism/login     (coming soon)
+ *   Restaurant POS  /restaurantpos  (old /login and /restaurant/login redirect here)
+ *   Hostel POS      /hostelpos      (old /hostel/login redirects)
+ *   Hotel POS       /hotelpos       (coming soon: waitlist, no form)
+ *   Resort POS      /resortpos      (coming soon)
+ *   Tourism POS     /tourismpos     (coming soon)
  * A login only opens at its own product's door. A new model = an entry here + a route file.
  * Pure apart from the remembered door; tested in login-doors.test.ts.
  */
@@ -12,7 +12,7 @@ import type { AppKind } from "@/lib/staff-login-logic";
 import { STAY_PRODUCTS, isProductId, productById, type ProductId } from "@/lib/products";
 
 export type Door = ProductId;
-export type DoorPath = "/restaurant/login" | "/hostel/login" | "/hotel/login" | "/resort/login" | "/tourism/login";
+export type DoorPath = "/restaurantpos" | "/hostelpos" | "/hotelpos" | "/resortpos" | "/tourismpos";
 
 export interface DoorInfo {
   product: ProductId;
@@ -39,28 +39,28 @@ const STAY_APPS: Pick<DoorInfo, "apps" | "appNames"> = {
 
 export const DOORS: Record<Door, DoorInfo> = {
   restaurant_pos: {
-    product: "restaurant_pos", path: "/restaurant/login", name: "Restaurant POS", open: true, site: "/restaurant-pos",
+    product: "restaurant_pos", path: "/restaurantpos", name: "Restaurant POS", open: true, site: "/restaurant-pos",
     apps: ["manager", "pos", "waiter"], appNames: {},
     pitch: "Billing your restaurant will love.",
     pitchBody: "POS Manager for the owner, POS Billdesk for the counter, Waiter Pro for the floor. Orders flow between them live, even offline.",
   },
   hostel_pos: {
-    product: "hostel_pos", path: "/hostel/login", name: "Hostel POS", open: true, site: "/hostel-pos", ...STAY_APPS,
+    product: "hostel_pos", path: "/hostelpos", name: "Hostel POS", open: true, site: "/hostel-pos", ...STAY_APPS,
     pitch: "Your property, one desk.",
     pitchBody: "Rooms and beds, rates, bookings from every channel and your own website, check-in to check-out, in one place. Keeps working when the Wi-Fi doesn't.",
   },
   hotel_pos: {
-    product: "hotel_pos", path: "/hotel/login", name: "Hotel POS", open: false, site: "/hotel-pos", ...STAY_APPS,
+    product: "hotel_pos", path: "/hotelpos", name: "Hotel POS", open: false, site: "/hotel-pos", ...STAY_APPS,
     pitch: "The front desk, the rooms, one folio.",
     pitchBody: "Rate plans, group bookings and several properties under one account. Coming soon.",
   },
   resort_pos: {
-    product: "resort_pos", path: "/resort/login", name: "Resort POS", open: false, site: "/resort-pos", ...STAY_APPS,
+    product: "resort_pos", path: "/resortpos", name: "Resort POS", open: false, site: "/resort-pos", ...STAY_APPS,
     pitch: "Stays, activities and packages.",
     pitchBody: "Cottages, tents and villas, activity slots and packages on the guest's one bill. Coming soon.",
   },
   tourism_pos: {
-    product: "tourism_pos", path: "/tourism/login", name: "Tourism POS", open: false, site: "/tourism-pos",
+    product: "tourism_pos", path: "/tourismpos", name: "Tourism POS", open: false, site: "/tourism-pos",
     apps: ["manager"], appNames: { manager: { name: "Tour Manager", for: "Departures, seats, drivers and rentals" } },
     pitch: "Tours, seats and drivers.",
     pitchBody: "Departures, vehicles, rentals, advances and GST bills. Coming soon.",
