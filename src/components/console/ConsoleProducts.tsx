@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { BedDouble, Building2, ChevronRight, Hotel, MapPin, Mountain, Plane, Plus, Search, Store, UtensilsCrossed, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ago, loadPlans, loadRestaurants, type PlanRow, type RestaurantRow } from "@/lib/console-api";
+import { ago, loadAccountPrices, loadPlans, loadRestaurants, type PlanRow, type RestaurantRow } from "@/lib/console-api";
+import { clientTerms } from "@/lib/plans";
 import { consoleToken } from "@/lib/console-client";
 import { platformRestaurantModels } from "@/lib/platform-restaurants.functions";
 import { modelLabel } from "@/lib/platform-restaurant-logic";
@@ -118,7 +119,14 @@ function ProductOutlets({ product, rows, plans, models, route, go }: { product: 
   const [onboarding, setOnboarding] = useState(false);
   const planName = (id: string | undefined) => plans.find((x) => x.id === id)?.name ?? id ?? "No plan";
   const shown = rows.filter((r) => restaurantMatches({ ...r, planName: planName(r.account?.planId) }, query) && filterMatches({ live: !!r.account?.live, status: r.account?.status ?? null }, filter));
-  const mrr = rows.reduce((s, r) => s + (r.account?.live && !r.account.complimentary ? plans.find((x) => x.id === r.account?.planId)?.monthly_price ?? 0 : 0), 0);
+  // Monthly revenue at what each client actually pays (own price or list), once per account: a Group plan covers several properties.
+  const prices = useQuery({ queryKey: ["console", "account-prices"], queryFn: loadAccountPrices });
+  const billed = new Map<string, number>();
+  for (const r of rows) {
+    const a = r.account; const plan = plans.find((x) => x.id === a?.planId);
+    if (a && plan && a.live && !a.complimentary) billed.set(a.id, clientTerms(plan, prices.data?.[a.id]).price);
+  }
+  const mrr = [...billed.values()].reduce((s, v) => s + v, 0);
   return (
     <div className="space-y-5">
       <Crumbs route={route} go={go} />

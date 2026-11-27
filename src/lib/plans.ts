@@ -180,6 +180,18 @@ export function stayPlanTotal(plan: Pick<PublicPlan, "price" | "includedRooms" |
   return plan.price + Math.max(0, Math.floor(rooms) - included) * plan.extraRoomPrice;
 }
 
+/**
+ * What one client actually pays: its own price (an offer, or the earlier price kept when the plan
+ * changed) with its own room terms, else the plan's list terms. Payments are recorded by hand.
+ */
+export function clientTerms(
+  plan: { monthly_price: number; included_rooms?: number | null; extra_room_price?: number | null },
+  own: { customPrice: number | null; includedRooms: number | null; extraRoomPrice: number | null } | null | undefined,
+): { price: number; includedRooms: number | null; extraRoomPrice: number | null; own: boolean } {
+  if (own && own.customPrice !== null) return { price: own.customPrice, includedRooms: own.includedRooms, extraRoomPrice: own.extraRoomPrice, own: true };
+  return { price: plan.monthly_price, includedRooms: plan.included_rooms ?? null, extraRoomPrice: plan.extra_room_price ?? null, own: false };
+}
+
 /** "Up to 8 rooms · ₹300 a month per extra room", "Up to 5 properties", or "". */
 export function roomPriceText(plan: Pick<PublicPlan, "includedRooms" | "extraRoomPrice" | "maxProperties">): string {
   if (plan.includedRooms != null) return `Up to ${plan.includedRooms} rooms${plan.extraRoomPrice ? ` · ₹${plan.extraRoomPrice.toLocaleString("en-IN")} a month per extra room` : ""}`;

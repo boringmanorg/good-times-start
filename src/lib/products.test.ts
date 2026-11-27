@@ -117,3 +117,16 @@ describe("Hostel POS room pricing (owner, 27 Nov 2026)", async () => {
     expect(roomPriceText(essential!)).toBe("Up to 8 rooms · ₹300 a month per extra room");
   });
 });
+
+describe("client prices (owner, 27 Nov 2026)", async () => {
+  const { clientTerms } = await import("./plans");
+  const plan = { monthly_price: 2299, included_rooms: 8, extra_room_price: 300 };
+  it("a client without its own price pays the list terms", () => {
+    expect(clientTerms(plan, null)).toEqual({ price: 2299, includedRooms: 8, extraRoomPrice: 300, own: false });
+    expect(clientTerms(plan, { customPrice: null, includedRooms: null, extraRoomPrice: null })).toMatchObject({ price: 2299, own: false });
+  });
+  it("an offer or a kept earlier price replaces the list terms, rooms included", () => {
+    expect(clientTerms(plan, { customPrice: 1299, includedRooms: 10, extraRoomPrice: 250 })).toEqual({ price: 1299, includedRooms: 10, extraRoomPrice: 250, own: true });
+    expect(clientTerms({ monthly_price: 449 }, { customPrice: 199, includedRooms: null, extraRoomPrice: null })).toEqual({ price: 199, includedRooms: null, extraRoomPrice: null, own: true });
+  });
+});

@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Ban, Check, History, IndianRupee, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ago, loadPayments, recordPayment, saveRestaurantInfo, setTerminal, updateAccount, type PlanRow, type RestaurantRow } from "@/lib/console-api";
-import { featureName, featuresFor, SEAT_APPS, seatAppsFor, seatUseText, stayPlanTotal, type Feature, type SeatApp } from "@/lib/plans";
+import { ago, loadAccountPrices, loadPayments, recordPayment, saveRestaurantInfo, setAccountPrice, setTerminal, updateAccount, type AccountPrice, type PlanRow, type RestaurantRow } from "@/lib/console-api";
+import { clientTerms, featureName, featuresFor, SEAT_APPS, seatAppsFor, seatUseText, stayPlanTotal, type Feature, type SeatApp } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { field } from "./ConsoleBits";
 import { planProduct, STAY_PRODUCTS, type ProductId } from "@/lib/products";
@@ -63,13 +63,13 @@ export function RestaurantInfo({ r }: { r: RestaurantRow }) {
  * Recording a payment moves the paid-until date forward (never losing time already paid for) and
  * makes the account live again.
  */
-function Renewal({ r, price, plan }: { r: RestaurantRow; price: number; plan?: PlanRow | undefined }) {
+function Renewal({ r, price, terms }: { r: RestaurantRow; price: number; terms: { includedRooms: number | null; extraRoomPrice: number | null } }) {
   const queryClient = useQueryClient();
   const a = r.account!;
-  // Hostel POS plans priced by rooms: the monthly amount follows the property's room count.
-  const roomPriced = plan?.included_rooms != null && !!plan.extra_room_price;
-  const [rooms, setRooms] = useState(String(plan?.included_rooms ?? ""));
-  const monthly = roomPriced ? stayPlanTotal({ price, includedRooms: plan!.included_rooms ?? null, extraRoomPrice: plan!.extra_room_price ?? null }, Number(rooms || 0)) ?? price : price;
+  // Plans priced by rooms: the monthly amount follows the property's room count (client's own terms first).
+  const roomPriced = terms.includedRooms != null && !!terms.extraRoomPrice;
+  const [rooms, setRooms] = useState(String(terms.includedRooms ?? ""));
+  const monthly = roomPriced ? stayPlanTotal({ price, includedRooms: terms.includedRooms, extraRoomPrice: terms.extraRoomPrice }, Number(rooms || 0)) ?? price : price;
   const [amount, setAmount] = useState(String(price));
   const [months, setMonths] = useState(1);
   const [method, setMethod] = useState("upi");
@@ -99,8 +99,8 @@ function Renewal({ r, price, plan }: { r: RestaurantRow; price: number; plan?: P
       <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {roomPriced ? (
           <label className="text-sm font-medium">Rooms at the property
-            <input value={rooms} inputMode="numeric" onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, "").slice(0, 4); setRooms(v); setAmount(String(stayPlanTotal({ price, includedRooms: plan!.included_rooms ?? null, extraRoomPrice: plan!.extra_room_price ?? null }, Number(v || 0)) ?? price)); }} className={cn(field, "tabular-nums")} />
-            <span className="mt-1 block text-xs font-normal text-muted-foreground">{plan!.included_rooms} rooms included · ₹{plan!.extra_room_price} per extra room · ₹{monthly.toLocaleString("en-IN")} a month</span>
+            <input value={rooms} inputMode="numeric" onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, "").slice(0, 4); setRooms(v); setAmount(String(stayPlanTotal({ price, includedRooms: terms.includedRooms, extraRoomPrice: terms.extraRoomPrice }, Number(v || 0)) ?? price)); }} className={cn(field, "tabular-nums")} />
+            <span className="mt-1 block text-xs font-normal text-muted-foreground">{terms.includedRooms} rooms included · ₹{terms.extraRoomPrice} per extra room · ₹{monthly.toLocaleString("en-IN")} a month</span>
           </label>
         ) : null}
         <label className="text-sm font-medium">Amount received (₹)
@@ -242,7 +242,81 @@ export function SubscriptionSection({ r, plans, product = "restaurant_pos" }: { 
         </ul>
       </fieldset>
       <div className="lg:col-span-2"><Button disabled={busy} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save subscription"}</Button></div>
-      <div className="lg:col-span-2"><Renewal key={`${planRow?.id}-${planRow?.monthly_price ?? 0}`} r={r} price={planRow?.monthly_price ?? 0} plan={planRow} /></div>
+      {planRow ? <div className="lg:col-span-2"><ClientPrice r={r} planRow={planRow} onPlan={plan === a.planId} stays={stays} /></div> : null}
+    </div>
+  );
+}
+
+/**
+ * What this client pays. The plan's list price applies unless the client has its own price: an
+ * initial offer set here, or the earlier price kept automatically when the plan's price changed.
+ * Moving the client to another plan drops its own price (the cloud does that).
+ */
+function ClientPrice({ r, planRow, onPlan, stays }: { r: RestaurantRow; planRow: PlanRow; onPlan: boolean; stays: boolean }) {
+  const queryClient = useQueryClient();
+  const a = r.account!;
+  const prices = useQuery({ queryKey: ["console", "account-prices"], queryFn: loadAccountPrices });
+  const own: AccountPrice | undefined = onPlan ? prices.data?.[a.id] : undefined;
+  const terms = clientTerms(planRow, own);
+  const [editing, setEditing] = useState(false);
+  const [price, setPrice] = useState("");
+  const [rooms, setRooms] = useState("");
+  const [extra, setExtra] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const roomPlan = stays && planRow.included_rooms != null;
+  const open = () => {
+    setPrice(String(terms.price)); setRooms(terms.includedRooms == null ? "" : String(terms.includedRooms));
+    setExtra(terms.extraRoomPrice == null ? "" : String(terms.extraRoomPrice)); setNote(own?.note ?? ""); setEditing(true);
+  };
+  const save = async (clear = false) => {
+    setBusy(true);
+    try {
+      await setAccountPrice({ account: a.id, price: clear ? null : Number(price || 0), includedRooms: clear || !roomPlan || rooms === "" ? null : Number(rooms),
+        extraRoomPrice: clear || !roomPlan || rooms === "" ? null : Number(extra || 0), note: clear ? "" : note });
+      toast.success(clear ? `${r.name} is back on the ${planRow.name} list price` : `${r.name}: own price saved`);
+      setEditing(false);
+      await queryClient.invalidateQueries({ queryKey: ["console"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the price"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold"><IndianRupee className="size-4 text-primary" />Client price</h3>
+            <p className="mt-1 text-sm">
+              <span className="text-xl font-bold tabular-nums">₹{terms.price.toLocaleString("en-IN")}</span> a month
+              {terms.includedRooms != null ? <span className="text-muted-foreground"> · {terms.includedRooms} rooms included · ₹{terms.extraRoomPrice ?? 0} per extra room</span> : null}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {!onPlan ? "Save the subscription first: a new plan starts on its list price." : terms.own ? `Own price · list price ₹${planRow.monthly_price.toLocaleString("en-IN")}${own?.note ? ` · ${own.note}` : ""}` : `${planRow.name} list price`}
+            </p>
+          </div>
+          {onPlan && !editing ? (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={open}>{terms.own ? "Change price" : "Set an offer price"}</Button>
+              {terms.own ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (window.confirm(`Put ${r.name} back on the ${planRow.name} list price (₹${planRow.monthly_price.toLocaleString("en-IN")})?`)) void save(true); }}>Use list price</Button> : null}
+            </div>
+          ) : null}
+        </div>
+        {editing ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="text-sm font-medium">Monthly price (₹)<input inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value.replace(/\D/g, "").slice(0, 7))} className={cn(field, "tabular-nums")} /></label>
+            {roomPlan ? <>
+              <label className="text-sm font-medium">Rooms included<input inputMode="numeric" value={rooms} onChange={(e) => setRooms(e.target.value.replace(/\D/g, "").slice(0, 4))} className={cn(field, "tabular-nums")} /></label>
+              <label className="text-sm font-medium">₹ per extra room<input inputMode="numeric" value={extra} disabled={rooms === ""} onChange={(e) => setExtra(e.target.value.replace(/\D/g, "").slice(0, 6))} className={cn(field, "tabular-nums")} /></label>
+            </> : null}
+            <label className="text-sm font-medium sm:col-span-2 lg:col-span-4">Why this price (the offer)<input value={note} maxLength={200} placeholder="e.g. Launch offer for the first 6 months" onChange={(e) => setNote(e.target.value)} className={field} /></label>
+            <div className="flex gap-2 sm:col-span-2 lg:col-span-4">
+              <Button size="sm" disabled={busy || !price || note.trim().length < 3} onClick={() => void save()}><Save />{busy ? "Saving…" : "Save client price"}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <Renewal key={`${planRow.id}-${terms.price}-${terms.includedRooms ?? ""}-${terms.extraRoomPrice ?? ""}`} r={r} price={terms.price} terms={terms} />
     </div>
   );
 }

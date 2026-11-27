@@ -93,10 +93,18 @@ function PlanEditor({ p }: { p: PlanRow }) {
   const [features, setFeatures] = useState<Partial<Record<Feature, boolean>>>(p.features);
   const [busy, setBusy] = useState(false);
   const num = (s: string) => (s === "" ? null : Number(s));
+  // Stay plans: rooms in the base price, ₹ per extra room, and how many properties one subscription covers.
+  const stay = isStayPlan(p.id);
+  const [rooms, setRooms] = useState(p.included_rooms == null ? "" : String(p.included_rooms));
+  const [extra, setExtra] = useState(p.extra_room_price == null ? "" : String(p.extra_room_price));
+  const [props, setProps] = useState(String(p.max_outlets ?? 1));
   const save = async () => {
     setBusy(true);
     try {
-      await savePlan({ id: p.id, name: name.trim() || p.name, monthly: Number(price) || 0, billdesk: num(seats.pos), waiter: hasWaiter ? num(seats.waiter) : 0, admin: num(seats.manager), features, active: true, quote, tagline });
+      const priceChanged = (Number(price) || 0) !== p.monthly_price || (stay && (num(rooms) !== (p.included_rooms ?? null) || num(extra) !== (p.extra_room_price ?? null)));
+      if (priceChanged && !window.confirm(`New clients will see the new ${name} terms. Clients already on ${name} keep the price they have now; change any of them under the client's Plan & billing. Save?`)) return;
+      await savePlan({ id: p.id, name: name.trim() || p.name, monthly: Number(price) || 0, billdesk: num(seats.pos), waiter: hasWaiter ? num(seats.waiter) : 0, admin: num(seats.manager), features, active: true, quote, tagline,
+        ...(stay ? { rooms: { included: num(rooms), extra: num(rooms) === null ? null : num(extra) }, maxOutlets: Math.max(1, Number(props) || 1) } : {}) });
       toast.success(`${name} saved`);
       await queryClient.invalidateQueries({ queryKey: ["console"] });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the plan"); }
@@ -110,6 +118,14 @@ function PlanEditor({ p }: { p: PlanRow }) {
         <label className="text-sm font-medium sm:col-span-2">Tagline<input value={tagline} maxLength={120} onChange={(e) => setTagline(e.target.value)} className={field} /></label>
         <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={quote} onChange={(e) => setQuote(e.target.checked)} className="size-4 accent-[var(--color-primary)]" />Call for quote</label>
       </div>
+      {stay ? (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <label className="text-xs text-muted-foreground">Rooms included<input inputMode="numeric" placeholder="no limit" value={rooms} onChange={(e) => setRooms(e.target.value.replace(/\D/g, "").slice(0, 4))} className={field} /></label>
+          <label className="text-xs text-muted-foreground">₹ per extra room a month<input inputMode="numeric" placeholder="—" disabled={rooms === ""} value={extra} onChange={(e) => setExtra(e.target.value.replace(/\D/g, "").slice(0, 6))} className={field} /></label>
+          <label className="text-xs text-muted-foreground">Properties covered<input inputMode="numeric" value={props} onChange={(e) => setProps(e.target.value.replace(/\D/g, "").slice(0, 3))} className={field} /></label>
+        </div>
+      ) : null}
+      <p className="mt-2 text-xs text-muted-foreground">A new price or room terms apply to new clients. Clients already on this plan keep what they pay now.</p>
       <div className="mt-3 grid grid-cols-3 gap-2">
         {seatAppsFor(planProduct(p.id)).map(([k, l]) => (
           <label key={k} className="text-xs text-muted-foreground">{l} seats<input inputMode="numeric" placeholder="any" value={seats[k]} onChange={(e) => setSeats((s) => ({ ...s, [k]: e.target.value.replace(/\D/g, "").slice(0, 4) }))} className={field} /></label>

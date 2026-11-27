@@ -146,6 +146,15 @@ export function describeActivity(e: ActivityEvent, plans: Record<string, string>
       return { area: "integrations", tone: "normal", title: `${PLATFORM[str(d["platform"])] ?? str(d["platform"])} ${d["mode"] === "off" ? "switched off" : `${MODE[str(d["mode"])] ?? str(d["mode"])} switched on`}`, details: str(d["store_id"]) ? [`Store id ${str(d["store_id"])}`] : [] };
     case "sandbox_order":
       return { area: "integrations", tone: "normal", title: `${PLATFORM[str(d["platform"])] ?? ""} test order ${str(d["code"])} sent · ${rupees(d["subtotal"])}`, details: [] };
+    case "price_kept":
+      return { area: "billing", tone: "money", title: `Kept on the earlier ${plans[str(d["plan"])] ?? str(d["plan"])} price: ${rupees(d["price"])} a month`,
+        details: [`New list price ${rupees(d["newPrice"])}`, ...(d["includedRooms"] != null ? [`${str(d["includedRooms"])} rooms included · ${rupees(d["extraRoomPrice"])} per extra room`] : [])] };
+    case "price_changed": {
+      const to = obj(d["to"]);
+      if (to["price"] == null) return { area: "billing", tone: "normal", title: "Client price removed: back on the plan's list price", details: [] };
+      return { area: "billing", tone: "money", title: `Client price set: ${rupees(to["price"])} a month`,
+        details: [...(to["includedRooms"] != null ? [`${str(to["includedRooms"])} rooms included · ${rupees(to["extraRoomPrice"])} per extra room`] : []), ...(str(to["note"]) ? [`Offer: ${str(to["note"])}`] : [])] };
+    }
     default:
       return { area: "outlet", tone: "normal", title: e.kind.replace(/_/g, " "), details: [] };
   }

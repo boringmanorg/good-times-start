@@ -53,3 +53,13 @@ describe("catalogue drift against the ladder", () => {
     expect(catalogueDrift(drifted, ladder, FEATURES).map((d) => `${d.plan}:${d.feature}:${d.actual}`)).toEqual(["basic:purchases:true", "pro:gift_cards:false", "pro:kds:true"]);
   });
 });
+
+describe("client price events", () => {
+  it("reads a kept price and an offer", async () => {
+    const { describeActivity } = await import("./activity-logic");
+    const kept = describeActivity({ kind: "price_kept", detail: { plan: "pro", price: 599, newPrice: 1299 } } as never, { pro: "Pro" });
+    expect(kept?.title).toMatch(/earlier Pro price/);
+    const offer = describeActivity({ kind: "price_changed", detail: { to: { price: 1500, note: "Launch offer" } } } as never);
+    expect(offer?.details.join(" ")).toMatch(/Launch offer/);
+  });
+});

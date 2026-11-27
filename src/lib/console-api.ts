@@ -60,8 +60,27 @@ export async function loadPlans(): Promise<PlanRow[]> {
 export const updateAccount = (a: { id: string; plan: string; status: string; paidUntil: string | null; complimentary: boolean; seats: Partial<Record<SeatApp, number>>; features: Partial<Record<Feature, boolean>>; notes: string }) =>
   rpc<void>("platform_update_account", { _id: a.id, _plan: a.plan, _status: a.status, _paid_until: a.paidUntil, _complimentary: a.complimentary,
     _seat_overrides: a.seats, _feature_overrides: a.features, _notes: a.notes });
-export const savePlan = (p: { id: string; name: string; monthly: number; billdesk: number | null; waiter: number | null; admin: number | null; features: Partial<Record<Feature, boolean>>; active: boolean; quote: boolean; tagline: string }) =>
-  rpc<void>("platform_save_plan", { _id: p.id, _name: p.name, _monthly: p.monthly, _billdesk: p.billdesk, _waiter: p.waiter, _admin: p.admin, _features: p.features, _active: p.active, _quote: p.quote, _tagline: p.tagline });
+/**
+ * Save a plan. Room terms are only written when `rooms` is given (stay plans), so a restaurant
+ * plan save or a drift restore never wipes them. Changing the price or room terms keeps every
+ * current client on the old terms (cloud trigger `plans_keep_customer_prices`).
+ */
+export const savePlan = (p: { id: string; name: string; monthly: number; billdesk: number | null; waiter: number | null; admin: number | null; features: Partial<Record<Feature, boolean>>; active: boolean; quote: boolean; tagline: string;
+  rooms?: { included: number | null; extra: number | null }; maxOutlets?: number }) =>
+  rpc<void>("platform_save_plan", { _id: p.id, _name: p.name, _monthly: p.monthly, _billdesk: p.billdesk, _waiter: p.waiter, _admin: p.admin, _features: p.features, _active: p.active, _quote: p.quote, _tagline: p.tagline,
+    _set_rooms: !!p.rooms, _included_rooms: p.rooms?.included ?? null, _extra_room_price: p.rooms?.extra ?? null, _max_outlets: p.maxOutlets ?? null });
+
+/** One client's own price (an offer, or the earlier price kept when the plan changed). */
+export interface AccountPrice { id: string; customPrice: number | null; includedRooms: number | null; extraRoomPrice: number | null; note: string | null; setAt: string | null }
+export async function loadAccountPrices(): Promise<Record<string, AccountPrice>> {
+  const { data, error } = await (consoleClient().from.bind(consoleClient()) as unknown as (t: string) => { select: (s: string) => Promise<{ data: { id: string; custom_price: number | null; custom_included_rooms: number | null; custom_extra_room_price: number | null; price_note: string | null; price_set_at: string | null }[] | null; error: { message: string } | null }> })("accounts")
+    .select("id, custom_price, custom_included_rooms, custom_extra_room_price, price_note, price_set_at");
+  if (error) throw new Error(error.message);
+  return Object.fromEntries((data ?? []).map((r) => [r.id, { id: r.id, customPrice: r.custom_price, includedRooms: r.custom_included_rooms, extraRoomPrice: r.custom_extra_room_price, note: r.price_note, setAt: r.price_set_at }]));
+}
+/** Set one client's price (all nulls clears it back to the plan's price). The note is required with a price. */
+export const setAccountPrice = (p: { account: string; price: number | null; includedRooms: number | null; extraRoomPrice: number | null; note: string }) =>
+  rpc<void>("platform_set_account_price", { _account: p.account, _price: p.price, _included_rooms: p.includedRooms, _extra_room_price: p.extraRoomPrice, _note: p.note });
 export const setTerminal = (restaurant: string, device: string, action: "active" | "blocked" | "release") =>
   rpc<string>("platform_set_terminal", { _restaurant: restaurant, _device: device, _action: action });
 
