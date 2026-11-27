@@ -132,7 +132,7 @@ function SiteFooter() {
           <ul className="mt-3 space-y-2 text-muted-foreground">
             <li><a href="/#plans" className="hover:text-foreground">Pricing</a></li>
             <li><a href="/#status" className="hover:text-foreground">What's live</a></li>
-            <li><Link to="/tab-bistro" className="hover:text-foreground">TAB Bistro by XTSY</Link></li>
+            <li><Link to="/tab-bistro/{-$sub}" className="hover:text-foreground">TAB Bistro by XTSY</Link></li>
             <li><a href="https://xtsy.one" target="_blank" rel="noreferrer" className="hover:text-foreground">xtsy.one</a></li>
           </ul>
         </div>
@@ -140,9 +140,9 @@ function SiteFooter() {
           <p className="font-bold">Help</p>
           <ul className="mt-3 space-y-2 text-muted-foreground">
             <li><a href="mailto:admin@xtsy.one" className="hover:text-foreground">admin@xtsy.one</a></li>
-            <li><Link to="/privacy" className="hover:text-foreground">Privacy</Link></li>
-            <li><Link to="/terms" className="hover:text-foreground">Terms of service</Link></li>
-            <li><Link to="/refunds" className="hover:text-foreground">Refunds and cancellation</Link></li>
+            <li><Link to="/privacy/{-$sub}" className="hover:text-foreground">Privacy</Link></li>
+            <li><Link to="/terms/{-$sub}" className="hover:text-foreground">Terms of service</Link></li>
+            <li><Link to="/refunds/{-$sub}" className="hover:text-foreground">Refunds and cancellation</Link></li>
           </ul>
         </div>
       </div>

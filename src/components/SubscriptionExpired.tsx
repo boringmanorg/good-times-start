@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { subscriptionText, whatsappLink, type Entitlements } from "@/lib/plans";
 import logo from "@/assets/logo.png";
 import { signInPath } from "@/lib/login-doors";
+import { silent } from "@/lib/silent-route";
 
 /*
  * The subscription has run out (the 7-day grace after the renewal date included) or XTSY has
@@ -20,7 +21,7 @@ export function SubscriptionExpired({ plan, admin, restaurantName }: { plan: Ent
   const signOut = async () => {
     await queryClient.cancelQueries(); queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: signInPath(), replace: true });
+    await navigate({ to: silent(signInPath()), replace: true });
   };
   return (
     <main className="grid min-h-screen place-items-center bg-background p-4">

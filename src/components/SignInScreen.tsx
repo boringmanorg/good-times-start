@@ -11,6 +11,7 @@ import { freeDeviceFor } from "@/lib/device-switch";
 import { productById } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import { silent } from "@/lib/silent-route";
 
 const APP_ICONS: Record<"restaurant" | "stay", Record<AppKind, typeof Store>> = {
   restaurant: { manager: LayoutDashboard, pos: Store, waiter: Tablet },
@@ -53,7 +54,7 @@ export function SignInScreen({ door }: { door: Door }) {
     const target: AppKind = chosen && apps.includes(chosen) ? chosen : apps[0] ?? chosen ?? "manager";
     setAppMode(target);
     rememberDoor(door);
-    void navigate({ to: user.role === "kitchen" && !stay ? "/tables" : homeFor(door, target), replace: true });
+    void navigate({ to: silent(user.role === "kitchen" && !stay ? "/tables" : homeFor(door, target)), replace: true });
   }, [loading, user, submitting, chosen, navigate, door, info.apps, stay]);
 
   const app = chosen;
@@ -101,7 +102,7 @@ export function SignInScreen({ door }: { door: Door }) {
       setAppMode(target);
       rememberDoor(door);
       await refresh();
-      await navigate({ to: homeFor(door, target), replace: true });
+      await navigate({ to: silent(homeFor(door, target)), replace: true });
     } finally {
       setBusy(false);
       setSubmitting(false);

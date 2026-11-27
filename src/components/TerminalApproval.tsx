@@ -10,6 +10,7 @@ import { isAdmin, useStaff } from "@/lib/staff";
 import { approveThisTerminal, rememberTerminalName, touchTerminal } from "@/lib/terminal-actions";
 import logo from "@/assets/logo.png";
 import { signInPath } from "@/lib/login-doors";
+import { silent } from "@/lib/silent-route";
 
 /*
  * A device seen for the first time waits for the admin. Two ways through:
@@ -52,7 +53,7 @@ export function TerminalWaiting({ restaurantId, app, device }: { restaurantId: s
   const signOut = async () => {
     await queryClient.cancelQueries(); queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: signInPath(), replace: true });
+    await navigate({ to: silent(signInPath()), replace: true });
   };
 
   return (

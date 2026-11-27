@@ -10,92 +10,61 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AccountsRouteImport } from './routes/accounts'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as BrandRouteImport } from './routes/brand'
-import { Route as ConsoleRouteImport } from './routes/console'
-import { Route as CustomersRouteImport } from './routes/customers'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as FrontDeskRouteImport } from './routes/front-desk'
+import { Route as BistroRouteImport } from './routes/_bistro'
 import { Route as HostelPosRouteImport } from './routes/hostel-pos'
 import { Route as HotelPosRouteImport } from './routes/hotel-pos'
-import { Route as KitchenRouteImport } from './routes/kitchen'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ManagerRouteImport } from './routes/manager'
-import { Route as MarketingRouteImport } from './routes/marketing'
-import { Route as MenuRouteImport } from './routes/menu'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as RefundsRouteImport } from './routes/refunds'
-import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResortPosRouteImport } from './routes/resort-pos'
 import { Route as RestaurantPosRouteImport } from './routes/restaurant-pos'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as StockRouteImport } from './routes/stock'
-import { Route as SupportRouteImport } from './routes/support'
-import { Route as TabBistroRouteImport } from './routes/tab-bistro'
-import { Route as TablesRouteImport } from './routes/tables'
-import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TourismPosRouteImport } from './routes/tourism-pos'
-import { Route as WaiterRouteImport } from './routes/waiter'
-import { Route as XtsyPosRouteImport } from './routes/xtsy-pos'
+import { Route as AccountsChar123SubChar125RouteImport } from './routes/accounts.{-$sub}'
+import { Route as AuthChar123SubChar125RouteImport } from './routes/auth.{-$sub}'
 import { Route as BookSlugRouteImport } from './routes/book.$slug'
-import { Route as HostelLoginRouteImport } from './routes/hostel.login'
-import { Route as HotelLoginRouteImport } from './routes/hotel.login'
+import { Route as BrandChar123SubChar125RouteImport } from './routes/brand.{-$sub}'
+import { Route as ConsoleChar123SubChar125RouteImport } from './routes/console.{-$sub}'
+import { Route as CustomersChar123SubChar125RouteImport } from './routes/customers.{-$sub}'
+import { Route as DashboardChar123SubChar125RouteImport } from './routes/dashboard.{-$sub}'
+import { Route as FrontDeskChar123SubChar125RouteImport } from './routes/front-desk.{-$sub}'
+import { Route as KitchenChar123SubChar125RouteImport } from './routes/kitchen.{-$sub}'
+import { Route as LoginChar123SubChar125RouteImport } from './routes/login.{-$sub}'
+import { Route as ManagerChar123SubChar125RouteImport } from './routes/manager.{-$sub}'
+import { Route as MarketingChar123SubChar125RouteImport } from './routes/marketing.{-$sub}'
+import { Route as MenuChar123SubChar125RouteImport } from './routes/menu.{-$sub}'
 import { Route as OrderSlugRouteImport } from './routes/order.$slug'
-import { Route as ResortLoginRouteImport } from './routes/resort.login'
-import { Route as RestaurantLoginRouteImport } from './routes/restaurant.login'
-import { Route as StaysIndexRouteImport } from './routes/stays.index'
-import { Route as StaysBookingsRouteImport } from './routes/stays.bookings'
-import { Route as StaysPropertyRouteImport } from './routes/stays.property'
-import { Route as StaysRatesRouteImport } from './routes/stays.rates'
-import { Route as StaysReportsRouteImport } from './routes/stays.reports'
-import { Route as TabBistroIndexRouteImport } from './routes/tab-bistro.index'
-import { Route as TabBistroGiftCardsRouteImport } from './routes/tab-bistro.gift-cards'
-import { Route as TabBistroMenuRouteImport } from './routes/tab-bistro.menu'
-import { Route as TabBistroVisitRouteImport } from './routes/tab-bistro.visit'
-import { Route as TourismLoginRouteImport } from './routes/tourism.login'
+import { Route as PrivacyChar123SubChar125RouteImport } from './routes/privacy.{-$sub}'
+import { Route as RefundsChar123SubChar125RouteImport } from './routes/refunds.{-$sub}'
+import { Route as ReportsChar123SubChar125RouteImport } from './routes/reports.{-$sub}'
+import { Route as SettingsChar123SubChar125RouteImport } from './routes/settings.{-$sub}'
+import { Route as SetupChar123SubChar125RouteImport } from './routes/setup.{-$sub}'
+import { Route as StaysChar123SubChar125RouteImport } from './routes/stays.{-$sub}'
+import { Route as StockChar123SubChar125RouteImport } from './routes/stock.{-$sub}'
+import { Route as SupportChar123SubChar125RouteImport } from './routes/support.{-$sub}'
+import { Route as TablesChar123SubChar125RouteImport } from './routes/tables.{-$sub}'
+import { Route as TermsChar123SubChar125RouteImport } from './routes/terms.{-$sub}'
+import { Route as WaiterChar123SubChar125RouteImport } from './routes/waiter.{-$sub}'
+import { Route as XtsyPosChar123SubChar125RouteImport } from './routes/xtsy-pos.{-$sub}'
+import { Route as BistroTabBistroChar123SubChar125RouteImport } from './routes/_bistro.tab-bistro.{-$sub}'
+import { Route as HostelLoginChar123SubChar125RouteImport } from './routes/hostel.login.{-$sub}'
+import { Route as HotelLoginChar123SubChar125RouteImport } from './routes/hotel.login.{-$sub}'
+import { Route as ResortLoginChar123SubChar125RouteImport } from './routes/resort.login.{-$sub}'
+import { Route as RestaurantLoginChar123SubChar125RouteImport } from './routes/restaurant.login.{-$sub}'
+import { Route as StaysBookingsChar123SubChar125RouteImport } from './routes/stays.bookings.{-$sub}'
+import { Route as StaysPropertyChar123SubChar125RouteImport } from './routes/stays.property.{-$sub}'
+import { Route as StaysRatesChar123SubChar125RouteImport } from './routes/stays.rates.{-$sub}'
+import { Route as StaysReportsChar123SubChar125RouteImport } from './routes/stays.reports.{-$sub}'
+import { Route as TourismLoginChar123SubChar125RouteImport } from './routes/tourism.login.{-$sub}'
+import { Route as BistroTabBistroGiftCardsChar123SubChar125RouteImport } from './routes/_bistro.tab-bistro.gift-cards.{-$sub}'
+import { Route as BistroTabBistroMenuChar123SubChar125RouteImport } from './routes/_bistro.tab-bistro.menu.{-$sub}'
+import { Route as BistroTabBistroVisitChar123SubChar125RouteImport } from './routes/_bistro.tab-bistro.visit.{-$sub}'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountsRoute = AccountsRouteImport.update({
-  id: '/accounts',
-  path: '/accounts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BrandRoute = BrandRouteImport.update({
-  id: '/brand',
-  path: '/brand',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConsoleRoute = ConsoleRouteImport.update({
-  id: '/console',
-  path: '/console',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CustomersRoute = CustomersRouteImport.update({
-  id: '/customers',
-  path: '/customers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FrontDeskRoute = FrontDeskRouteImport.update({
-  id: '/front-desk',
-  path: '/front-desk',
+const BistroRoute = BistroRouteImport.update({
+  id: '/_bistro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HostelPosRoute = HostelPosRouteImport.update({
@@ -106,46 +75,6 @@ const HostelPosRoute = HostelPosRouteImport.update({
 const HotelPosRoute = HotelPosRouteImport.update({
   id: '/hotel-pos',
   path: '/hotel-pos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KitchenRoute = KitchenRouteImport.update({
-  id: '/kitchen',
-  path: '/kitchen',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ManagerRoute = ManagerRouteImport.update({
-  id: '/manager',
-  path: '/manager',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketingRoute = MarketingRouteImport.update({
-  id: '/marketing',
-  path: '/marketing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MenuRoute = MenuRouteImport.update({
-  id: '/menu',
-  path: '/menu',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RefundsRoute = RefundsRouteImport.update({
-  id: '/refunds',
-  path: '/refunds',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResortPosRoute = ResortPosRouteImport.update({
@@ -163,44 +92,9 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StockRoute = StockRouteImport.update({
-  id: '/stock',
-  path: '/stock',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SupportRoute = SupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TabBistroRoute = TabBistroRouteImport.update({
-  id: '/tab-bistro',
-  path: '/tab-bistro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TablesRoute = TablesRouteImport.update({
-  id: '/tables',
-  path: '/tables',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TourismPosRoute = TourismPosRouteImport.update({
@@ -208,14 +102,15 @@ const TourismPosRoute = TourismPosRouteImport.update({
   path: '/tourism-pos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WaiterRoute = WaiterRouteImport.update({
-  id: '/waiter',
-  path: '/waiter',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const XtsyPosRoute = XtsyPosRouteImport.update({
-  id: '/xtsy-pos',
-  path: '/xtsy-pos',
+const AccountsChar123SubChar125Route =
+  AccountsChar123SubChar125RouteImport.update({
+    id: '/accounts/{-$sub}',
+    path: '/accounts/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthChar123SubChar125Route = AuthChar123SubChar125RouteImport.update({
+  id: '/auth/{-$sub}',
+  path: '/auth/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BookSlugRoute = BookSlugRouteImport.update({
@@ -223,14 +118,61 @@ const BookSlugRoute = BookSlugRouteImport.update({
   path: '/book/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HostelLoginRoute = HostelLoginRouteImport.update({
-  id: '/hostel/login',
-  path: '/hostel/login',
+const BrandChar123SubChar125Route = BrandChar123SubChar125RouteImport.update({
+  id: '/brand/{-$sub}',
+  path: '/brand/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HotelLoginRoute = HotelLoginRouteImport.update({
-  id: '/hotel/login',
-  path: '/hotel/login',
+const ConsoleChar123SubChar125Route =
+  ConsoleChar123SubChar125RouteImport.update({
+    id: '/console/{-$sub}',
+    path: '/console/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CustomersChar123SubChar125Route =
+  CustomersChar123SubChar125RouteImport.update({
+    id: '/customers/{-$sub}',
+    path: '/customers/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardChar123SubChar125Route =
+  DashboardChar123SubChar125RouteImport.update({
+    id: '/dashboard/{-$sub}',
+    path: '/dashboard/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const FrontDeskChar123SubChar125Route =
+  FrontDeskChar123SubChar125RouteImport.update({
+    id: '/front-desk/{-$sub}',
+    path: '/front-desk/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const KitchenChar123SubChar125Route =
+  KitchenChar123SubChar125RouteImport.update({
+    id: '/kitchen/{-$sub}',
+    path: '/kitchen/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LoginChar123SubChar125Route = LoginChar123SubChar125RouteImport.update({
+  id: '/login/{-$sub}',
+  path: '/login/{-$sub}',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerChar123SubChar125Route =
+  ManagerChar123SubChar125RouteImport.update({
+    id: '/manager/{-$sub}',
+    path: '/manager/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const MarketingChar123SubChar125Route =
+  MarketingChar123SubChar125RouteImport.update({
+    id: '/marketing/{-$sub}',
+    path: '/marketing/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const MenuChar123SubChar125Route = MenuChar123SubChar125RouteImport.update({
+  id: '/menu/{-$sub}',
+  path: '/menu/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrderSlugRoute = OrderSlugRouteImport.update({
@@ -238,414 +180,496 @@ const OrderSlugRoute = OrderSlugRouteImport.update({
   path: '/order/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResortLoginRoute = ResortLoginRouteImport.update({
-  id: '/resort/login',
-  path: '/resort/login',
+const PrivacyChar123SubChar125Route =
+  PrivacyChar123SubChar125RouteImport.update({
+    id: '/privacy/{-$sub}',
+    path: '/privacy/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RefundsChar123SubChar125Route =
+  RefundsChar123SubChar125RouteImport.update({
+    id: '/refunds/{-$sub}',
+    path: '/refunds/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ReportsChar123SubChar125Route =
+  ReportsChar123SubChar125RouteImport.update({
+    id: '/reports/{-$sub}',
+    path: '/reports/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SettingsChar123SubChar125Route =
+  SettingsChar123SubChar125RouteImport.update({
+    id: '/settings/{-$sub}',
+    path: '/settings/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SetupChar123SubChar125Route = SetupChar123SubChar125RouteImport.update({
+  id: '/setup/{-$sub}',
+  path: '/setup/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RestaurantLoginRoute = RestaurantLoginRouteImport.update({
-  id: '/restaurant/login',
-  path: '/restaurant/login',
+const StaysChar123SubChar125Route = StaysChar123SubChar125RouteImport.update({
+  id: '/stays/{-$sub}',
+  path: '/stays/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StaysIndexRoute = StaysIndexRouteImport.update({
-  id: '/stays/',
-  path: '/stays/',
+const StockChar123SubChar125Route = StockChar123SubChar125RouteImport.update({
+  id: '/stock/{-$sub}',
+  path: '/stock/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StaysBookingsRoute = StaysBookingsRouteImport.update({
-  id: '/stays/bookings',
-  path: '/stays/bookings',
+const SupportChar123SubChar125Route =
+  SupportChar123SubChar125RouteImport.update({
+    id: '/support/{-$sub}',
+    path: '/support/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TablesChar123SubChar125Route = TablesChar123SubChar125RouteImport.update({
+  id: '/tables/{-$sub}',
+  path: '/tables/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StaysPropertyRoute = StaysPropertyRouteImport.update({
-  id: '/stays/property',
-  path: '/stays/property',
+const TermsChar123SubChar125Route = TermsChar123SubChar125RouteImport.update({
+  id: '/terms/{-$sub}',
+  path: '/terms/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StaysRatesRoute = StaysRatesRouteImport.update({
-  id: '/stays/rates',
-  path: '/stays/rates',
+const WaiterChar123SubChar125Route = WaiterChar123SubChar125RouteImport.update({
+  id: '/waiter/{-$sub}',
+  path: '/waiter/{-$sub}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StaysReportsRoute = StaysReportsRouteImport.update({
-  id: '/stays/reports',
-  path: '/stays/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TabBistroIndexRoute = TabBistroIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => TabBistroRoute,
-} as any)
-const TabBistroGiftCardsRoute = TabBistroGiftCardsRouteImport.update({
-  id: '/gift-cards',
-  path: '/gift-cards',
-  getParentRoute: () => TabBistroRoute,
-} as any)
-const TabBistroMenuRoute = TabBistroMenuRouteImport.update({
-  id: '/menu',
-  path: '/menu',
-  getParentRoute: () => TabBistroRoute,
-} as any)
-const TabBistroVisitRoute = TabBistroVisitRouteImport.update({
-  id: '/visit',
-  path: '/visit',
-  getParentRoute: () => TabBistroRoute,
-} as any)
-const TourismLoginRoute = TourismLoginRouteImport.update({
-  id: '/tourism/login',
-  path: '/tourism/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const XtsyPosChar123SubChar125Route =
+  XtsyPosChar123SubChar125RouteImport.update({
+    id: '/xtsy-pos/{-$sub}',
+    path: '/xtsy-pos/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const BistroTabBistroChar123SubChar125Route =
+  BistroTabBistroChar123SubChar125RouteImport.update({
+    id: '/tab-bistro/{-$sub}',
+    path: '/tab-bistro/{-$sub}',
+    getParentRoute: () => BistroRoute,
+  } as any)
+const HostelLoginChar123SubChar125Route =
+  HostelLoginChar123SubChar125RouteImport.update({
+    id: '/hostel/login/{-$sub}',
+    path: '/hostel/login/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const HotelLoginChar123SubChar125Route =
+  HotelLoginChar123SubChar125RouteImport.update({
+    id: '/hotel/login/{-$sub}',
+    path: '/hotel/login/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ResortLoginChar123SubChar125Route =
+  ResortLoginChar123SubChar125RouteImport.update({
+    id: '/resort/login/{-$sub}',
+    path: '/resort/login/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RestaurantLoginChar123SubChar125Route =
+  RestaurantLoginChar123SubChar125RouteImport.update({
+    id: '/restaurant/login/{-$sub}',
+    path: '/restaurant/login/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const StaysBookingsChar123SubChar125Route =
+  StaysBookingsChar123SubChar125RouteImport.update({
+    id: '/stays/bookings/{-$sub}',
+    path: '/stays/bookings/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const StaysPropertyChar123SubChar125Route =
+  StaysPropertyChar123SubChar125RouteImport.update({
+    id: '/stays/property/{-$sub}',
+    path: '/stays/property/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const StaysRatesChar123SubChar125Route =
+  StaysRatesChar123SubChar125RouteImport.update({
+    id: '/stays/rates/{-$sub}',
+    path: '/stays/rates/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const StaysReportsChar123SubChar125Route =
+  StaysReportsChar123SubChar125RouteImport.update({
+    id: '/stays/reports/{-$sub}',
+    path: '/stays/reports/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TourismLoginChar123SubChar125Route =
+  TourismLoginChar123SubChar125RouteImport.update({
+    id: '/tourism/login/{-$sub}',
+    path: '/tourism/login/{-$sub}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const BistroTabBistroGiftCardsChar123SubChar125Route =
+  BistroTabBistroGiftCardsChar123SubChar125RouteImport.update({
+    id: '/tab-bistro/gift-cards/{-$sub}',
+    path: '/tab-bistro/gift-cards/{-$sub}',
+    getParentRoute: () => BistroRoute,
+  } as any)
+const BistroTabBistroMenuChar123SubChar125Route =
+  BistroTabBistroMenuChar123SubChar125RouteImport.update({
+    id: '/tab-bistro/menu/{-$sub}',
+    path: '/tab-bistro/menu/{-$sub}',
+    getParentRoute: () => BistroRoute,
+  } as any)
+const BistroTabBistroVisitChar123SubChar125Route =
+  BistroTabBistroVisitChar123SubChar125RouteImport.update({
+    id: '/tab-bistro/visit/{-$sub}',
+    path: '/tab-bistro/visit/{-$sub}',
+    getParentRoute: () => BistroRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/accounts': typeof AccountsRoute
-  '/auth': typeof AuthRoute
-  '/brand': typeof BrandRoute
-  '/console': typeof ConsoleRoute
-  '/customers': typeof CustomersRoute
-  '/dashboard': typeof DashboardRoute
-  '/front-desk': typeof FrontDeskRoute
   '/hostel-pos': typeof HostelPosRoute
   '/hotel-pos': typeof HotelPosRoute
-  '/kitchen': typeof KitchenRoute
-  '/login': typeof LoginRoute
-  '/manager': typeof ManagerRoute
-  '/marketing': typeof MarketingRoute
-  '/menu': typeof MenuRoute
-  '/privacy': typeof PrivacyRoute
-  '/refunds': typeof RefundsRoute
-  '/reports': typeof ReportsRoute
   '/resort-pos': typeof ResortPosRoute
   '/restaurant-pos': typeof RestaurantPosRoute
   '/robots.txt': typeof RobotsDottxtRoute
-  '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/stock': typeof StockRoute
-  '/support': typeof SupportRoute
-  '/tab-bistro': typeof TabBistroRouteWithChildren
-  '/tables': typeof TablesRoute
-  '/terms': typeof TermsRoute
   '/tourism-pos': typeof TourismPosRoute
-  '/waiter': typeof WaiterRoute
-  '/xtsy-pos': typeof XtsyPosRoute
+  '/accounts/{-$sub}': typeof AccountsChar123SubChar125Route
+  '/auth/{-$sub}': typeof AuthChar123SubChar125Route
   '/book/$slug': typeof BookSlugRoute
-  '/hostel/login': typeof HostelLoginRoute
-  '/hotel/login': typeof HotelLoginRoute
+  '/brand/{-$sub}': typeof BrandChar123SubChar125Route
+  '/console/{-$sub}': typeof ConsoleChar123SubChar125Route
+  '/customers/{-$sub}': typeof CustomersChar123SubChar125Route
+  '/dashboard/{-$sub}': typeof DashboardChar123SubChar125Route
+  '/front-desk/{-$sub}': typeof FrontDeskChar123SubChar125Route
+  '/kitchen/{-$sub}': typeof KitchenChar123SubChar125Route
+  '/login/{-$sub}': typeof LoginChar123SubChar125Route
+  '/manager/{-$sub}': typeof ManagerChar123SubChar125Route
+  '/marketing/{-$sub}': typeof MarketingChar123SubChar125Route
+  '/menu/{-$sub}': typeof MenuChar123SubChar125Route
   '/order/$slug': typeof OrderSlugRoute
-  '/resort/login': typeof ResortLoginRoute
-  '/restaurant/login': typeof RestaurantLoginRoute
-  '/stays/bookings': typeof StaysBookingsRoute
-  '/stays/property': typeof StaysPropertyRoute
-  '/stays/rates': typeof StaysRatesRoute
-  '/stays/reports': typeof StaysReportsRoute
-  '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
-  '/tab-bistro/menu': typeof TabBistroMenuRoute
-  '/tab-bistro/visit': typeof TabBistroVisitRoute
-  '/tourism/login': typeof TourismLoginRoute
-  '/stays/': typeof StaysIndexRoute
-  '/tab-bistro/': typeof TabBistroIndexRoute
+  '/privacy/{-$sub}': typeof PrivacyChar123SubChar125Route
+  '/refunds/{-$sub}': typeof RefundsChar123SubChar125Route
+  '/reports/{-$sub}': typeof ReportsChar123SubChar125Route
+  '/settings/{-$sub}': typeof SettingsChar123SubChar125Route
+  '/setup/{-$sub}': typeof SetupChar123SubChar125Route
+  '/stays/{-$sub}': typeof StaysChar123SubChar125Route
+  '/stock/{-$sub}': typeof StockChar123SubChar125Route
+  '/support/{-$sub}': typeof SupportChar123SubChar125Route
+  '/tables/{-$sub}': typeof TablesChar123SubChar125Route
+  '/terms/{-$sub}': typeof TermsChar123SubChar125Route
+  '/waiter/{-$sub}': typeof WaiterChar123SubChar125Route
+  '/xtsy-pos/{-$sub}': typeof XtsyPosChar123SubChar125Route
+  '/tab-bistro/{-$sub}': typeof BistroTabBistroChar123SubChar125Route
+  '/hostel/login/{-$sub}': typeof HostelLoginChar123SubChar125Route
+  '/hotel/login/{-$sub}': typeof HotelLoginChar123SubChar125Route
+  '/resort/login/{-$sub}': typeof ResortLoginChar123SubChar125Route
+  '/restaurant/login/{-$sub}': typeof RestaurantLoginChar123SubChar125Route
+  '/stays/bookings/{-$sub}': typeof StaysBookingsChar123SubChar125Route
+  '/stays/property/{-$sub}': typeof StaysPropertyChar123SubChar125Route
+  '/stays/rates/{-$sub}': typeof StaysRatesChar123SubChar125Route
+  '/stays/reports/{-$sub}': typeof StaysReportsChar123SubChar125Route
+  '/tourism/login/{-$sub}': typeof TourismLoginChar123SubChar125Route
+  '/tab-bistro/gift-cards/{-$sub}': typeof BistroTabBistroGiftCardsChar123SubChar125Route
+  '/tab-bistro/menu/{-$sub}': typeof BistroTabBistroMenuChar123SubChar125Route
+  '/tab-bistro/visit/{-$sub}': typeof BistroTabBistroVisitChar123SubChar125Route
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/accounts': typeof AccountsRoute
-  '/auth': typeof AuthRoute
-  '/brand': typeof BrandRoute
-  '/console': typeof ConsoleRoute
-  '/customers': typeof CustomersRoute
-  '/dashboard': typeof DashboardRoute
-  '/front-desk': typeof FrontDeskRoute
   '/hostel-pos': typeof HostelPosRoute
   '/hotel-pos': typeof HotelPosRoute
-  '/kitchen': typeof KitchenRoute
-  '/login': typeof LoginRoute
-  '/manager': typeof ManagerRoute
-  '/marketing': typeof MarketingRoute
-  '/menu': typeof MenuRoute
-  '/privacy': typeof PrivacyRoute
-  '/refunds': typeof RefundsRoute
-  '/reports': typeof ReportsRoute
   '/resort-pos': typeof ResortPosRoute
   '/restaurant-pos': typeof RestaurantPosRoute
   '/robots.txt': typeof RobotsDottxtRoute
-  '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/stock': typeof StockRoute
-  '/support': typeof SupportRoute
-  '/tables': typeof TablesRoute
-  '/terms': typeof TermsRoute
   '/tourism-pos': typeof TourismPosRoute
-  '/waiter': typeof WaiterRoute
-  '/xtsy-pos': typeof XtsyPosRoute
+  '/accounts/{-$sub}': typeof AccountsChar123SubChar125Route
+  '/auth/{-$sub}': typeof AuthChar123SubChar125Route
   '/book/$slug': typeof BookSlugRoute
-  '/hostel/login': typeof HostelLoginRoute
-  '/hotel/login': typeof HotelLoginRoute
+  '/brand/{-$sub}': typeof BrandChar123SubChar125Route
+  '/console/{-$sub}': typeof ConsoleChar123SubChar125Route
+  '/customers/{-$sub}': typeof CustomersChar123SubChar125Route
+  '/dashboard/{-$sub}': typeof DashboardChar123SubChar125Route
+  '/front-desk/{-$sub}': typeof FrontDeskChar123SubChar125Route
+  '/kitchen/{-$sub}': typeof KitchenChar123SubChar125Route
+  '/login/{-$sub}': typeof LoginChar123SubChar125Route
+  '/manager/{-$sub}': typeof ManagerChar123SubChar125Route
+  '/marketing/{-$sub}': typeof MarketingChar123SubChar125Route
+  '/menu/{-$sub}': typeof MenuChar123SubChar125Route
   '/order/$slug': typeof OrderSlugRoute
-  '/resort/login': typeof ResortLoginRoute
-  '/restaurant/login': typeof RestaurantLoginRoute
-  '/stays/bookings': typeof StaysBookingsRoute
-  '/stays/property': typeof StaysPropertyRoute
-  '/stays/rates': typeof StaysRatesRoute
-  '/stays/reports': typeof StaysReportsRoute
-  '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
-  '/tab-bistro/menu': typeof TabBistroMenuRoute
-  '/tab-bistro/visit': typeof TabBistroVisitRoute
-  '/tourism/login': typeof TourismLoginRoute
-  '/stays': typeof StaysIndexRoute
-  '/tab-bistro': typeof TabBistroIndexRoute
+  '/privacy/{-$sub}': typeof PrivacyChar123SubChar125Route
+  '/refunds/{-$sub}': typeof RefundsChar123SubChar125Route
+  '/reports/{-$sub}': typeof ReportsChar123SubChar125Route
+  '/settings/{-$sub}': typeof SettingsChar123SubChar125Route
+  '/setup/{-$sub}': typeof SetupChar123SubChar125Route
+  '/stays/{-$sub}': typeof StaysChar123SubChar125Route
+  '/stock/{-$sub}': typeof StockChar123SubChar125Route
+  '/support/{-$sub}': typeof SupportChar123SubChar125Route
+  '/tables/{-$sub}': typeof TablesChar123SubChar125Route
+  '/terms/{-$sub}': typeof TermsChar123SubChar125Route
+  '/waiter/{-$sub}': typeof WaiterChar123SubChar125Route
+  '/xtsy-pos/{-$sub}': typeof XtsyPosChar123SubChar125Route
+  '/tab-bistro/{-$sub}': typeof BistroTabBistroChar123SubChar125Route
+  '/hostel/login/{-$sub}': typeof HostelLoginChar123SubChar125Route
+  '/hotel/login/{-$sub}': typeof HotelLoginChar123SubChar125Route
+  '/resort/login/{-$sub}': typeof ResortLoginChar123SubChar125Route
+  '/restaurant/login/{-$sub}': typeof RestaurantLoginChar123SubChar125Route
+  '/stays/bookings/{-$sub}': typeof StaysBookingsChar123SubChar125Route
+  '/stays/property/{-$sub}': typeof StaysPropertyChar123SubChar125Route
+  '/stays/rates/{-$sub}': typeof StaysRatesChar123SubChar125Route
+  '/stays/reports/{-$sub}': typeof StaysReportsChar123SubChar125Route
+  '/tourism/login/{-$sub}': typeof TourismLoginChar123SubChar125Route
+  '/tab-bistro/gift-cards/{-$sub}': typeof BistroTabBistroGiftCardsChar123SubChar125Route
+  '/tab-bistro/menu/{-$sub}': typeof BistroTabBistroMenuChar123SubChar125Route
+  '/tab-bistro/visit/{-$sub}': typeof BistroTabBistroVisitChar123SubChar125Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/accounts': typeof AccountsRoute
-  '/auth': typeof AuthRoute
-  '/brand': typeof BrandRoute
-  '/console': typeof ConsoleRoute
-  '/customers': typeof CustomersRoute
-  '/dashboard': typeof DashboardRoute
-  '/front-desk': typeof FrontDeskRoute
+  '/_bistro': typeof BistroRouteWithChildren
   '/hostel-pos': typeof HostelPosRoute
   '/hotel-pos': typeof HotelPosRoute
-  '/kitchen': typeof KitchenRoute
-  '/login': typeof LoginRoute
-  '/manager': typeof ManagerRoute
-  '/marketing': typeof MarketingRoute
-  '/menu': typeof MenuRoute
-  '/privacy': typeof PrivacyRoute
-  '/refunds': typeof RefundsRoute
-  '/reports': typeof ReportsRoute
   '/resort-pos': typeof ResortPosRoute
   '/restaurant-pos': typeof RestaurantPosRoute
   '/robots.txt': typeof RobotsDottxtRoute
-  '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/stock': typeof StockRoute
-  '/support': typeof SupportRoute
-  '/tab-bistro': typeof TabBistroRouteWithChildren
-  '/tables': typeof TablesRoute
-  '/terms': typeof TermsRoute
   '/tourism-pos': typeof TourismPosRoute
-  '/waiter': typeof WaiterRoute
-  '/xtsy-pos': typeof XtsyPosRoute
+  '/accounts/{-$sub}': typeof AccountsChar123SubChar125Route
+  '/auth/{-$sub}': typeof AuthChar123SubChar125Route
   '/book/$slug': typeof BookSlugRoute
-  '/hostel/login': typeof HostelLoginRoute
-  '/hotel/login': typeof HotelLoginRoute
+  '/brand/{-$sub}': typeof BrandChar123SubChar125Route
+  '/console/{-$sub}': typeof ConsoleChar123SubChar125Route
+  '/customers/{-$sub}': typeof CustomersChar123SubChar125Route
+  '/dashboard/{-$sub}': typeof DashboardChar123SubChar125Route
+  '/front-desk/{-$sub}': typeof FrontDeskChar123SubChar125Route
+  '/kitchen/{-$sub}': typeof KitchenChar123SubChar125Route
+  '/login/{-$sub}': typeof LoginChar123SubChar125Route
+  '/manager/{-$sub}': typeof ManagerChar123SubChar125Route
+  '/marketing/{-$sub}': typeof MarketingChar123SubChar125Route
+  '/menu/{-$sub}': typeof MenuChar123SubChar125Route
   '/order/$slug': typeof OrderSlugRoute
-  '/resort/login': typeof ResortLoginRoute
-  '/restaurant/login': typeof RestaurantLoginRoute
-  '/stays/bookings': typeof StaysBookingsRoute
-  '/stays/property': typeof StaysPropertyRoute
-  '/stays/rates': typeof StaysRatesRoute
-  '/stays/reports': typeof StaysReportsRoute
-  '/tab-bistro/gift-cards': typeof TabBistroGiftCardsRoute
-  '/tab-bistro/menu': typeof TabBistroMenuRoute
-  '/tab-bistro/visit': typeof TabBistroVisitRoute
-  '/tourism/login': typeof TourismLoginRoute
-  '/stays/': typeof StaysIndexRoute
-  '/tab-bistro/': typeof TabBistroIndexRoute
+  '/privacy/{-$sub}': typeof PrivacyChar123SubChar125Route
+  '/refunds/{-$sub}': typeof RefundsChar123SubChar125Route
+  '/reports/{-$sub}': typeof ReportsChar123SubChar125Route
+  '/settings/{-$sub}': typeof SettingsChar123SubChar125Route
+  '/setup/{-$sub}': typeof SetupChar123SubChar125Route
+  '/stays/{-$sub}': typeof StaysChar123SubChar125Route
+  '/stock/{-$sub}': typeof StockChar123SubChar125Route
+  '/support/{-$sub}': typeof SupportChar123SubChar125Route
+  '/tables/{-$sub}': typeof TablesChar123SubChar125Route
+  '/terms/{-$sub}': typeof TermsChar123SubChar125Route
+  '/waiter/{-$sub}': typeof WaiterChar123SubChar125Route
+  '/xtsy-pos/{-$sub}': typeof XtsyPosChar123SubChar125Route
+  '/_bistro/tab-bistro/{-$sub}': typeof BistroTabBistroChar123SubChar125Route
+  '/hostel/login/{-$sub}': typeof HostelLoginChar123SubChar125Route
+  '/hotel/login/{-$sub}': typeof HotelLoginChar123SubChar125Route
+  '/resort/login/{-$sub}': typeof ResortLoginChar123SubChar125Route
+  '/restaurant/login/{-$sub}': typeof RestaurantLoginChar123SubChar125Route
+  '/stays/bookings/{-$sub}': typeof StaysBookingsChar123SubChar125Route
+  '/stays/property/{-$sub}': typeof StaysPropertyChar123SubChar125Route
+  '/stays/rates/{-$sub}': typeof StaysRatesChar123SubChar125Route
+  '/stays/reports/{-$sub}': typeof StaysReportsChar123SubChar125Route
+  '/tourism/login/{-$sub}': typeof TourismLoginChar123SubChar125Route
+  '/_bistro/tab-bistro/gift-cards/{-$sub}': typeof BistroTabBistroGiftCardsChar123SubChar125Route
+  '/_bistro/tab-bistro/menu/{-$sub}': typeof BistroTabBistroMenuChar123SubChar125Route
+  '/_bistro/tab-bistro/visit/{-$sub}': typeof BistroTabBistroVisitChar123SubChar125Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/accounts'
-    | '/auth'
-    | '/brand'
-    | '/console'
-    | '/customers'
-    | '/dashboard'
-    | '/front-desk'
     | '/hostel-pos'
     | '/hotel-pos'
-    | '/kitchen'
-    | '/login'
-    | '/manager'
-    | '/marketing'
-    | '/menu'
-    | '/privacy'
-    | '/refunds'
-    | '/reports'
     | '/resort-pos'
     | '/restaurant-pos'
     | '/robots.txt'
-    | '/settings'
-    | '/setup'
     | '/sitemap.xml'
-    | '/stock'
-    | '/support'
-    | '/tab-bistro'
-    | '/tables'
-    | '/terms'
     | '/tourism-pos'
-    | '/waiter'
-    | '/xtsy-pos'
+    | '/accounts/{-$sub}'
+    | '/auth/{-$sub}'
     | '/book/$slug'
-    | '/hostel/login'
-    | '/hotel/login'
+    | '/brand/{-$sub}'
+    | '/console/{-$sub}'
+    | '/customers/{-$sub}'
+    | '/dashboard/{-$sub}'
+    | '/front-desk/{-$sub}'
+    | '/kitchen/{-$sub}'
+    | '/login/{-$sub}'
+    | '/manager/{-$sub}'
+    | '/marketing/{-$sub}'
+    | '/menu/{-$sub}'
     | '/order/$slug'
-    | '/resort/login'
-    | '/restaurant/login'
-    | '/stays/bookings'
-    | '/stays/property'
-    | '/stays/rates'
-    | '/stays/reports'
-    | '/tab-bistro/gift-cards'
-    | '/tab-bistro/menu'
-    | '/tab-bistro/visit'
-    | '/tourism/login'
-    | '/stays/'
-    | '/tab-bistro/'
+    | '/privacy/{-$sub}'
+    | '/refunds/{-$sub}'
+    | '/reports/{-$sub}'
+    | '/settings/{-$sub}'
+    | '/setup/{-$sub}'
+    | '/stays/{-$sub}'
+    | '/stock/{-$sub}'
+    | '/support/{-$sub}'
+    | '/tables/{-$sub}'
+    | '/terms/{-$sub}'
+    | '/waiter/{-$sub}'
+    | '/xtsy-pos/{-$sub}'
+    | '/tab-bistro/{-$sub}'
+    | '/hostel/login/{-$sub}'
+    | '/hotel/login/{-$sub}'
+    | '/resort/login/{-$sub}'
+    | '/restaurant/login/{-$sub}'
+    | '/stays/bookings/{-$sub}'
+    | '/stays/property/{-$sub}'
+    | '/stays/rates/{-$sub}'
+    | '/stays/reports/{-$sub}'
+    | '/tourism/login/{-$sub}'
+    | '/tab-bistro/gift-cards/{-$sub}'
+    | '/tab-bistro/menu/{-$sub}'
+    | '/tab-bistro/visit/{-$sub}'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/accounts'
-    | '/auth'
-    | '/brand'
-    | '/console'
-    | '/customers'
-    | '/dashboard'
-    | '/front-desk'
     | '/hostel-pos'
     | '/hotel-pos'
-    | '/kitchen'
-    | '/login'
-    | '/manager'
-    | '/marketing'
-    | '/menu'
-    | '/privacy'
-    | '/refunds'
-    | '/reports'
     | '/resort-pos'
     | '/restaurant-pos'
     | '/robots.txt'
-    | '/settings'
-    | '/setup'
     | '/sitemap.xml'
-    | '/stock'
-    | '/support'
-    | '/tables'
-    | '/terms'
     | '/tourism-pos'
-    | '/waiter'
-    | '/xtsy-pos'
+    | '/accounts/{-$sub}'
+    | '/auth/{-$sub}'
     | '/book/$slug'
-    | '/hostel/login'
-    | '/hotel/login'
+    | '/brand/{-$sub}'
+    | '/console/{-$sub}'
+    | '/customers/{-$sub}'
+    | '/dashboard/{-$sub}'
+    | '/front-desk/{-$sub}'
+    | '/kitchen/{-$sub}'
+    | '/login/{-$sub}'
+    | '/manager/{-$sub}'
+    | '/marketing/{-$sub}'
+    | '/menu/{-$sub}'
     | '/order/$slug'
-    | '/resort/login'
-    | '/restaurant/login'
-    | '/stays/bookings'
-    | '/stays/property'
-    | '/stays/rates'
-    | '/stays/reports'
-    | '/tab-bistro/gift-cards'
-    | '/tab-bistro/menu'
-    | '/tab-bistro/visit'
-    | '/tourism/login'
-    | '/stays'
-    | '/tab-bistro'
+    | '/privacy/{-$sub}'
+    | '/refunds/{-$sub}'
+    | '/reports/{-$sub}'
+    | '/settings/{-$sub}'
+    | '/setup/{-$sub}'
+    | '/stays/{-$sub}'
+    | '/stock/{-$sub}'
+    | '/support/{-$sub}'
+    | '/tables/{-$sub}'
+    | '/terms/{-$sub}'
+    | '/waiter/{-$sub}'
+    | '/xtsy-pos/{-$sub}'
+    | '/tab-bistro/{-$sub}'
+    | '/hostel/login/{-$sub}'
+    | '/hotel/login/{-$sub}'
+    | '/resort/login/{-$sub}'
+    | '/restaurant/login/{-$sub}'
+    | '/stays/bookings/{-$sub}'
+    | '/stays/property/{-$sub}'
+    | '/stays/rates/{-$sub}'
+    | '/stays/reports/{-$sub}'
+    | '/tourism/login/{-$sub}'
+    | '/tab-bistro/gift-cards/{-$sub}'
+    | '/tab-bistro/menu/{-$sub}'
+    | '/tab-bistro/visit/{-$sub}'
   id:
     | '__root__'
     | '/'
-    | '/accounts'
-    | '/auth'
-    | '/brand'
-    | '/console'
-    | '/customers'
-    | '/dashboard'
-    | '/front-desk'
+    | '/_bistro'
     | '/hostel-pos'
     | '/hotel-pos'
-    | '/kitchen'
-    | '/login'
-    | '/manager'
-    | '/marketing'
-    | '/menu'
-    | '/privacy'
-    | '/refunds'
-    | '/reports'
     | '/resort-pos'
     | '/restaurant-pos'
     | '/robots.txt'
-    | '/settings'
-    | '/setup'
     | '/sitemap.xml'
-    | '/stock'
-    | '/support'
-    | '/tab-bistro'
-    | '/tables'
-    | '/terms'
     | '/tourism-pos'
-    | '/waiter'
-    | '/xtsy-pos'
+    | '/accounts/{-$sub}'
+    | '/auth/{-$sub}'
     | '/book/$slug'
-    | '/hostel/login'
-    | '/hotel/login'
+    | '/brand/{-$sub}'
+    | '/console/{-$sub}'
+    | '/customers/{-$sub}'
+    | '/dashboard/{-$sub}'
+    | '/front-desk/{-$sub}'
+    | '/kitchen/{-$sub}'
+    | '/login/{-$sub}'
+    | '/manager/{-$sub}'
+    | '/marketing/{-$sub}'
+    | '/menu/{-$sub}'
     | '/order/$slug'
-    | '/resort/login'
-    | '/restaurant/login'
-    | '/stays/bookings'
-    | '/stays/property'
-    | '/stays/rates'
-    | '/stays/reports'
-    | '/tab-bistro/gift-cards'
-    | '/tab-bistro/menu'
-    | '/tab-bistro/visit'
-    | '/tourism/login'
-    | '/stays/'
-    | '/tab-bistro/'
+    | '/privacy/{-$sub}'
+    | '/refunds/{-$sub}'
+    | '/reports/{-$sub}'
+    | '/settings/{-$sub}'
+    | '/setup/{-$sub}'
+    | '/stays/{-$sub}'
+    | '/stock/{-$sub}'
+    | '/support/{-$sub}'
+    | '/tables/{-$sub}'
+    | '/terms/{-$sub}'
+    | '/waiter/{-$sub}'
+    | '/xtsy-pos/{-$sub}'
+    | '/_bistro/tab-bistro/{-$sub}'
+    | '/hostel/login/{-$sub}'
+    | '/hotel/login/{-$sub}'
+    | '/resort/login/{-$sub}'
+    | '/restaurant/login/{-$sub}'
+    | '/stays/bookings/{-$sub}'
+    | '/stays/property/{-$sub}'
+    | '/stays/rates/{-$sub}'
+    | '/stays/reports/{-$sub}'
+    | '/tourism/login/{-$sub}'
+    | '/_bistro/tab-bistro/gift-cards/{-$sub}'
+    | '/_bistro/tab-bistro/menu/{-$sub}'
+    | '/_bistro/tab-bistro/visit/{-$sub}'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccountsRoute: typeof AccountsRoute
-  AuthRoute: typeof AuthRoute
-  BrandRoute: typeof BrandRoute
-  ConsoleRoute: typeof ConsoleRoute
-  CustomersRoute: typeof CustomersRoute
-  DashboardRoute: typeof DashboardRoute
-  FrontDeskRoute: typeof FrontDeskRoute
+  BistroRoute: typeof BistroRouteWithChildren
   HostelPosRoute: typeof HostelPosRoute
   HotelPosRoute: typeof HotelPosRoute
-  KitchenRoute: typeof KitchenRoute
-  LoginRoute: typeof LoginRoute
-  ManagerRoute: typeof ManagerRoute
-  MarketingRoute: typeof MarketingRoute
-  MenuRoute: typeof MenuRoute
-  PrivacyRoute: typeof PrivacyRoute
-  RefundsRoute: typeof RefundsRoute
-  ReportsRoute: typeof ReportsRoute
   ResortPosRoute: typeof ResortPosRoute
   RestaurantPosRoute: typeof RestaurantPosRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
-  SettingsRoute: typeof SettingsRoute
-  SetupRoute: typeof SetupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  StockRoute: typeof StockRoute
-  SupportRoute: typeof SupportRoute
-  TabBistroRoute: typeof TabBistroRouteWithChildren
-  TablesRoute: typeof TablesRoute
-  TermsRoute: typeof TermsRoute
   TourismPosRoute: typeof TourismPosRoute
-  WaiterRoute: typeof WaiterRoute
-  XtsyPosRoute: typeof XtsyPosRoute
+  AccountsChar123SubChar125Route: typeof AccountsChar123SubChar125Route
+  AuthChar123SubChar125Route: typeof AuthChar123SubChar125Route
   BookSlugRoute: typeof BookSlugRoute
-  HostelLoginRoute: typeof HostelLoginRoute
-  HotelLoginRoute: typeof HotelLoginRoute
+  BrandChar123SubChar125Route: typeof BrandChar123SubChar125Route
+  ConsoleChar123SubChar125Route: typeof ConsoleChar123SubChar125Route
+  CustomersChar123SubChar125Route: typeof CustomersChar123SubChar125Route
+  DashboardChar123SubChar125Route: typeof DashboardChar123SubChar125Route
+  FrontDeskChar123SubChar125Route: typeof FrontDeskChar123SubChar125Route
+  KitchenChar123SubChar125Route: typeof KitchenChar123SubChar125Route
+  LoginChar123SubChar125Route: typeof LoginChar123SubChar125Route
+  ManagerChar123SubChar125Route: typeof ManagerChar123SubChar125Route
+  MarketingChar123SubChar125Route: typeof MarketingChar123SubChar125Route
+  MenuChar123SubChar125Route: typeof MenuChar123SubChar125Route
   OrderSlugRoute: typeof OrderSlugRoute
-  ResortLoginRoute: typeof ResortLoginRoute
-  RestaurantLoginRoute: typeof RestaurantLoginRoute
-  StaysBookingsRoute: typeof StaysBookingsRoute
-  StaysPropertyRoute: typeof StaysPropertyRoute
-  StaysRatesRoute: typeof StaysRatesRoute
-  StaysReportsRoute: typeof StaysReportsRoute
-  TourismLoginRoute: typeof TourismLoginRoute
-  StaysIndexRoute: typeof StaysIndexRoute
+  PrivacyChar123SubChar125Route: typeof PrivacyChar123SubChar125Route
+  RefundsChar123SubChar125Route: typeof RefundsChar123SubChar125Route
+  ReportsChar123SubChar125Route: typeof ReportsChar123SubChar125Route
+  SettingsChar123SubChar125Route: typeof SettingsChar123SubChar125Route
+  SetupChar123SubChar125Route: typeof SetupChar123SubChar125Route
+  StaysChar123SubChar125Route: typeof StaysChar123SubChar125Route
+  StockChar123SubChar125Route: typeof StockChar123SubChar125Route
+  SupportChar123SubChar125Route: typeof SupportChar123SubChar125Route
+  TablesChar123SubChar125Route: typeof TablesChar123SubChar125Route
+  TermsChar123SubChar125Route: typeof TermsChar123SubChar125Route
+  WaiterChar123SubChar125Route: typeof WaiterChar123SubChar125Route
+  XtsyPosChar123SubChar125Route: typeof XtsyPosChar123SubChar125Route
+  HostelLoginChar123SubChar125Route: typeof HostelLoginChar123SubChar125Route
+  HotelLoginChar123SubChar125Route: typeof HotelLoginChar123SubChar125Route
+  ResortLoginChar123SubChar125Route: typeof ResortLoginChar123SubChar125Route
+  RestaurantLoginChar123SubChar125Route: typeof RestaurantLoginChar123SubChar125Route
+  StaysBookingsChar123SubChar125Route: typeof StaysBookingsChar123SubChar125Route
+  StaysPropertyChar123SubChar125Route: typeof StaysPropertyChar123SubChar125Route
+  StaysRatesChar123SubChar125Route: typeof StaysRatesChar123SubChar125Route
+  StaysReportsChar123SubChar125Route: typeof StaysReportsChar123SubChar125Route
+  TourismLoginChar123SubChar125Route: typeof TourismLoginChar123SubChar125Route
 }
 
 declare module '@tanstack/react-router' {
@@ -657,53 +681,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/accounts': {
-      id: '/accounts'
-      path: '/accounts'
-      fullPath: '/accounts'
-      preLoaderRoute: typeof AccountsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/brand': {
-      id: '/brand'
-      path: '/brand'
-      fullPath: '/brand'
-      preLoaderRoute: typeof BrandRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/console': {
-      id: '/console'
-      path: '/console'
-      fullPath: '/console'
-      preLoaderRoute: typeof ConsoleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/customers': {
-      id: '/customers'
-      path: '/customers'
-      fullPath: '/customers'
-      preLoaderRoute: typeof CustomersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/front-desk': {
-      id: '/front-desk'
-      path: '/front-desk'
-      fullPath: '/front-desk'
-      preLoaderRoute: typeof FrontDeskRouteImport
+    '/_bistro': {
+      id: '/_bistro'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof BistroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hostel-pos': {
@@ -718,62 +700,6 @@ declare module '@tanstack/react-router' {
       path: '/hotel-pos'
       fullPath: '/hotel-pos'
       preLoaderRoute: typeof HotelPosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kitchen': {
-      id: '/kitchen'
-      path: '/kitchen'
-      fullPath: '/kitchen'
-      preLoaderRoute: typeof KitchenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manager': {
-      id: '/manager'
-      path: '/manager'
-      fullPath: '/manager'
-      preLoaderRoute: typeof ManagerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/marketing': {
-      id: '/marketing'
-      path: '/marketing'
-      fullPath: '/marketing'
-      preLoaderRoute: typeof MarketingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/menu': {
-      id: '/menu'
-      path: '/menu'
-      fullPath: '/menu'
-      preLoaderRoute: typeof MenuRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/refunds': {
-      id: '/refunds'
-      path: '/refunds'
-      fullPath: '/refunds'
-      preLoaderRoute: typeof RefundsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/resort-pos': {
@@ -797,60 +723,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stock': {
-      id: '/stock'
-      path: '/stock'
-      fullPath: '/stock'
-      preLoaderRoute: typeof StockRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/support': {
-      id: '/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof SupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tab-bistro': {
-      id: '/tab-bistro'
-      path: '/tab-bistro'
-      fullPath: '/tab-bistro'
-      preLoaderRoute: typeof TabBistroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tables': {
-      id: '/tables'
-      path: '/tables'
-      fullPath: '/tables'
-      preLoaderRoute: typeof TablesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tourism-pos': {
@@ -860,18 +737,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TourismPosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/waiter': {
-      id: '/waiter'
-      path: '/waiter'
-      fullPath: '/waiter'
-      preLoaderRoute: typeof WaiterRouteImport
+    '/accounts/{-$sub}': {
+      id: '/accounts/{-$sub}'
+      path: '/accounts/{-$sub}'
+      fullPath: '/accounts/{-$sub}'
+      preLoaderRoute: typeof AccountsChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/xtsy-pos': {
-      id: '/xtsy-pos'
-      path: '/xtsy-pos'
-      fullPath: '/xtsy-pos'
-      preLoaderRoute: typeof XtsyPosRouteImport
+    '/auth/{-$sub}': {
+      id: '/auth/{-$sub}'
+      path: '/auth/{-$sub}'
+      fullPath: '/auth/{-$sub}'
+      preLoaderRoute: typeof AuthChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/book/$slug': {
@@ -881,18 +758,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/hostel/login': {
-      id: '/hostel/login'
-      path: '/hostel/login'
-      fullPath: '/hostel/login'
-      preLoaderRoute: typeof HostelLoginRouteImport
+    '/brand/{-$sub}': {
+      id: '/brand/{-$sub}'
+      path: '/brand/{-$sub}'
+      fullPath: '/brand/{-$sub}'
+      preLoaderRoute: typeof BrandChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/hotel/login': {
-      id: '/hotel/login'
-      path: '/hotel/login'
-      fullPath: '/hotel/login'
-      preLoaderRoute: typeof HotelLoginRouteImport
+    '/console/{-$sub}': {
+      id: '/console/{-$sub}'
+      path: '/console/{-$sub}'
+      fullPath: '/console/{-$sub}'
+      preLoaderRoute: typeof ConsoleChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/customers/{-$sub}': {
+      id: '/customers/{-$sub}'
+      path: '/customers/{-$sub}'
+      fullPath: '/customers/{-$sub}'
+      preLoaderRoute: typeof CustomersChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/{-$sub}': {
+      id: '/dashboard/{-$sub}'
+      path: '/dashboard/{-$sub}'
+      fullPath: '/dashboard/{-$sub}'
+      preLoaderRoute: typeof DashboardChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/front-desk/{-$sub}': {
+      id: '/front-desk/{-$sub}'
+      path: '/front-desk/{-$sub}'
+      fullPath: '/front-desk/{-$sub}'
+      preLoaderRoute: typeof FrontDeskChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kitchen/{-$sub}': {
+      id: '/kitchen/{-$sub}'
+      path: '/kitchen/{-$sub}'
+      fullPath: '/kitchen/{-$sub}'
+      preLoaderRoute: typeof KitchenChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/{-$sub}': {
+      id: '/login/{-$sub}'
+      path: '/login/{-$sub}'
+      fullPath: '/login/{-$sub}'
+      preLoaderRoute: typeof LoginChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/{-$sub}': {
+      id: '/manager/{-$sub}'
+      path: '/manager/{-$sub}'
+      fullPath: '/manager/{-$sub}'
+      preLoaderRoute: typeof ManagerChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing/{-$sub}': {
+      id: '/marketing/{-$sub}'
+      path: '/marketing/{-$sub}'
+      fullPath: '/marketing/{-$sub}'
+      preLoaderRoute: typeof MarketingChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/menu/{-$sub}': {
+      id: '/menu/{-$sub}'
+      path: '/menu/{-$sub}'
+      fullPath: '/menu/{-$sub}'
+      preLoaderRoute: typeof MenuChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/order/$slug': {
@@ -902,156 +835,249 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/resort/login': {
-      id: '/resort/login'
-      path: '/resort/login'
-      fullPath: '/resort/login'
-      preLoaderRoute: typeof ResortLoginRouteImport
+    '/privacy/{-$sub}': {
+      id: '/privacy/{-$sub}'
+      path: '/privacy/{-$sub}'
+      fullPath: '/privacy/{-$sub}'
+      preLoaderRoute: typeof PrivacyChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/restaurant/login': {
-      id: '/restaurant/login'
-      path: '/restaurant/login'
-      fullPath: '/restaurant/login'
-      preLoaderRoute: typeof RestaurantLoginRouteImport
+    '/refunds/{-$sub}': {
+      id: '/refunds/{-$sub}'
+      path: '/refunds/{-$sub}'
+      fullPath: '/refunds/{-$sub}'
+      preLoaderRoute: typeof RefundsChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stays/': {
-      id: '/stays/'
-      path: '/stays'
-      fullPath: '/stays/'
-      preLoaderRoute: typeof StaysIndexRouteImport
+    '/reports/{-$sub}': {
+      id: '/reports/{-$sub}'
+      path: '/reports/{-$sub}'
+      fullPath: '/reports/{-$sub}'
+      preLoaderRoute: typeof ReportsChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stays/bookings': {
-      id: '/stays/bookings'
-      path: '/stays/bookings'
-      fullPath: '/stays/bookings'
-      preLoaderRoute: typeof StaysBookingsRouteImport
+    '/settings/{-$sub}': {
+      id: '/settings/{-$sub}'
+      path: '/settings/{-$sub}'
+      fullPath: '/settings/{-$sub}'
+      preLoaderRoute: typeof SettingsChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stays/property': {
-      id: '/stays/property'
-      path: '/stays/property'
-      fullPath: '/stays/property'
-      preLoaderRoute: typeof StaysPropertyRouteImport
+    '/setup/{-$sub}': {
+      id: '/setup/{-$sub}'
+      path: '/setup/{-$sub}'
+      fullPath: '/setup/{-$sub}'
+      preLoaderRoute: typeof SetupChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stays/rates': {
-      id: '/stays/rates'
-      path: '/stays/rates'
-      fullPath: '/stays/rates'
-      preLoaderRoute: typeof StaysRatesRouteImport
+    '/stays/{-$sub}': {
+      id: '/stays/{-$sub}'
+      path: '/stays/{-$sub}'
+      fullPath: '/stays/{-$sub}'
+      preLoaderRoute: typeof StaysChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stays/reports': {
-      id: '/stays/reports'
-      path: '/stays/reports'
-      fullPath: '/stays/reports'
-      preLoaderRoute: typeof StaysReportsRouteImport
+    '/stock/{-$sub}': {
+      id: '/stock/{-$sub}'
+      path: '/stock/{-$sub}'
+      fullPath: '/stock/{-$sub}'
+      preLoaderRoute: typeof StockChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tab-bistro/': {
-      id: '/tab-bistro/'
-      path: '/'
-      fullPath: '/tab-bistro/'
-      preLoaderRoute: typeof TabBistroIndexRouteImport
-      parentRoute: typeof TabBistroRoute
-    }
-    '/tab-bistro/gift-cards': {
-      id: '/tab-bistro/gift-cards'
-      path: '/gift-cards'
-      fullPath: '/tab-bistro/gift-cards'
-      preLoaderRoute: typeof TabBistroGiftCardsRouteImport
-      parentRoute: typeof TabBistroRoute
-    }
-    '/tab-bistro/menu': {
-      id: '/tab-bistro/menu'
-      path: '/menu'
-      fullPath: '/tab-bistro/menu'
-      preLoaderRoute: typeof TabBistroMenuRouteImport
-      parentRoute: typeof TabBistroRoute
-    }
-    '/tab-bistro/visit': {
-      id: '/tab-bistro/visit'
-      path: '/visit'
-      fullPath: '/tab-bistro/visit'
-      preLoaderRoute: typeof TabBistroVisitRouteImport
-      parentRoute: typeof TabBistroRoute
-    }
-    '/tourism/login': {
-      id: '/tourism/login'
-      path: '/tourism/login'
-      fullPath: '/tourism/login'
-      preLoaderRoute: typeof TourismLoginRouteImport
+    '/support/{-$sub}': {
+      id: '/support/{-$sub}'
+      path: '/support/{-$sub}'
+      fullPath: '/support/{-$sub}'
+      preLoaderRoute: typeof SupportChar123SubChar125RouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/tables/{-$sub}': {
+      id: '/tables/{-$sub}'
+      path: '/tables/{-$sub}'
+      fullPath: '/tables/{-$sub}'
+      preLoaderRoute: typeof TablesChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms/{-$sub}': {
+      id: '/terms/{-$sub}'
+      path: '/terms/{-$sub}'
+      fullPath: '/terms/{-$sub}'
+      preLoaderRoute: typeof TermsChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/waiter/{-$sub}': {
+      id: '/waiter/{-$sub}'
+      path: '/waiter/{-$sub}'
+      fullPath: '/waiter/{-$sub}'
+      preLoaderRoute: typeof WaiterChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/xtsy-pos/{-$sub}': {
+      id: '/xtsy-pos/{-$sub}'
+      path: '/xtsy-pos/{-$sub}'
+      fullPath: '/xtsy-pos/{-$sub}'
+      preLoaderRoute: typeof XtsyPosChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_bistro/tab-bistro/{-$sub}': {
+      id: '/_bistro/tab-bistro/{-$sub}'
+      path: '/tab-bistro/{-$sub}'
+      fullPath: '/tab-bistro/{-$sub}'
+      preLoaderRoute: typeof BistroTabBistroChar123SubChar125RouteImport
+      parentRoute: typeof BistroRoute
+    }
+    '/hostel/login/{-$sub}': {
+      id: '/hostel/login/{-$sub}'
+      path: '/hostel/login/{-$sub}'
+      fullPath: '/hostel/login/{-$sub}'
+      preLoaderRoute: typeof HostelLoginChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hotel/login/{-$sub}': {
+      id: '/hotel/login/{-$sub}'
+      path: '/hotel/login/{-$sub}'
+      fullPath: '/hotel/login/{-$sub}'
+      preLoaderRoute: typeof HotelLoginChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resort/login/{-$sub}': {
+      id: '/resort/login/{-$sub}'
+      path: '/resort/login/{-$sub}'
+      fullPath: '/resort/login/{-$sub}'
+      preLoaderRoute: typeof ResortLoginChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant/login/{-$sub}': {
+      id: '/restaurant/login/{-$sub}'
+      path: '/restaurant/login/{-$sub}'
+      fullPath: '/restaurant/login/{-$sub}'
+      preLoaderRoute: typeof RestaurantLoginChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/bookings/{-$sub}': {
+      id: '/stays/bookings/{-$sub}'
+      path: '/stays/bookings/{-$sub}'
+      fullPath: '/stays/bookings/{-$sub}'
+      preLoaderRoute: typeof StaysBookingsChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/property/{-$sub}': {
+      id: '/stays/property/{-$sub}'
+      path: '/stays/property/{-$sub}'
+      fullPath: '/stays/property/{-$sub}'
+      preLoaderRoute: typeof StaysPropertyChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/rates/{-$sub}': {
+      id: '/stays/rates/{-$sub}'
+      path: '/stays/rates/{-$sub}'
+      fullPath: '/stays/rates/{-$sub}'
+      preLoaderRoute: typeof StaysRatesChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stays/reports/{-$sub}': {
+      id: '/stays/reports/{-$sub}'
+      path: '/stays/reports/{-$sub}'
+      fullPath: '/stays/reports/{-$sub}'
+      preLoaderRoute: typeof StaysReportsChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tourism/login/{-$sub}': {
+      id: '/tourism/login/{-$sub}'
+      path: '/tourism/login/{-$sub}'
+      fullPath: '/tourism/login/{-$sub}'
+      preLoaderRoute: typeof TourismLoginChar123SubChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_bistro/tab-bistro/gift-cards/{-$sub}': {
+      id: '/_bistro/tab-bistro/gift-cards/{-$sub}'
+      path: '/tab-bistro/gift-cards/{-$sub}'
+      fullPath: '/tab-bistro/gift-cards/{-$sub}'
+      preLoaderRoute: typeof BistroTabBistroGiftCardsChar123SubChar125RouteImport
+      parentRoute: typeof BistroRoute
+    }
+    '/_bistro/tab-bistro/menu/{-$sub}': {
+      id: '/_bistro/tab-bistro/menu/{-$sub}'
+      path: '/tab-bistro/menu/{-$sub}'
+      fullPath: '/tab-bistro/menu/{-$sub}'
+      preLoaderRoute: typeof BistroTabBistroMenuChar123SubChar125RouteImport
+      parentRoute: typeof BistroRoute
+    }
+    '/_bistro/tab-bistro/visit/{-$sub}': {
+      id: '/_bistro/tab-bistro/visit/{-$sub}'
+      path: '/tab-bistro/visit/{-$sub}'
+      fullPath: '/tab-bistro/visit/{-$sub}'
+      preLoaderRoute: typeof BistroTabBistroVisitChar123SubChar125RouteImport
+      parentRoute: typeof BistroRoute
     }
   }
 }
 
-interface TabBistroRouteChildren {
-  TabBistroGiftCardsRoute: typeof TabBistroGiftCardsRoute
-  TabBistroMenuRoute: typeof TabBistroMenuRoute
-  TabBistroVisitRoute: typeof TabBistroVisitRoute
-  TabBistroIndexRoute: typeof TabBistroIndexRoute
+interface BistroRouteChildren {
+  BistroTabBistroChar123SubChar125Route: typeof BistroTabBistroChar123SubChar125Route
+  BistroTabBistroGiftCardsChar123SubChar125Route: typeof BistroTabBistroGiftCardsChar123SubChar125Route
+  BistroTabBistroMenuChar123SubChar125Route: typeof BistroTabBistroMenuChar123SubChar125Route
+  BistroTabBistroVisitChar123SubChar125Route: typeof BistroTabBistroVisitChar123SubChar125Route
 }
 
-const TabBistroRouteChildren: TabBistroRouteChildren = {
-  TabBistroGiftCardsRoute: TabBistroGiftCardsRoute,
-  TabBistroMenuRoute: TabBistroMenuRoute,
-  TabBistroVisitRoute: TabBistroVisitRoute,
-  TabBistroIndexRoute: TabBistroIndexRoute,
+const BistroRouteChildren: BistroRouteChildren = {
+  BistroTabBistroChar123SubChar125Route: BistroTabBistroChar123SubChar125Route,
+  BistroTabBistroGiftCardsChar123SubChar125Route:
+    BistroTabBistroGiftCardsChar123SubChar125Route,
+  BistroTabBistroMenuChar123SubChar125Route:
+    BistroTabBistroMenuChar123SubChar125Route,
+  BistroTabBistroVisitChar123SubChar125Route:
+    BistroTabBistroVisitChar123SubChar125Route,
 }
 
-const TabBistroRouteWithChildren = TabBistroRoute._addFileChildren(
-  TabBistroRouteChildren,
-)
+const BistroRouteWithChildren =
+  BistroRoute._addFileChildren(BistroRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccountsRoute: AccountsRoute,
-  AuthRoute: AuthRoute,
-  BrandRoute: BrandRoute,
-  ConsoleRoute: ConsoleRoute,
-  CustomersRoute: CustomersRoute,
-  DashboardRoute: DashboardRoute,
-  FrontDeskRoute: FrontDeskRoute,
+  BistroRoute: BistroRouteWithChildren,
   HostelPosRoute: HostelPosRoute,
   HotelPosRoute: HotelPosRoute,
-  KitchenRoute: KitchenRoute,
-  LoginRoute: LoginRoute,
-  ManagerRoute: ManagerRoute,
-  MarketingRoute: MarketingRoute,
-  MenuRoute: MenuRoute,
-  PrivacyRoute: PrivacyRoute,
-  RefundsRoute: RefundsRoute,
-  ReportsRoute: ReportsRoute,
   ResortPosRoute: ResortPosRoute,
   RestaurantPosRoute: RestaurantPosRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
-  SettingsRoute: SettingsRoute,
-  SetupRoute: SetupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  StockRoute: StockRoute,
-  SupportRoute: SupportRoute,
-  TabBistroRoute: TabBistroRouteWithChildren,
-  TablesRoute: TablesRoute,
-  TermsRoute: TermsRoute,
   TourismPosRoute: TourismPosRoute,
-  WaiterRoute: WaiterRoute,
-  XtsyPosRoute: XtsyPosRoute,
+  AccountsChar123SubChar125Route: AccountsChar123SubChar125Route,
+  AuthChar123SubChar125Route: AuthChar123SubChar125Route,
   BookSlugRoute: BookSlugRoute,
-  HostelLoginRoute: HostelLoginRoute,
-  HotelLoginRoute: HotelLoginRoute,
+  BrandChar123SubChar125Route: BrandChar123SubChar125Route,
+  ConsoleChar123SubChar125Route: ConsoleChar123SubChar125Route,
+  CustomersChar123SubChar125Route: CustomersChar123SubChar125Route,
+  DashboardChar123SubChar125Route: DashboardChar123SubChar125Route,
+  FrontDeskChar123SubChar125Route: FrontDeskChar123SubChar125Route,
+  KitchenChar123SubChar125Route: KitchenChar123SubChar125Route,
+  LoginChar123SubChar125Route: LoginChar123SubChar125Route,
+  ManagerChar123SubChar125Route: ManagerChar123SubChar125Route,
+  MarketingChar123SubChar125Route: MarketingChar123SubChar125Route,
+  MenuChar123SubChar125Route: MenuChar123SubChar125Route,
   OrderSlugRoute: OrderSlugRoute,
-  ResortLoginRoute: ResortLoginRoute,
-  RestaurantLoginRoute: RestaurantLoginRoute,
-  StaysBookingsRoute: StaysBookingsRoute,
-  StaysPropertyRoute: StaysPropertyRoute,
-  StaysRatesRoute: StaysRatesRoute,
-  StaysReportsRoute: StaysReportsRoute,
-  TourismLoginRoute: TourismLoginRoute,
-  StaysIndexRoute: StaysIndexRoute,
+  PrivacyChar123SubChar125Route: PrivacyChar123SubChar125Route,
+  RefundsChar123SubChar125Route: RefundsChar123SubChar125Route,
+  ReportsChar123SubChar125Route: ReportsChar123SubChar125Route,
+  SettingsChar123SubChar125Route: SettingsChar123SubChar125Route,
+  SetupChar123SubChar125Route: SetupChar123SubChar125Route,
+  StaysChar123SubChar125Route: StaysChar123SubChar125Route,
+  StockChar123SubChar125Route: StockChar123SubChar125Route,
+  SupportChar123SubChar125Route: SupportChar123SubChar125Route,
+  TablesChar123SubChar125Route: TablesChar123SubChar125Route,
+  TermsChar123SubChar125Route: TermsChar123SubChar125Route,
+  WaiterChar123SubChar125Route: WaiterChar123SubChar125Route,
+  XtsyPosChar123SubChar125Route: XtsyPosChar123SubChar125Route,
+  HostelLoginChar123SubChar125Route: HostelLoginChar123SubChar125Route,
+  HotelLoginChar123SubChar125Route: HotelLoginChar123SubChar125Route,
+  ResortLoginChar123SubChar125Route: ResortLoginChar123SubChar125Route,
+  RestaurantLoginChar123SubChar125Route: RestaurantLoginChar123SubChar125Route,
+  StaysBookingsChar123SubChar125Route: StaysBookingsChar123SubChar125Route,
+  StaysPropertyChar123SubChar125Route: StaysPropertyChar123SubChar125Route,
+  StaysRatesChar123SubChar125Route: StaysRatesChar123SubChar125Route,
+  StaysReportsChar123SubChar125Route: StaysReportsChar123SubChar125Route,
+  TourismLoginChar123SubChar125Route: TourismLoginChar123SubChar125Route,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

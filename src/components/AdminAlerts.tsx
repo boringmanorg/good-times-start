@@ -92,8 +92,8 @@ export function AdminAlerts() {
       window.dispatchEvent(new Event(a.action.event));
       return;
     }
-    if (a.action.to === "/stock") void navigate({ to: "/stock" });
-    else void navigate({ to: "/settings", hash: a.action.hash });
+    if (a.action.to === "/stock") void navigate({ to: "/stock/{-$sub}" });
+    else void navigate({ to: "/settings/{-$sub}", hash: a.action.hash });
   };
   const allow = async () => {
     try { const p = await Notification.requestPermission(); setPermission(p); } catch { /* unsupported */ }

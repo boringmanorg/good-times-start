@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { useStaff } from "@/lib/staff";
 import { isFramedPath } from "@/lib/framed-paths";
+import { silent } from "@/lib/silent-route";
 
 /** Staff screens in the order people usually open them. */
 const SCREENS = ["/tables", "/menu", "/stock", "/customers", "/settings"] as const;
@@ -31,7 +32,7 @@ export function PreloadScreens() {
       if (cancelled) return;
       const to = queue.shift();
       if (!to) return;
-      void router.preloadRoute({ to }).catch(() => undefined).finally(() => {
+      void router.preloadRoute({ to: silent(to) }).catch(() => undefined).finally(() => {
         handle = w.requestIdleCallback ? w.requestIdleCallback(next, { timeout: 2000 }) : window.setTimeout(next, 200);
       });
     };

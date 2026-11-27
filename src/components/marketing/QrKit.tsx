@@ -103,7 +103,7 @@ export function QrKit({ slug, restaurantName, brand, ordering }: { slug: string;
       {orderingOff || (meta.perTable && !ordering.table) ? (
         <div className="rounded-xl border border-gold/50 bg-gold/10 p-4 text-sm">
           <p className="font-semibold">{meta.perTable ? "QR ordering at tables is switched off." : "Guest ordering is switched off."} Guests who scan will see the menu but can't order.</p>
-          <Link to="/settings" hash="ordering" className="mt-1 inline-block font-semibold text-primary">Turn it on in Settings → Ordering</Link>
+          <Link to="/settings/{-$sub}" hash="ordering" className="mt-1 inline-block font-semibold text-primary">Turn it on in Settings → Ordering</Link>
         </div>
       ) : null}
 

@@ -170,9 +170,9 @@ export function OrderingSettings({ className, ref, ...props }: OrderingSettingsP
           ].map((check) => <div key={check.label} className="border-l-2 border-border pl-3"><p className="flex items-center gap-2 text-sm font-semibold">{check.ok ? <CheckCircle2 className="size-4 text-success" /> : <AlertTriangle className="size-4 text-warning" />}{check.label}</p><p className="mt-1 text-xs text-muted-foreground">{check.detail}</p></div>)}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" asChild><Link to="/marketing">Brand, cover & offers<ExternalLink /></Link></Button>
-          <Button variant="ghost" size="sm" asChild><Link to="/menu">Manage dishes</Link></Button>
-          <Button variant="ghost" size="sm" asChild><Link to="/tables">Manage tables</Link></Button>
+          <Button variant="outline" size="sm" asChild><Link to="/marketing/{-$sub}">Brand, cover & offers<ExternalLink /></Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link to="/menu/{-$sub}">Manage dishes</Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link to="/tables/{-$sub}">Manage tables</Link></Button>
         </div>
       </section>
 

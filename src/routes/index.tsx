@@ -79,7 +79,7 @@ const ORDER_TYPES: { v: OrderType; l: string }[] = [{ v: "dine-in", l: "Dine-in"
 function PosPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const toFloor = () => void navigate({ to: "/tables" });
+  const toFloor = () => void navigate({ to: "/tables/{-$sub}" });
   const entry = !!(search.table || search.bill || search.type);
   const menu = useLiveQuery(() => getDb().menu.toArray(), [], []);
   const firstSync = useFirstSyncDone();
@@ -467,7 +467,7 @@ function PosPage() {
       <div className="flex h-[calc(100vh-57px-5rem)] flex-col lg:h-[calc(100vh-57px)]">
         {/* Every bill comes from Tables: a table, or a counter order (takeaway, delivery, apps). */}
         <div className="flex items-center gap-2 border-b border-border bg-card px-3 py-2">
-          <Link to="/tables" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-[13px] font-semibold text-foreground hover:bg-accent">
+          <Link to="/tables/{-$sub}" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-[13px] font-semibold text-foreground hover:bg-accent">
             <ArrowLeft className="size-3.5" />Tables
           </Link>
           <span className="min-w-0 truncate text-sm font-semibold">
@@ -531,8 +531,8 @@ function PosPage() {
                 <p className="font-semibold">{firstSync ? "No dishes yet" : "Loading the menu…"}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{firstSync ? "Add dishes in Menu, or import them from Excel." : "This device is getting your restaurant's menu. It appears here in a moment."}</p>
                 {firstSync ? <div className="mt-4 flex justify-center gap-2">
-                  <Link to="/menu" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Open Menu</Link>
-                  <Link to="/setup" className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold">Setup</Link>
+                  <Link to="/menu/{-$sub}" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Open Menu</Link>
+                  <Link to="/setup/{-$sub}" className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold">Setup</Link>
                 </div> : null}
               </div>
             ) : <p className="col-span-full py-10 text-center text-sm text-muted-foreground">{q ? `No dishes match "${q}"` : "Nothing available in this category"}</p>)}

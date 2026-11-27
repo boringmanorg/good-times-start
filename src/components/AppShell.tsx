@@ -44,6 +44,7 @@ import { AppUpdateWatcher } from "./AppUpdateWatcher";
 import { TerminalWaiting } from "./TerminalApproval";
 import { SubscriptionExpired } from "./SubscriptionExpired";
 import { signInPath } from "@/lib/login-doors";
+import { silent } from "@/lib/silent-route";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -157,7 +158,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
   const [checking, setChecking] = useState(false);
 
   const retry = async () => {
-    if (!staff) { await navigate({ to: signInPath() }); return; }
+    if (!staff) { await navigate({ to: silent(signInPath()) }); return; }
     if (!restaurantId) return;
     if (!online) { await saveSyncError(new Error("No internet connection. Orders remain safely stored on this device.")); return; }
     setBusy(true);
@@ -213,7 +214,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: signInPath(), replace: true });
+    await navigate({ to: silent(signInPath()), replace: true });
   };
 
   const [buildId, setBuildId] = useState("");
@@ -235,7 +236,7 @@ export function SyncChip({ statusOnly = false }: { statusOnly?: boolean } = {}) 
       </Button>
       {statusOnly ? null : staff
         ? <Button size="icon" variant="ghost" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut /></Button>
-        : <Button size="sm" variant="ghost" onClick={() => void navigate({ to: signInPath() })}><LogIn />Sign in</Button>}
+        : <Button size="sm" variant="ghost" onClick={() => void navigate({ to: silent(signInPath()) })}><LogIn />Sign in</Button>}
     </div>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" onCloseAutoFocus={(event) => { event.preventDefault(); statusButton.current?.focus({ preventScroll: true }); }}>
@@ -288,7 +289,7 @@ function AccessBlocked({ problem, own }: { problem: string; own: AppKind | null 
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    await navigate({ to: signInPath(), replace: true });
+    await navigate({ to: silent(signInPath()), replace: true });
   };
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
@@ -297,7 +298,7 @@ function AccessBlocked({ problem, own }: { problem: string; own: AppKind | null 
         <h1 className="mt-3 text-xl font-bold">Not available here</h1>
         <p className="mt-2 text-sm text-muted-foreground">{problem}</p>
         <div className="mt-5 flex flex-col gap-2">
-          {own ? <Button onClick={() => { setAppMode(own); void navigate({ to: APPS[own].home }); }}><ArrowRightLeft />Open {APPS[own].name}</Button> : null}
+          {own ? <Button onClick={() => { setAppMode(own); void navigate({ to: silent(APPS[own].home) }); }}><ArrowRightLeft />Open {APPS[own].name}</Button> : null}
           <Button variant="outline" onClick={() => void signOut()}><LogOut />Sign in with another login</Button>
         </div>
       </div>
@@ -340,7 +341,7 @@ export function PersistentFrame({ children }: { children: ReactNode }) {
   }, [rid, app]);
   // Internal system: every staff screen needs a signed-in person.
   useEffect(() => {
-    if (staffApp && !loading && !user) void navigate({ to: signInPath(), replace: true });
+    if (staffApp && !loading && !user) void navigate({ to: silent(signInPath()), replace: true });
   }, [staffApp, loading, user, navigate]);
   if (staffApp && (loading || !user)) {
     return (
@@ -430,10 +431,10 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
   const navigateTo = useNavigate();
   // A stay property's people land on its own screens, never on restaurant ones it doesn't show.
   useEffect(() => {
-    if (stay && current && !allowed.includes(current.to) && home !== current.to) void navigateTo({ to: home, replace: true });
+    if (stay && current && !allowed.includes(current.to) && home !== current.to) void navigateTo({ to: silent(home), replace: true });
   }, [stay, current?.to, home]); // eslint-disable-line react-hooks/exhaustive-deps -- allowed/navigateTo follow the same inputs
   useEffect(() => {
-    if (plan && current?.to === "/dashboard" && notInPlan("/dashboard") && home !== "/dashboard") void navigateTo({ to: home, replace: true });
+    if (plan && current?.to === "/dashboard" && notInPlan("/dashboard") && home !== "/dashboard") void navigateTo({ to: silent(home), replace: true });
   }, [plan, current?.to, home]); // eslint-disable-line react-hooks/exhaustive-deps -- notInPlan/navigateTo are stable for this check
   const needsDetails = isAdmin(user) && !settings.updatedAt && pathname !== "/settings" && pathname !== "/setup";
 
@@ -452,7 +453,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
           {nav.map(({ to, label, icon: Icon }) => {
             const active = current?.to === to || (to === "/tables" && pathname === "/");
             return (
-              <Link key={to} to={to} aria-current={active ? "page" : undefined} title={wide ? undefined : label}
+              <Link key={to} to={silent(to)} aria-current={active ? "page" : undefined} title={wide ? undefined : label}
                 className={`relative flex items-center rounded-[10px] font-medium transition-colors ${wide ? "gap-3 px-3 py-2.5 text-sm" : "flex-col gap-1 px-1 py-2 text-[10.5px]"} ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"}`}>
                 {active ? <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-sidebar-primary" aria-hidden="true" /> : null}
                 <Icon className={wide ? "size-[1.15rem] shrink-0" : "size-[1.3rem]"} strokeWidth={active ? 2.2 : 1.8} />
@@ -492,7 +493,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
           </a>
         ) : null}
         {needsDetails && !needsRestaurant ? (
-          <Link to="/setup" className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-warning lg:px-6">
+          <Link to="/setup/{-$sub}" className="flex items-center gap-2 border-b border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-warning lg:px-6">
             <AlertTriangle className="size-4 shrink-0" />{stay ? "Finish setting up: add your GSTIN and address so folios and café bills carry your details." : "Finish setting up: add your GSTIN, menu, tables and staff so bills carry your details."}
           </Link>
         ) : null}
@@ -513,7 +514,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
                 <p className="font-semibold">This screen isn't part of {APPS[app].name}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{app === "manager" ? "Open tables and printing from POS Billdesk." : "Ask the admin if you need it."}</p>
               </>}
-              <Link to={home} className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Go to {NAV.find((n) => n.to === home)?.label}</Link>
+              <Link to={silent(home)} className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Go to {NAV.find((n) => n.to === home)?.label}</Link>
             </div>
           ) : children}
         </main>
@@ -523,7 +524,7 @@ function Frame({ children, tone }: { children: ReactNode; tone: Tone }) {
         {nav.map(({ to, label, icon: Icon }) => {
           const active = current?.to === to || (to === "/tables" && pathname === "/");
           return (
-            <Link key={to} to={to} aria-current={active ? "page" : undefined}
+            <Link key={to} to={silent(to)} aria-current={active ? "page" : undefined}
               className={`relative flex min-h-14 min-w-[3.1rem] flex-1 flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold ${active ? "text-primary" : "text-muted-foreground"}`}>
               {active ? <span className="absolute inset-x-4 top-0 h-[2px] rounded-b bg-primary" aria-hidden="true" /> : null}
               <Icon className="size-5" />
