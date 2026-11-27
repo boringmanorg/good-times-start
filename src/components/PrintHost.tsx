@@ -7,7 +7,7 @@ import type { Kot, Order } from "@/lib/types";
 import { KOT_END_FEED_MM } from "@/lib/slip";
 import { useAppMode } from '@/lib/app-mode';
 import { useStaff } from '@/lib/staff';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-app';
 import { getDeviceId } from '@/lib/terminal-actions';
 import { flushCounterPrints } from '@/lib/counter-print';
 import { clearPrintJobs, hasPrintJobs, markKotsSeen, printBill, printJobsServerSnapshot, printJobsSnapshot, printKots, subscribePrintJobs } from "@/lib/print-jobs";

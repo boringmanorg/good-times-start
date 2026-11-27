@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { cancelledBillBooking, type Reservation } from "./reservations";
 import type { Order } from "./types";
 

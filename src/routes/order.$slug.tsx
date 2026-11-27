@@ -6,7 +6,7 @@ import { guestPlaceName, hasOpenRooms } from "@/lib/guest-place";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BadgePercent, BedDouble, CalendarDays, Truck, Users, Check, ChefHat, Clock, ExternalLink, MapPin, Minus, Phone, Plus, Search, Send, Share, ShoppingBag, Smartphone, Sparkles, Star, Store, UtensilsCrossed, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ItemOptions } from "@/components/ItemOptions";

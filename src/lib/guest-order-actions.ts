@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import type { CartLine, Kot, Order } from "./types";
 import { getDb, getSettings, markDirty } from "./db";
 import { allocateRestaurantNumber } from "./restaurant-numbering";

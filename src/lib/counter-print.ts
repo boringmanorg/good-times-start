@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-app';
 import { getDb } from './db';
 import { getDeviceId, touchTerminal } from './terminal-actions';
 import { currentDevice } from './app-mode';

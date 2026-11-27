@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { getDb } from "./db";
 import { syncCloudData } from "./cloud-sync";
 import { financialYear } from "./billing";

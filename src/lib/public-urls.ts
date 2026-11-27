@@ -16,6 +16,7 @@
  * so installed counter apps and bookmarks keep working, and the next move shows the new address.
  * Pure; tested in public-urls.test.ts.
  */
+import { appSpace } from "./app-space";
 
 export type UrlModel = "restaurant" | "hostel" | "hotel" | "resort";
 const STAY_MODELS: UrlModel[] = ["hostel", "hotel", "resort"];
@@ -38,9 +39,10 @@ const STAY_OUT = invert(STAY);
 const SHARED = new Set(["/customers", "/settings", "/front-desk"]);
 
 /** Which product's folder shared screens (guests, settings) show under. Set at sign-in and from the address. */
-let current: UrlModel = "restaurant";
+let current: UrlModel | null = null;
 export function setUrlModel(model: UrlModel): void { current = model; }
-export function urlModel(): UrlModel { return current; }
+/** Until someone signs in, a Hostel POS tab shows Hostel addresses and a restaurant tab restaurant ones. */
+export function urlModel(): UrlModel { return current ?? (appSpace() === "stay" ? "hostel" : "restaurant"); }
 export function urlModelOf(product: string | null | undefined): UrlModel {
   return product === "hostel_pos" ? "hostel" : product === "hotel_pos" ? "hotel" : product === "resort_pos" ? "resort" : "restaurant";
 }
@@ -68,7 +70,7 @@ export function toInternal(pathname: string, search: string): { pathname: string
 }
 
 /** Internal path → public address, or null to leave it alone. */
-export function toPublic(pathname: string, search: string, model: UrlModel = current): string | null {
+export function toPublic(pathname: string, search: string, model: UrlModel = urlModel()): string | null {
   if (pathname === "/") return isBill(search) ? "/restaurant/bill" : null;
   const stay = STAY_MODELS.includes(model);
   const p = pathname.replace(/\/$/, "") || "/";

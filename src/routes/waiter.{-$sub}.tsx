@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Bell, Check, ChefHat, LogOut, Minus, Plus, Printer, Search, Users } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VegMark } from "@/components/VegMark";

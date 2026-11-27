@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { useStaff } from "./staff";
 import type { Entitlements } from "./plans";
 

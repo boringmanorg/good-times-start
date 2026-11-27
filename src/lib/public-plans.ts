@@ -6,7 +6,7 @@
  * the moment a price changed in the console. Now the site reads the catalogue and falls back
  * to the compiled copy only if the read fails, so a pricing section never comes up empty.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { FEATURES, PUBLIC_PLANS, type Feature, type PlanId, type PublicPlan } from "./plans";
 import type { ProductId } from "./products";
 import { modelPlanRows, SITE_MODELS } from "./site-models";

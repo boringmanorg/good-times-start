@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, Gift, Search, Ticket } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/billing";
 import { cardState, giftCardTotals, issueProblem, normaliseCode, redeemProblem, type GiftCard, type GiftCardEvent } from "@/lib/gift-card-logic";

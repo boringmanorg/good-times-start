@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { getDb } from "./db";
 import { getDeviceId } from "./terminal-actions";
 import { nextOfflineNumber, parseSequence, readClaims, type OfflineClaim } from "./counter-offline-numbering";

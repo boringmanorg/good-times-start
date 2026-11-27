@@ -14,8 +14,9 @@
  *    and writes carry a "xtsy-support-…" device id, so the restaurant's audit log shows them.
  */
 import { APPS, appsFor, loginForEmail, type AppKind } from "./staff-login-logic";
+import { spaced } from "@/lib/app-space";
 
-export const SUPPORT_KEY = "xtsy-support";
+export const SUPPORT_KEY = spaced("xtsy-support");
 export const HANDOFF_KEY = "xtsy-support-handoff";
 export const HANDOFF_TTL_MS = 2 * 60_000;
 export const MIN_REASON = 8;

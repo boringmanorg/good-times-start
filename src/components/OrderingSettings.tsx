@@ -8,7 +8,7 @@ import { CheckCircle2, AlertTriangle, Copy, ExternalLink, Printer, QrCode, Refre
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { GUEST_ORDER_ORIGIN } from "@/lib/qr-ordering";
 import { cn } from "@/lib/utils";
 import { getDb } from "@/lib/db";

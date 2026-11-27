@@ -10,6 +10,7 @@
  */
 import type { AppKind } from "@/lib/staff-login-logic";
 import { STAY_PRODUCTS, isProductId, productById, type ProductId } from "@/lib/products";
+import { appSpace, spaced } from "@/lib/app-space";
 
 export type Door = ProductId;
 export type DoorPath = "/restaurantpos" | "/hostelpos" | "/hotelpos" | "/resortpos" | "/tourismpos";
@@ -100,7 +101,7 @@ export function wrongDoorMessage(at: Door, products: (string | null | undefined)
   return `This login is for ${productById(right.product).name}. Sign in at ${right.path} instead.`;
 }
 
-const KEY = "xtsy-door";
+const KEY = spaced("xtsy-door");
 
 /** Remember the door this device signs in at, so signing out comes back to it. */
 export function rememberDoor(door: Door): void {
@@ -109,9 +110,13 @@ export function rememberDoor(door: Door): void {
 
 /** The remembered door's sign-in page. Older devices stored "stay" / "restaurant". */
 export function signInPath(): DoorPath {
+  // Each app has its own sign-in: a Hostel/Hotel/Resort POS tab never goes to the restaurant door.
+  const fallback = appSpace() === "stay" ? DOORS.hostel_pos.path : DOORS.restaurant_pos.path;
   try {
     const v = window.localStorage.getItem(KEY);
     if (v === "stay") return DOORS.hostel_pos.path;
-    return DOORS[doorOf(v)].path;
-  } catch { return DOORS.restaurant_pos.path; }
+    if (!v) return fallback;
+    const door = DOORS[doorOf(v)];
+    return (appSpace() === "stay") === isStayDoor(door.product) ? door.path : fallback;
+  } catch { return fallback; }
 }

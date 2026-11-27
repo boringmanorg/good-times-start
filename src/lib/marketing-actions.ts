@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { getDb, markDirty } from "./db";
 import { normalisePhone } from "./customer-logic";
 import { sanitizeBranding, cleanSource, type Branding, type ScanRow } from "./marketing-logic";

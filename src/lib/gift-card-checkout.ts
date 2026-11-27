@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase-app';
 import type { Json } from '@/integrations/supabase/types';
 import { getDb } from './db';
 import { syncCloudData } from './cloud-sync';

@@ -1,4 +1,5 @@
 import Dexie, { type Table } from "dexie";
+import { spaced } from "./app-space";
 import type { CartDraft, Customer, DayClose, InventoryItem, Kot, LedgerEntry, Material, MenuItem, Order, RestaurantSettings, RestaurantTable, StockEntry, Supplier } from "./types";
 import { kotNumber } from "./kot-history";
 import { SEED_MENU, SEED_TABLES } from "./seed";
@@ -45,7 +46,8 @@ class RestroDB extends Dexie {
   materialLevels!: Table<{ materialId: string; qty: number }, string>;
 
   constructor() {
-    super("restro-pos");
+    // Restaurant POS keeps "restro-pos"; a Hostel/Hotel/Resort POS tab has its own database (app-space.ts).
+    super(spaced("restro-pos"));
     this.version(1).stores({
       menu: "id, category, name",
       orders: "++id, billNo, status, createdAt, tableId",

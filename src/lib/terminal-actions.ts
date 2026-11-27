@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { isLovablePreview } from "./preview-host";
 import { isSupportSession } from "./support-session";
 import { getDb, getDeviceCode } from "./db";
 import type { AppKind, DeviceKind } from "./staff-login-logic";
+import { spaced } from "@/lib/app-space";
 
 /*
  * Terminals: every device checks in with its bill series, app and login, so
@@ -34,7 +35,7 @@ export async function getDeviceId(): Promise<string> {
 }
 
 /* This device's status, remembered so a blocked device stays blocked offline. */
-const STATUS_KEY = "xtsy-terminal-status";
+const STATUS_KEY = spaced("xtsy-terminal-status");
 export type Status = "active" | "blocked" | "over_plan" | "pending";
 const isStatus = (v: unknown): v is Status => v === "active" || v === "blocked" || v === "over_plan" || v === "pending";
 let status: Status = (() => { try { const s = window.localStorage.getItem(STATUS_KEY); return isStatus(s) ? s : "active"; } catch { return "active"; } })();
@@ -85,7 +86,7 @@ export async function releaseTerminal(restaurantId: string, deviceId: string): P
   if (error) throw new Error("Couldn't release the terminal.");
 }
 
-const NAME_KEY = "xtsy-terminal-name";
+const NAME_KEY = spaced("xtsy-terminal-name");
 /** The name this device was approved under, kept on the device itself. */
 export function thisTerminalName(): string {
   try { return window.localStorage.getItem(NAME_KEY) ?? ""; } catch { return ""; }

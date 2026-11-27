@@ -7,7 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/billing";
 import { useLiveQuery } from "dexie-react-hooks";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { getDb } from "@/lib/db";
 import { createOutlet, outletPurchases, outletSales, pushMenu, transferStock } from "@/lib/outlet-actions";
 import { brandPnl, brandTotals, newOutletProblem, outletCountText, pnlByOutlet, pushMenuProblem, ranked, shareOfBrand, totalsByOutlet, transferLines, transferProblem, type Outlet } from "@/lib/brand-logic";

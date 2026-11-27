@@ -9,10 +9,11 @@ import { upiLink } from "@/lib/billing";
 import { billSlip, escPos, kotSlip, rawbtIntent } from "@/lib/slip";
 import { SlipView } from "@/components/Slip";
 import { getChosenApp } from "@/lib/app-mode";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { queueCounterPrint } from "@/lib/counter-print";
 import { thermalDestination } from "@/lib/print-routing";
 import { numberBillForPrint } from "@/lib/bill-numbering";
+import { spaced } from "@/lib/app-space";
 
 /**
  * One place every screen prints through. Bills and KOTs are thermal slips
@@ -105,7 +106,7 @@ async function routeWirelessPrint(kind: 'bill' | 'kot', payload: Order | Kot[]):
   const id = data.session?.user.id;
   if (!id) { toast.error('Sign in to send printing to the counter'); return true; }
   // Cached membership enables the durable local queue during outages.
-  const cached = window.localStorage.getItem('xtsy-pos-staff');
+  const cached = window.localStorage.getItem(spaced('xtsy-pos-staff'));
   const staff = cached ? JSON.parse(cached) as { id: string; restaurantId: string | null } : null;
   if (!staff?.restaurantId || staff.id !== id) { toast.error('Restaurant access is unavailable'); return true; }
   await queueCounterPrint(staff.restaurantId, kind, payload);

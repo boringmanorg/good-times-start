@@ -1,3 +1,4 @@
+import { spaced } from "@/lib/app-space";
 /*
  * Admin code: a 6-digit code that changes every 60 seconds (time-based one-time code, HMAC-SHA256).
  * The admin's device shows it; a staff terminal checks it on its own, with no internet and no cloud call.
@@ -60,7 +61,7 @@ export async function checkAdminCode(code: string, key: AdminCodeKey | null | un
   return null;
 }
 
-const USED_KEY = "xtsy-admin-code-used";
+const USED_KEY = spaced("xtsy-admin-code-used");
 export function lastUsedStep(): number {
   try { const v = Number(window.localStorage.getItem(USED_KEY)); return Number.isFinite(v) ? v : -1; } catch { return -1; }
 }

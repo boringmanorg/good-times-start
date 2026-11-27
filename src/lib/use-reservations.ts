@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { getDb } from "./db";
 import { useStaff } from "./staff";
 import type { Reservation } from "./reservations";

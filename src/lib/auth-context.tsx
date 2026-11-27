@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { spaced } from "./app-space";
+import { supabase } from "@/lib/supabase-app";
 import { loginForEmail, type LoginRow } from "./staff-login-logic";
 import { AuthContext, type Membership, type SignedInStaff } from "./staff";
 import { chosenOutlet, pickActive } from "./active-outlet";
@@ -9,7 +10,8 @@ import { chosenOutlet, pickActive } from "./active-outlet";
  * app opens instantly and keeps enforcing roles when the internet is down.
  * The cloud copy refreshes it whenever there's a connection.
  */
-const STAFF_CACHE = "xtsy-pos-staff";
+// Each app (Restaurant POS, Hostel POS) keeps its own signed-in person (app-space.ts).
+const STAFF_CACHE = spaced("xtsy-pos-staff");
 function readCachedStaff(id: string): SignedInStaff | null {
   try {
     const raw = window.localStorage.getItem(STAFF_CACHE);

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LifeBuoy } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { Button } from "@/components/ui/button";
 import { setAppMode } from "@/lib/app-mode";
 import { useStaff } from "@/lib/staff";
@@ -9,6 +9,8 @@ import { prepareOutletSwitch } from "@/lib/outlet-actions";
 import { HANDOFF_KEY, readHandoff, sessionFromHandoff, supportAppFor, supportHome } from "@/lib/support-logic";
 import { beginSupport, clearSupport } from "@/lib/support-session";
 import logo from "@/assets/logo.png";
+import { appSpace } from "@/lib/app-space";
+import { homeFor } from "@/lib/login-doors";
 import { SILENT_PARAMS, silent } from "@/lib/silent-route";
 
 /**
@@ -43,7 +45,9 @@ function SupportPage() {
       beginSupport(sessionFromHandoff(handoff));
       setAppMode(supportAppFor(handoff.email, handoff.role));
       await refresh();
-      await navigate({ to: silent(supportHome(handoff.email, handoff.role) as "/dashboard"), replace: true });
+      // A property's staff open their stay app, not the restaurant screens.
+      const home = appSpace() === "stay" ? homeFor("hostel_pos", supportAppFor(handoff.email, handoff.role)) : supportHome(handoff.email, handoff.role);
+      await navigate({ to: silent(home as "/dashboard"), replace: true });
     })().catch((e: unknown) => {
       clearSupport();
       setProblem(e instanceof Error ? e.message : "Couldn't open the support session.");

@@ -18,6 +18,7 @@ import { approvalStatus, entryAmount } from "@/lib/purchase-logic";
 import { adminAlerts, type AdminAlert } from "@/lib/admin-alerts";
 import { playBookingChime } from "@/lib/booking-alert-audio";
 import { cn } from "@/lib/utils";
+import { spaced } from "@/lib/app-space";
 
 /*
  * The admin's bell (owner / manager, every app and device): new terminals to approve, purchases to
@@ -25,7 +26,7 @@ import { cn } from "@/lib/utils";
  * chimes and, once the admin allows it, shows a phone / desktop notification while the app is open.
  */
 
-const SEEN_KEY = "xtsy-admin-alerts-seen";
+const SEEN_KEY = spaced("xtsy-admin-alerts-seen");
 
 function notify(alert: AdminAlert) {
   try {

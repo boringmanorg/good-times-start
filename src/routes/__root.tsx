@@ -14,6 +14,7 @@ import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth-context";
+import { appSpace, spaceOfPath } from "@/lib/app-space";
 import { isPublicPath } from "@/lib/public-paths";
 
 /** The staff layer (sync, printing, the POS frame) as its own chunk: public pages never download it. */
@@ -139,7 +140,14 @@ function isStaleChunkError(error: unknown) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const publicPage = isPublicPath(useRouterState({ select: (s) => s.location.pathname }));
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const publicPage = isPublicPath(pathname);
+  // Restaurant POS and Hostel POS are separate apps with separate sign-ins (app-space.ts): a tab
+  // that moves to the other app's screens loads afresh, so it picks up that app's session and data.
+  useEffect(() => {
+    if (publicPage || typeof window === "undefined") return;
+    if (spaceOfPath(window.location.pathname, window.location.search) !== appSpace()) window.location.reload();
+  }, [pathname, publicPage]);
   useEffect(() => {
     const onPreload = (e: Event) => { e.preventDefault(); reloadOnceForStaleChunk(); };
     const onRejection = (e: PromiseRejectionEvent) => {

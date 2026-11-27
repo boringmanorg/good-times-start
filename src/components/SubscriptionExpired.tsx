@@ -2,7 +2,7 @@ import { LogOut, MessageCircle, PauseCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { subscriptionText, whatsappLink, type Entitlements } from "@/lib/plans";
 import logo from "@/assets/logo.png";
 import { signInPath } from "@/lib/login-doors";

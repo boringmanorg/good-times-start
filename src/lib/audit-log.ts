@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 
 /** One change written by the cloud: who, which terminal, what and which fields. Owners and managers only. */
 export interface AuditEntry {

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ROLE_LABELS, isAdmin, useStaff } from "@/lib/staff";
 import { isStayProduct } from "@/lib/platform-restaurant-logic";
 import { productById, productOf } from "@/lib/products";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { requeueHeldRecords, clearSyncNotice, getLiveStatus, getSyncSnapshot, onLiveStatus, saveSyncError, syncCloudData } from "@/lib/cloud-sync";
 import { diagnoseCloudSync } from "@/lib/sync-diagnosis.functions";
 import logo from "@/assets/logo.png";

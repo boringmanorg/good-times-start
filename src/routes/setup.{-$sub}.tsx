@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useRestaurantSettings } from "@/lib/use-settings";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { ROLE_LABELS, isAdmin, useStaff, type StaffRole } from "@/lib/staff";
 import { getDb, loadSampleData, saveSettings } from "@/lib/db";
 import { GST_MODES } from "@/lib/billing-config";

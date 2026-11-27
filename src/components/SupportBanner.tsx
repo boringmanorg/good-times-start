@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LifeBuoy, LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { getDb, resetDevice } from "@/lib/db";
 import { supportBannerText } from "@/lib/support-logic";
 import { clearSupport, currentSupport } from "@/lib/support-session";

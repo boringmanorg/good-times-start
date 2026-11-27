@@ -6,7 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellRing, CalendarClock, Check, ChefHat, Clock, IndianRupee, MapPin, Phone, Send, ShoppingBag, Smartphone, Truck, Users, UtensilsCrossed, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { ConfirmButton } from "@/components/ConfirmButton";

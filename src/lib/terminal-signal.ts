@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 
 /**
  * One "sync everything" signal shared by every open terminal of a restaurant (counter, waiter,

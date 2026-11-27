@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, LogOut, MonitorSmartphone, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { APPS, DEVICE_LABELS, type AppKind, type DeviceKind } from "@/lib/staff-login-logic";
 import { isAdmin, useStaff } from "@/lib/staff";
 import { approveThisTerminal, rememberTerminalName, touchTerminal } from "@/lib/terminal-actions";

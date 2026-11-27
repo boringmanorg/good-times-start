@@ -23,7 +23,7 @@ import { field } from "./ConsoleBits";
 const roleName = (r: string) => STAFF_ROLES.find((x) => x.v === r)?.l ?? r;
 const message = (e: unknown) => (e instanceof Error ? e.message : "Couldn't save. Check the internet.");
 
-export function ConsoleLogins({ restaurantId, restaurantName }: { restaurantId: string; restaurantName: string }) {
+export function ConsoleLogins({ restaurantId, restaurantName, stay = false }: { restaurantId: string; restaurantName: string; stay?: boolean }) {
   const queryClient = useQueryClient();
   const staff = useQuery({ queryKey: ["console", "staff", restaurantId], queryFn: () => loadStaff(restaurantId) });
   const [adding, setAdding] = useState(false);
@@ -54,7 +54,7 @@ export function ConsoleLogins({ restaurantId, restaurantName }: { restaurantId: 
               <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", s.signInOff ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success")}>{s.signInOff ? "Sign-in off" : "Can sign in"}</span>
               <Button size="sm" variant="outline" disabled={s.signInOff} title={s.signInOff ? "Sign-in is off for this login" : `Open ${APPS[supportAppFor(s.email, s.role)].name} as this user`} onClick={() => setOpening(opening === s.userId ? null : s.userId)}><LifeBuoy />Sign in as</Button>
               <Button size="sm" variant="ghost" onClick={() => setEditing(s.userId)}><Pencil />Edit</Button>
-              {opening === s.userId ? <SignInAs restaurantId={restaurantId} login={s} onDone={() => { setOpening(null); void queryClient.invalidateQueries({ queryKey: ["console", "support", restaurantId] }); }} /> : null}
+              {opening === s.userId ? <SignInAs restaurantId={restaurantId} stay={stay} login={s} onDone={() => { setOpening(null); void queryClient.invalidateQueries({ queryKey: ["console", "support", restaurantId] }); }} /> : null}
             </li>
           ))}
         {!staff.isLoading && !list.length && !staff.error ? <li className="p-3 text-sm text-muted-foreground">No logins yet.</li> : null}
@@ -68,7 +68,7 @@ export function ConsoleLogins({ restaurantId, restaurantName }: { restaurantId: 
  * "Sign in as": opens this user's own app in a new tab (support-logic.ts). The reason is
  * required and kept in the restaurant's history; the tab shows a support banner throughout.
  */
-function SignInAs({ restaurantId, login, onDone }: { restaurantId: string; login: StaffLogin; onDone: () => void }) {
+function SignInAs({ restaurantId, stay, login, onDone }: { restaurantId: string; stay: boolean; login: StaffLogin; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const problem = supportReasonProblem(reason);
@@ -81,7 +81,9 @@ function SignInAs({ restaurantId, login, onDone }: { restaurantId: string; login
     try {
       const s = await platformSupportSignIn({ data: { token: await consoleToken(), restaurantId, userId: login.userId, reason } });
       window.localStorage.setItem(HANDOFF_KEY, JSON.stringify({ ...s, at: Date.now() }));
-      if (tab) tab.location.href = "/support"; else window.open("/support", "_blank");
+      // A property's support tab opens in Hostel POS's own app space, never over a restaurant session.
+      const to = stay ? "/support?space=stay" : "/support";
+      if (tab) tab.location.href = to; else window.open(to, "_blank");
       toast.success(`Opening ${app} as ${login.email}`);
       onDone();
     } catch (e) { tab?.close(); toast.error(message(e)); } finally { setBusy(false); }

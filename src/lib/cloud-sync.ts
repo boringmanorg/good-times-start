@@ -1,5 +1,5 @@
 import { getDeviceId } from "./terminal-actions";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { flushOfflineClaims, freshRestaurantNumber } from "@/lib/restaurant-numbering";
 import { SyncScheduler } from "./sync-scheduler";
 import { startTerminalSignals } from "./terminal-signal";

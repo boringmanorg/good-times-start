@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { BedDouble, LayoutDashboard, Store, Tablet, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-app";
 import { Button } from "@/components/ui/button";
 import { setAppMode, syncAppModeFromUrl, useChosenApp } from "@/lib/app-mode";
 import { useStaff } from "@/lib/staff";

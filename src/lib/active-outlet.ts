@@ -6,8 +6,9 @@
  * reload. The guards live in `prepareOutletSwitch`; the choice lives here.
  */
 import type { Membership } from "./staff";
+import { spaced } from "@/lib/app-space";
 
-const KEY = "xtsy-outlet";
+const KEY = spaced("xtsy-outlet");
 
 /** The outlet this device last chose, if any. */
 export function chosenOutlet(): string | null {
