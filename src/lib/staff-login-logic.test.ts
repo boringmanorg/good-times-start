@@ -1,8 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { accessProblem, appFromLocation, appsFor, deviceKind, emailFromInput, loginForEmail, maskPhone, passwordProblem, type LoginRow } from "./staff-login-logic";
+import {
+  accessProblem,
+  appFromLocation,
+  appInfo,
+  appLink,
+  appsOfProduct,
+  appsFor,
+  deviceKind,
+  emailFromInput,
+  loginForEmail,
+  maskPhone,
+  passwordProblem,
+  type LoginRow,
+} from "./staff-login-logic";
 
 const row = (login: LoginRow["login"], patch: Partial<LoginRow> = {}): LoginRow => ({
-  login, active: true, devices: login === "billdesk" ? ["desktop"] : login === "waiter" ? ["android"] : ["android", "ios", "desktop"], whatsapp: "", display_name: login, ...patch,
+  login,
+  active: true,
+  devices:
+    login === "billdesk"
+      ? ["desktop"]
+      : login === "waiter"
+        ? ["android"]
+        : ["android", "ios", "desktop"],
+  whatsapp: "",
+  display_name: login,
+  ...patch,
 });
 
 describe("internal logins", () => {
@@ -26,31 +49,108 @@ describe("internal logins", () => {
   it("tells each device apart", () => {
     expect(deviceKind("Mozilla/5.0 (Linux; Android 14; SM-X200) Chrome/130")).toBe("android");
     expect(deviceKind("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe("ios");
-    expect(deviceKind("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 5)).toBe("ios"); // iPad in desktop mode
-    expect(deviceKind("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 0)).toBe("desktop");
+    expect(deviceKind("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 5)).toBe(
+      "ios",
+    ); // iPad in desktop mode
+    expect(deviceKind("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 0)).toBe(
+      "desktop",
+    );
     expect(deviceKind("Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Win32", 0)).toBe("desktop");
   });
 
   it("keeps each login in its app and on its devices", () => {
-    expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "pos", device: "desktop" })).toBeNull();
-    expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "pos", device: "android" })).toMatch(/Windows or Mac computer only/);
-    expect(accessProblem({ login: "billdesk", role: "cashier", row: row("billdesk"), app: "manager", device: "desktop" })).toMatch(/uses POS Billdesk, not POS Manager/);
-    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "android" })).toBeNull();
-    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "desktop" })).toMatch(/Waiter Pro runs on Android phone or tablet or iPhone or iPad only/);
+    expect(
+      accessProblem({
+        login: "billdesk",
+        role: "cashier",
+        row: row("billdesk"),
+        app: "pos",
+        device: "desktop",
+      }),
+    ).toBeNull();
+    expect(
+      accessProblem({
+        login: "billdesk",
+        role: "cashier",
+        row: row("billdesk"),
+        app: "pos",
+        device: "android",
+      }),
+    ).toMatch(/Windows or Mac computer only/);
+    expect(
+      accessProblem({
+        login: "billdesk",
+        role: "cashier",
+        row: row("billdesk"),
+        app: "manager",
+        device: "desktop",
+      }),
+    ).toMatch(/uses POS Billdesk, not POS Manager/);
+    expect(
+      accessProblem({
+        login: "waiter",
+        role: "captain",
+        row: row("waiter"),
+        app: "waiter",
+        device: "android",
+      }),
+    ).toBeNull();
+    expect(
+      accessProblem({
+        login: "waiter",
+        role: "captain",
+        row: row("waiter"),
+        app: "waiter",
+        device: "desktop",
+      }),
+    ).toMatch(/Waiter Pro runs on Android phone or tablet or iPhone or iPad only/);
     // Per-login device choice still applies inside the app's own devices.
-    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter"), app: "waiter", device: "ios" })).toMatch(/set up for Android phone or tablet only/);
-    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter", { devices: ["android", "ios"] }), app: "waiter", device: "ios" })).toBeNull();
-    expect(accessProblem({ login: "waiter", role: "captain", row: row("waiter", { active: false }), app: "waiter", device: "android" })).toMatch(/switched off/);
+    expect(
+      accessProblem({
+        login: "waiter",
+        role: "captain",
+        row: row("waiter"),
+        app: "waiter",
+        device: "ios",
+      }),
+    ).toMatch(/set up for Android phone or tablet only/);
+    expect(
+      accessProblem({
+        login: "waiter",
+        role: "captain",
+        row: row("waiter", { devices: ["android", "ios"] }),
+        app: "waiter",
+        device: "ios",
+      }),
+    ).toBeNull();
+    expect(
+      accessProblem({
+        login: "waiter",
+        role: "captain",
+        row: row("waiter", { active: false }),
+        app: "waiter",
+        device: "android",
+      }),
+    ).toMatch(/switched off/);
   });
 
   it("never locks the admin out of POS Manager, on any device", () => {
     for (const device of ["android", "ios", "desktop"] as const) {
-      expect(accessProblem({ login: "admin", role: "owner", row: row("admin", { devices: ["desktop"] }), app: "manager", device })).toBeNull();
+      expect(
+        accessProblem({
+          login: "admin",
+          role: "owner",
+          row: row("admin", { devices: ["desktop"] }),
+          app: "manager",
+          device,
+        }),
+      ).toBeNull();
     }
   });
 
   it("runs each app only on its own kind of device, for everyone", () => {
-    const admin = (app: "pos" | "waiter", device: "android" | "ios" | "desktop") => accessProblem({ login: "admin", role: "owner", row: row("admin"), app, device });
+    const admin = (app: "pos" | "waiter", device: "android" | "ios" | "desktop") =>
+      accessProblem({ login: "admin", role: "owner", row: row("admin"), app, device });
     expect(admin("pos", "desktop")).toBeNull();
     expect(admin("pos", "android")).toMatch(/POS Billdesk runs on Windows or Mac computer only/);
     expect(admin("pos", "ios")).toMatch(/use POS Manager or Waiter Pro/);
@@ -76,5 +176,50 @@ describe("internal logins", () => {
     expect(passwordProblem("Xtsy123$$")).toBeNull();
     expect(maskPhone("918837317070")).toBe("+91 ••••• •7070");
     expect(maskPhone("")).toBe("");
+  });
+});
+
+describe("Hostel POS has its own apps (never POS Billdesk or Waiter Pro)", () => {
+  it("names and links the stay apps inside the product's folder", () => {
+    expect(appsOfProduct(true)).toEqual(["manager", "pos"]);
+    expect(appsOfProduct(false)).toEqual(["manager", "pos", "waiter"]);
+    expect(appInfo("pos", true).name).toBe("Front Desk");
+    expect(appInfo("manager", true).name).toBe("Property Manager");
+    expect(appInfo("pos", true).home).toBe("/front-desk");
+    expect(appInfo("pos", false).name).toBe("POS Billdesk");
+    expect(appLink("pos", "hostel")).toBe("/hostel/front-desk?app=pos");
+    expect(appLink("manager", "hostel")).toBe("/hostel/dashboard?app=manager");
+    expect(appLink("pos", "restaurant")).toBe("/restaurant/tables?app=pos");
+    for (const a of ["pos", "manager"] as const)
+      expect(appLink(a, "hostel")).not.toMatch(/restaurant|tables/);
+  });
+  it("speaks of the stay apps in access messages", () => {
+    const r = {
+      login: "billdesk" as const,
+      active: true,
+      devices: ["desktop" as const],
+      whatsapp: "",
+      display_name: "Reception",
+    };
+    expect(
+      accessProblem({
+        login: "billdesk",
+        role: "cashier",
+        row: r,
+        app: "manager",
+        device: "desktop",
+        stay: true,
+      }),
+    ).toMatch(/uses Front Desk, not Property Manager/);
+    expect(
+      accessProblem({
+        login: "billdesk",
+        role: "cashier",
+        row: r,
+        app: "pos",
+        device: "android",
+        stay: true,
+      }),
+    ).not.toMatch(/Billdesk|Waiter/);
   });
 });

@@ -1,9 +1,55 @@
-import type { CartLine, Customer, DayClose, InventoryItem, Kot, Material, MenuItem, Order, RestaurantSettings, RestaurantTable, StockEntry, Supplier } from "./types";
+import type {
+  CartLine,
+  Customer,
+  DayClose,
+  InventoryItem,
+  Kot,
+  Material,
+  MenuItem,
+  Order,
+  RestaurantSettings,
+  RestaurantTable,
+  StockEntry,
+  Supplier,
+} from "./types";
 
 /** Kinds of records shared between a restaurant's devices (mirrors restaurant_records.kind). */
-export type RecordKind = "settings" | "menu" | "table" | "order" | "kot" | "inventory" | "material" | "supplier" | "stock_entry" | "customer" | "day_close" | "ledger" | "unit_type" | "unit" | "stay";
+export type RecordKind =
+  | "settings"
+  | "menu"
+  | "table"
+  | "order"
+  | "kot"
+  | "inventory"
+  | "material"
+  | "supplier"
+  | "stock_entry"
+  | "customer"
+  | "day_close"
+  | "ledger"
+  | "unit_type"
+  | "unit"
+  | "stay"
+  | "night_audit";
 
-export const RECORD_KINDS: readonly RecordKind[] = ["settings", "menu", "table", "order", "kot", "inventory", "material", "supplier", "stock_entry", "customer", "day_close", "ledger", "unit_type", "unit", "stay"];
+export const RECORD_KINDS: readonly RecordKind[] = [
+  "settings",
+  "menu",
+  "table",
+  "order",
+  "kot",
+  "inventory",
+  "material",
+  "supplier",
+  "stock_entry",
+  "customer",
+  "day_close",
+  "ledger",
+  "unit_type",
+  "unit",
+  "stay",
+  "night_audit",
+];
 
 /** The single settings record per restaurant. */
 export const SETTINGS_RECORD_ID = "restaurant";
@@ -13,7 +59,8 @@ export function outboxKey(kind: RecordKind, recordId: string): string {
 }
 
 export function newUid(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+    return crypto.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
@@ -40,7 +87,10 @@ export function randomDeviceCode(): string {
 
 /** Device codes print on GST bills, so keep them short, upper-case and unambiguous. */
 export function normaliseDeviceCode(input: string): string {
-  return input.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+  return input
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 4);
 }
 
 /**
@@ -58,43 +108,84 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isString = (value: unknown): value is string => typeof value === "string";
-const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const isNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
 
 function isCartLine(value: unknown): value is CartLine {
-  return isRecord(value) && isString(value["itemId"]) && isString(value["name"]) && isNumber(value["price"]) && isNumber(value["qty"]);
+  return (
+    isRecord(value) &&
+    isString(value["itemId"]) &&
+    isString(value["name"]) &&
+    isNumber(value["price"]) &&
+    isNumber(value["qty"])
+  );
 }
 
 export function isOrderPayload(value: unknown): value is Order {
   if (!isRecord(value)) return false;
   const status = value["status"];
-  return isString(value["billNo"]) && Array.isArray(value["lines"]) && value["lines"].every(isCartLine) &&
-    isNumber(value["total"]) && isNumber(value["createdAt"]) &&
-    (status === "held" || status === "settled" || status === "void");
+  return (
+    isString(value["billNo"]) &&
+    Array.isArray(value["lines"]) &&
+    value["lines"].every(isCartLine) &&
+    isNumber(value["total"]) &&
+    isNumber(value["createdAt"]) &&
+    (status === "held" || status === "settled" || status === "void")
+  );
 }
 
 export function isKotPayload(value: unknown): value is Kot {
   if (!isRecord(value)) return false;
   const status = value["status"];
-  return isString(value["billNo"]) && isString(value["station"]) && Array.isArray(value["lines"]) &&
-    isNumber(value["createdAt"]) && (status === "new" || status === "preparing" || status === "ready" || status === "served");
+  return (
+    isString(value["billNo"]) &&
+    isString(value["station"]) &&
+    Array.isArray(value["lines"]) &&
+    isNumber(value["createdAt"]) &&
+    (status === "new" || status === "preparing" || status === "ready" || status === "served")
+  );
 }
 
 export function isMenuPayload(value: unknown): value is MenuItem {
-  return isRecord(value) && isString(value["id"]) && isString(value["name"]) && isString(value["category"]) &&
-    isNumber(value["price"]) && typeof value["veg"] === "boolean" && typeof value["available"] === "boolean";
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["name"]) &&
+    isString(value["category"]) &&
+    isNumber(value["price"]) &&
+    typeof value["veg"] === "boolean" &&
+    typeof value["available"] === "boolean"
+  );
 }
 
 export function isTablePayload(value: unknown): value is RestaurantTable {
-  return isRecord(value) && isString(value["id"]) && isString(value["label"]) && isString(value["section"]) &&
-    isNumber(value["seats"]) && isString(value["status"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["label"]) &&
+    isString(value["section"]) &&
+    isNumber(value["seats"]) &&
+    isString(value["status"])
+  );
 }
 
 export function isInventoryPayload(value: unknown): value is InventoryItem {
-  return isRecord(value) && isString(value["id"]) && isString(value["menuItemId"]) && isNumber(value["quantity"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["menuItemId"]) &&
+    isNumber(value["quantity"])
+  );
 }
 
 export function isMaterialPayload(value: unknown): value is Material {
-  return isRecord(value) && isString(value["id"]) && isString(value["name"]) && isString(value["unit"]) && isNumber(value["lowStockLevel"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["name"]) &&
+    isString(value["unit"]) &&
+    isNumber(value["lowStockLevel"])
+  );
 }
 
 export function isSupplierPayload(value: unknown): value is Supplier {
@@ -102,32 +193,82 @@ export function isSupplierPayload(value: unknown): value is Supplier {
 }
 
 export function isStockEntryPayload(value: unknown): value is StockEntry {
-  return isRecord(value) && isString(value["id"]) && isString(value["type"]) && isNumber(value["at"]) && Array.isArray(value["items"]) &&
-    value["items"].every((item) => isRecord(item) && isString(item["materialId"]) && isNumber(item["qty"]));
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["type"]) &&
+    isNumber(value["at"]) &&
+    Array.isArray(value["items"]) &&
+    value["items"].every(
+      (item) => isRecord(item) && isString(item["materialId"]) && isNumber(item["qty"]),
+    )
+  );
 }
 
 export function isCustomerPayload(value: unknown): value is Customer {
-  return isRecord(value) && isString(value["id"]) && isString(value["phone"]) && isNumber(value["createdAt"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["phone"]) &&
+    isNumber(value["createdAt"])
+  );
 }
 
 export function isDayClosePayload(value: unknown): value is DayClose {
-  return isRecord(value) && isString(value["id"]) && isString(value["day"]) && isString(value["series"]) && isNumber(value["countedCash"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["day"]) &&
+    isString(value["series"]) &&
+    isNumber(value["countedCash"])
+  );
 }
 
 export function isLedgerPayload(value: unknown): value is import("./types").LedgerEntry {
-  return isRecord(value) && isString(value["id"]) && isString(value["type"]) && isNumber(value["amount"]) && isNumber(value["at"]) && isString(value["mode"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["type"]) &&
+    isNumber(value["amount"]) &&
+    isNumber(value["at"]) &&
+    isString(value["mode"])
+  );
 }
 
 export function isUnitTypePayload(value: unknown): value is import("./pms/types").UnitType {
-  return isRecord(value) && isString(value["id"]) && isString(value["name"]) && isString(value["soldAs"]) && isNumber(value["rate"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["name"]) &&
+    isString(value["soldAs"]) &&
+    isNumber(value["rate"])
+  );
 }
 
 export function isUnitPayload(value: unknown): value is import("./pms/types").Unit {
-  return isRecord(value) && isString(value["id"]) && isString(value["typeId"]) && isString(value["label"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["typeId"]) &&
+    isString(value["label"])
+  );
 }
 
 export function isStayPayload(value: unknown): value is import("./pms/types").Stay {
-  return isRecord(value) && isString(value["id"]) && isString(value["reference"]) && isString(value["checkIn"]) && isString(value["checkOut"]) && Array.isArray(value["lines"]);
+  return (
+    isRecord(value) &&
+    isString(value["id"]) &&
+    isString(value["reference"]) &&
+    isString(value["checkIn"]) &&
+    isString(value["checkOut"]) &&
+    Array.isArray(value["lines"])
+  );
+}
+
+export function isNightAuditPayload(value: unknown): value is import("./pms/types").NightAudit {
+  return (
+    isRecord(value) && isString(value["id"]) && isString(value["date"]) && isNumber(value["at"])
+  );
 }
 
 export function isSettingsPayload(value: unknown): value is RestaurantSettings {
@@ -138,9 +279,18 @@ export function isSettingsPayload(value: unknown): value is RestaurantSettings {
 export function toSharedPayload(kind: RecordKind, record: unknown): Record<string, unknown> {
   if (!isRecord(record)) return {};
   const copy: Record<string, unknown> = { ...record };
-  if (kind === "order") { delete copy["id"]; delete copy["synced"]; delete copy["cloudUserId"]; }
-  if (kind === "kot") { delete copy["id"]; delete copy["orderId"]; }
-  if (kind === "inventory") { delete copy["synced"]; }
+  if (kind === "order") {
+    delete copy["id"];
+    delete copy["synced"];
+    delete copy["cloudUserId"];
+  }
+  if (kind === "kot") {
+    delete copy["id"];
+    delete copy["orderId"];
+  }
+  if (kind === "inventory") {
+    delete copy["synced"];
+  }
   // JSON round-trip drops undefined values and anything non-serialisable.
   return JSON.parse(JSON.stringify(copy)) as Record<string, unknown>;
 }
@@ -155,7 +305,8 @@ export function mergeSentLines(latest: CartLine[], pending: CartLine[]): CartLin
     const existing = merged.find((line) => line.itemId === add.itemId);
     if (existing) {
       existing.qty += add.qty;
-      if (add.note && add.note !== existing.note) existing.note = existing.note ? `${existing.note}; ${add.note}` : add.note;
+      if (add.note && add.note !== existing.note)
+        existing.note = existing.note ? `${existing.note}; ${add.note}` : add.note;
     } else {
       merged.push({ ...add });
     }

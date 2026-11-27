@@ -1,6 +1,20 @@
 import Dexie, { type Table } from "dexie";
 import { spaced } from "./app-space";
-import type { CartDraft, Customer, DayClose, InventoryItem, Kot, LedgerEntry, Material, MenuItem, Order, RestaurantSettings, RestaurantTable, StockEntry, Supplier } from "./types";
+import type {
+  CartDraft,
+  Customer,
+  DayClose,
+  InventoryItem,
+  Kot,
+  LedgerEntry,
+  Material,
+  MenuItem,
+  Order,
+  RestaurantSettings,
+  RestaurantTable,
+  StockEntry,
+  Supplier,
+} from "./types";
 import { kotNumber } from "./kot-history";
 import { SEED_MENU, SEED_TABLES } from "./seed";
 import { normalisePhone } from "./customer-logic";
@@ -42,6 +56,7 @@ class RestroDB extends Dexie {
   unitTypes!: Table<import("./pms/types").UnitType, string>;
   units!: Table<import("./pms/types").Unit, string>;
   stays!: Table<import("./pms/types").Stay, string>;
+  nightAudits!: Table<import("./pms/types").NightAudit, string>;
   /** Running stock per raw material, kept in step with stockEntries so screens never re-add the whole ledger. */
   materialLevels!: Table<{ materialId: string; qty: number }, string>;
 
@@ -73,48 +88,64 @@ class RestroDB extends Dexie {
       drafts: "id, tableId, updatedAt",
     });
     // XTSY POS: shared ids for bills and KOTs, per-device bill series and the sync outbox.
-    this.version(4).stores({
-      menu: "id, category, name",
-      orders: "++id, billNo, status, createdAt, tableId, uid",
-      restTables: "id, section, status",
-      kots: "++id, orderId, status, createdAt, uid",
-      meta: "key",
-      inventory: "id, menuItemId, tracked, synced",
-      drafts: "id, tableId, updatedAt",
-      outbox: "key, kind, at",
-    }).upgrade(async (tx) => {
-      const orders = tx.table<Order, number>("orders");
-      const kots = tx.table<Kot, number>("kots");
-      const meta = tx.table<{ key: string; value: number | string }, string>("meta");
+    this.version(4)
+      .stores({
+        menu: "id, category, name",
+        orders: "++id, billNo, status, createdAt, tableId, uid",
+        restTables: "id, section, status",
+        kots: "++id, orderId, status, createdAt, uid",
+        meta: "key",
+        inventory: "id, menuItemId, tracked, synced",
+        drafts: "id, tableId, updatedAt",
+        outbox: "key, kind, at",
+      })
+      .upgrade(async (tx) => {
+        const orders = tx.table<Order, number>("orders");
+        const kots = tx.table<Kot, number>("kots");
+        const meta = tx.table<{ key: string; value: number | string }, string>("meta");
 
-      await orders.toCollection().modify((order) => { if (!order.uid) order.uid = legacyOrderUid(order); });
-      const uidByOrderId = new Map<number, string>();
-      for (const order of await orders.toArray()) if (order.id !== undefined && order.uid) uidByOrderId.set(order.id, order.uid);
-      await kots.toCollection().modify((kot) => {
-        if (!kot.uid) kot.uid = legacyKotUid(kot);
-        if (!kot.orderUid) {
-          const orderUid = uidByOrderId.get(kot.orderId);
-          if (orderUid) kot.orderUid = orderUid;
+        await orders.toCollection().modify((order) => {
+          if (!order.uid) order.uid = legacyOrderUid(order);
+        });
+        const uidByOrderId = new Map<number, string>();
+        for (const order of await orders.toArray())
+          if (order.id !== undefined && order.uid) uidByOrderId.set(order.id, order.uid);
+        await kots.toCollection().modify((kot) => {
+          if (!kot.uid) kot.uid = legacyKotUid(kot);
+          if (!kot.orderUid) {
+            const orderUid = uidByOrderId.get(kot.orderId);
+            if (orderUid) kot.orderUid = orderUid;
+          }
+        });
+
+        // Devices already billing keep their current series so bill numbers stay continuous.
+        if (!(await meta.get("deviceCode"))) {
+          await meta.put({
+            key: "deviceCode",
+            value: (await meta.get("billSeq")) ? "D1" : randomDeviceCode(),
+          });
         }
+
+        // Queue this device's existing data once, so it reaches the restaurant on first sync.
+        const at = Date.now();
+        const entries: OutboxEntry[] = [];
+        const queue = (kind: RecordKind, recordId: string) =>
+          entries.push({ key: outboxKey(kind, recordId), kind, recordId, at });
+        for (const key of await tx.table<MenuItem, string>("menu").toCollection().primaryKeys())
+          queue("menu", String(key));
+        for (const key of await tx
+          .table<RestaurantTable, string>("restTables")
+          .toCollection()
+          .primaryKeys())
+          queue("table", String(key));
+        for (const item of await tx.table<InventoryItem, string>("inventory").toArray())
+          if (item.tracked) queue("inventory", item.id);
+        for (const order of await orders.toArray()) if (order.uid) queue("order", order.uid);
+        const recent = at - 2 * 24 * 60 * 60 * 1000;
+        for (const kot of await kots.where("createdAt").aboveOrEqual(recent).toArray())
+          if (kot.uid) queue("kot", kot.uid);
+        await tx.table<OutboxEntry, string>("outbox").bulkPut(entries);
       });
-
-      // Devices already billing keep their current series so bill numbers stay continuous.
-      if (!(await meta.get("deviceCode"))) {
-        await meta.put({ key: "deviceCode", value: (await meta.get("billSeq")) ? "D1" : randomDeviceCode() });
-      }
-
-      // Queue this device's existing data once, so it reaches the restaurant on first sync.
-      const at = Date.now();
-      const entries: OutboxEntry[] = [];
-      const queue = (kind: RecordKind, recordId: string) => entries.push({ key: outboxKey(kind, recordId), kind, recordId, at });
-      for (const key of await tx.table<MenuItem, string>("menu").toCollection().primaryKeys()) queue("menu", String(key));
-      for (const key of await tx.table<RestaurantTable, string>("restTables").toCollection().primaryKeys()) queue("table", String(key));
-      for (const item of await tx.table<InventoryItem, string>("inventory").toArray()) if (item.tracked) queue("inventory", item.id);
-      for (const order of await orders.toArray()) if (order.uid) queue("order", order.uid);
-      const recent = at - 2 * 24 * 60 * 60 * 1000;
-      for (const kot of await kots.where("createdAt").aboveOrEqual(recent).toArray()) if (kot.uid) queue("kot", kot.uid);
-      await tx.table<OutboxEntry, string>("outbox").bulkPut(entries);
-    });
     // XTSY POS: stock ledger and customer directory.
     this.version(5).stores({
       menu: "id, category, name",
@@ -146,31 +177,39 @@ class RestroDB extends Dexie {
       dayCloses: "id, day",
     });
     // Speed: running bill per table by index, guest visits by index, cached stock levels.
-    this.version(7).stores({
-      menu: "id, category, name",
-      orders: "++id, billNo, status, createdAt, tableId, uid, customerId, [tableId+status]",
-      restTables: "id, section, status",
-      kots: "++id, orderId, status, createdAt, uid",
-      meta: "key",
-      inventory: "id, menuItemId, tracked, synced",
-      drafts: "id, tableId, updatedAt",
-      outbox: "key, kind, at",
-      materials: "id, name",
-      suppliers: "id, name",
-      stockEntries: "id, type, at",
-      customers: "id, phone, name",
-      dayCloses: "id, day",
-      materialLevels: "materialId",
-    }).upgrade(async (tx) => {
-      await tx.table<Order, number>("orders").toCollection().modify((order) => {
-        const id = normalisePhone(order.customer?.phone);
-        if (id) order.customerId = id;
+    this.version(7)
+      .stores({
+        menu: "id, category, name",
+        orders: "++id, billNo, status, createdAt, tableId, uid, customerId, [tableId+status]",
+        restTables: "id, section, status",
+        kots: "++id, orderId, status, createdAt, uid",
+        meta: "key",
+        inventory: "id, menuItemId, tracked, synced",
+        drafts: "id, tableId, updatedAt",
+        outbox: "key, kind, at",
+        materials: "id, name",
+        suppliers: "id, name",
+        stockEntries: "id, type, at",
+        customers: "id, phone, name",
+        dayCloses: "id, day",
+        materialLevels: "materialId",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<Order, number>("orders")
+          .toCollection()
+          .modify((order) => {
+            const id = normalisePhone(order.customer?.phone);
+            if (id) order.customerId = id;
+          });
+        const levels = stockLevels(await tx.table<StockEntry, string>("stockEntries").toArray());
+        await tx
+          .table<{ materialId: string; qty: number }, string>("materialLevels")
+          .bulkPut([...levels].map(([materialId, qty]) => ({ materialId, qty })));
       });
-      const levels = stockLevels(await tx.table<StockEntry, string>("stockEntries").toArray());
-      await tx.table<{ materialId: string; qty: number }, string>("materialLevels").bulkPut([...levels].map(([materialId, qty]) => ({ materialId, qty })));
-    });
     this.version(8).stores({
-      orders: "++id, billNo, status, createdAt, settledAt, tableId, uid, customerId, [tableId+status]",
+      orders:
+        "++id, billNo, status, createdAt, settledAt, tableId, uid, customerId, [tableId+status]",
     });
     // Durability: a bill's tickets and a KOT's sibling stations by index, not by scanning every
     // KOT the counter has ever printed (settling, printing and table moves did, ~1 in 3 actions).
@@ -187,18 +226,32 @@ class RestroDB extends Dexie {
       units: "id, typeId",
       stays: "id, status, checkIn, checkOut, reference",
     });
+    // Night audits: one closed day per record (pms/day.ts).
+    this.version(12).stores({
+      nightAudits: "id, date",
+    });
   }
 }
 
 /** A bill's kitchen tickets, by its uid and/or local id (indexed; older tickets may carry only one). */
-export async function kotsForBill(orderUid: string | undefined, orderId?: number | undefined): Promise<Kot[]> {
+export async function kotsForBill(
+  orderUid: string | undefined,
+  orderId?: number | undefined,
+): Promise<Kot[]> {
   const db = getDb();
   const [byUid, byId] = await Promise.all([
     orderUid ? db.kots.where("orderUid").equals(orderUid).toArray() : Promise.resolve([] as Kot[]),
-    orderId !== undefined ? db.kots.where("orderId").equals(orderId).toArray() : Promise.resolve([] as Kot[]),
+    orderId !== undefined
+      ? db.kots.where("orderId").equals(orderId).toArray()
+      : Promise.resolve([] as Kot[]),
   ]);
   const seen = new Set<number | string>();
-  return [...byUid, ...byId].filter((k) => { const key = k.id ?? k.uid ?? ""; if (seen.has(key)) return false; seen.add(key); return true; });
+  return [...byUid, ...byId].filter((k) => {
+    const key = k.id ?? k.uid ?? "";
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -208,11 +261,17 @@ const r3 = (n: number) => Math.round(n * 1000) / 1000;
  * replaced or removed. Call inside a transaction that includes
  * stockEntries and materialLevels, before writing the entry itself.
  */
-export async function applyEntryToLevels(db: RestroDB, entryId: string, next: StockEntry | null): Promise<void> {
+export async function applyEntryToLevels(
+  db: RestroDB,
+  entryId: string,
+  next: StockEntry | null,
+): Promise<void> {
   const previous = await db.stockEntries.get(entryId);
   const deltas = new Map<string, number>();
-  for (const item of previous?.items ?? []) deltas.set(item.materialId, (deltas.get(item.materialId) ?? 0) - item.qty);
-  for (const item of next?.items ?? []) deltas.set(item.materialId, (deltas.get(item.materialId) ?? 0) + item.qty);
+  for (const item of previous?.items ?? [])
+    deltas.set(item.materialId, (deltas.get(item.materialId) ?? 0) - item.qty);
+  for (const item of next?.items ?? [])
+    deltas.set(item.materialId, (deltas.get(item.materialId) ?? 0) + item.qty);
   for (const [materialId, delta] of deltas) {
     if (!delta) continue;
     const current = (await db.materialLevels.get(materialId))?.qty ?? 0;
@@ -239,7 +298,9 @@ let tick = 0;
 /** Subscribe to local edits that need syncing. Returns an unsubscribe function. */
 export function onLocalChange(listener: (kinds: RecordKind[]) => void): () => void {
   listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 /** Record that these shared records changed on this device. */
@@ -293,7 +354,10 @@ export async function nextSeq(): Promise<number> {
     const floor = orders.reduce((max, order) => {
       const parts = order.billNo.split("/");
       const canonicalSeries = code === "D1" || code === "SJT" || code === "POS" ? "POS" : code;
-      const belongsToSeries = order.billNo.startsWith(`XTSY/${code.slice(0, 4)}/`) || parts[0] === code || parts[0] === canonicalSeries;
+      const belongsToSeries =
+        order.billNo.startsWith(`XTSY/${code.slice(0, 4)}/`) ||
+        parts[0] === code ||
+        parts[0] === canonicalSeries;
       const suffix = Number(parts.at(-1));
       return belongsToSeries && Number.isSafeInteger(suffix) ? Math.max(max, suffix) : max;
     }, 0);
@@ -307,7 +371,11 @@ export async function nextSeq(): Promise<number> {
 export async function nextKotNumber(deviceId: string, at: number): Promise<string> {
   const db = getDb();
   const existing = await db.kots.toArray();
-  const submissions = new Set(existing.map((kot) => kot.submissionId ?? `legacy:${kot.orderUid ?? kot.billNo}:${kot.createdAt}`));
+  const submissions = new Set(
+    existing.map(
+      (kot) => kot.submissionId ?? `legacy:${kot.orderUid ?? kot.billNo}:${kot.createdAt}`,
+    ),
+  );
   const printedMax = existing.reduce((max, kot) => {
     const match = /^KOT\/(\d+)$/.exec(kot.kotNo ?? "");
     return match ? Math.max(max, Number(match[1])) : max;
@@ -328,7 +396,9 @@ export async function getSettings(): Promise<RestaurantSettings> {
   if (typeof raw !== "string" || !raw) return EMPTY_SETTINGS;
   try {
     const parsed: unknown = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && typeof (parsed as RestaurantSettings).name === "string"
+    return parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as RestaurantSettings).name === "string"
       ? (parsed as RestaurantSettings)
       : EMPTY_SETTINGS;
   } catch {
@@ -338,7 +408,10 @@ export async function getSettings(): Promise<RestaurantSettings> {
 
 /** Save locally; `share` queues the change for the other devices (owners and managers). */
 export async function saveSettings(settings: RestaurantSettings, share = true): Promise<void> {
-  await getDb().meta.put({ key: "restaurantSettings", value: JSON.stringify({ ...settings, updatedAt: Date.now() }) });
+  await getDb().meta.put({
+    key: "restaurantSettings",
+    value: JSON.stringify({ ...settings, updatedAt: Date.now() }),
+  });
   if (share) await markDirty(["settings", SETTINGS_RECORD_ID]);
 }
 
@@ -349,7 +422,9 @@ export async function loadSampleData(): Promise<void> {
   const db = getDb();
   // A device that hasn't loaded the restaurant yet only looks empty; the sample would overwrite the real menu.
   if (typeof (await db.meta.get("lastSyncAt"))?.value !== "number") {
-    throw new Error("This device is still loading your restaurant. Wait until it shows Live, then check again.");
+    throw new Error(
+      "This device is still loading your restaurant. Wait until it shows Live, then check again.",
+    );
   }
   const changes: [RecordKind, string][] = [];
   if ((await db.menu.count()) === 0) {
@@ -369,9 +444,58 @@ export async function loadSampleData(): Promise<void> {
  */
 export async function resetDevice(): Promise<void> {
   const db = getDb();
-  await db.transaction("rw", [db.menu, db.orders, db.restTables, db.kots, db.inventory, db.drafts, db.outbox, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger, db.unitTypes, db.units, db.stays], async () => {
-    await Promise.all([db.unitTypes.clear(), db.units.clear(), db.stays.clear(), db.ledger.clear(), db.materialLevels.clear(), db.menu.clear(), db.orders.clear(), db.restTables.clear(), db.kots.clear(), db.inventory.clear(), db.drafts.clear(), db.outbox.clear(),
-      db.materials.clear(), db.suppliers.clear(), db.stockEntries.clear(), db.customers.clear(), db.dayCloses.clear()]);
-    for (const key of ["restaurantId", "pullCursor", "restaurantSettings", "lastSyncAt", "syncError"]) await db.meta.delete(key);
-  });
+  await db.transaction(
+    "rw",
+    [
+      db.menu,
+      db.orders,
+      db.restTables,
+      db.kots,
+      db.inventory,
+      db.drafts,
+      db.outbox,
+      db.meta,
+      db.materials,
+      db.suppliers,
+      db.stockEntries,
+      db.customers,
+      db.dayCloses,
+      db.materialLevels,
+      db.ledger,
+      db.unitTypes,
+      db.units,
+      db.stays,
+      db.nightAudits,
+    ],
+    async () => {
+      await Promise.all([
+        db.nightAudits.clear(),
+        db.unitTypes.clear(),
+        db.units.clear(),
+        db.stays.clear(),
+        db.ledger.clear(),
+        db.materialLevels.clear(),
+        db.menu.clear(),
+        db.orders.clear(),
+        db.restTables.clear(),
+        db.kots.clear(),
+        db.inventory.clear(),
+        db.drafts.clear(),
+        db.outbox.clear(),
+        db.materials.clear(),
+        db.suppliers.clear(),
+        db.stockEntries.clear(),
+        db.customers.clear(),
+        db.dayCloses.clear(),
+      ]);
+      for (const key of [
+        "restaurantId",
+        "pullCursor",
+        "restaurantSettings",
+        "lastSyncAt",
+        "syncError",
+      ])
+        await db.meta.delete(key);
+    },
+  );
 }

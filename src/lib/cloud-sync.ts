@@ -4,7 +4,15 @@ import { flushOfflineClaims, freshRestaurantNumber } from "@/lib/restaurant-numb
 import { SyncScheduler } from "./sync-scheduler";
 import { startTerminalSignals } from "./terminal-signal";
 import type { Json } from "@/integrations/supabase/types";
-import { applyEntryToLevels, getDb, kotsForBill, getSettings, markDirty, onLocalChange, type OutboxEntry } from "@/lib/db";
+import {
+  applyEntryToLevels,
+  getDb,
+  kotsForBill,
+  getSettings,
+  markDirty,
+  onLocalChange,
+  type OutboxEntry,
+} from "@/lib/db";
 import { deductInventory } from "@/lib/inventory";
 import { withCustomerId } from "@/lib/customer-logic";
 import { recordSaleConsumption } from "@/lib/stock-actions";
@@ -14,6 +22,7 @@ import {
   isDayClosePayload,
   isLedgerPayload,
   isStayPayload,
+  isNightAuditPayload,
   isUnitPayload,
   isUnitTypePayload,
   isMaterialPayload,
@@ -75,7 +84,9 @@ interface RemoteRow {
  */
 let versionedServer: boolean | null = null;
 /** Test hook. */
-export function resetVersionedServerProbe() { versionedServer = null; }
+export function resetVersionedServerProbe() {
+  versionedServer = null;
+}
 
 const CONFLICTS_KEY = "syncConflicts";
 const MAX_MERGES_PER_SYNC = 3;
@@ -94,10 +105,14 @@ async function readBaseVersion(kind: RecordKind, recordId: string) {
 }
 
 async function writeBase(kind: RecordKind, recordId: string, version: number, payload: unknown) {
-  await getDb().meta.put({ key: baseKey(kind, recordId), value: JSON.stringify(keepsBasePayload(kind) ? { version, payload } : { version }) });
+  await getDb().meta.put({
+    key: baseKey(kind, recordId),
+    value: JSON.stringify(keepsBasePayload(kind) ? { version, payload } : { version }),
+  });
 }
 
-const isKind = (kind: string): kind is RecordKind => (RECORD_KINDS as readonly string[]).includes(kind);
+const isKind = (kind: string): kind is RecordKind =>
+  (RECORD_KINDS as readonly string[]).includes(kind);
 
 async function readLocal(kind: RecordKind, recordId: string): Promise<unknown> {
   const db = getDb();
@@ -106,35 +121,62 @@ async function readLocal(kind: RecordKind, recordId: string): Promise<unknown> {
       const settings = await getSettings();
       return settings.name ? settings : undefined;
     }
-    case "menu": return db.menu.get(recordId);
-    case "table": return db.restTables.get(recordId);
-    case "inventory": return db.inventory.get(recordId);
-    case "order": return db.orders.where("uid").equals(recordId).first();
-    case "kot": return db.kots.where("uid").equals(recordId).first();
-    case "material": return db.materials.get(recordId);
-    case "supplier": return db.suppliers.get(recordId);
-    case "stock_entry": return db.stockEntries.get(recordId);
-    case "customer": return db.customers.get(recordId);
-    case "day_close": return db.dayCloses.get(recordId);
-    case "ledger": return db.ledger.get(recordId);
-    case "unit_type": return db.unitTypes.get(recordId);
-    case "unit": return db.units.get(recordId);
-    case "stay": return db.stays.get(recordId);
+    case "menu":
+      return db.menu.get(recordId);
+    case "table":
+      return db.restTables.get(recordId);
+    case "inventory":
+      return db.inventory.get(recordId);
+    case "order":
+      return db.orders.where("uid").equals(recordId).first();
+    case "kot":
+      return db.kots.where("uid").equals(recordId).first();
+    case "material":
+      return db.materials.get(recordId);
+    case "supplier":
+      return db.suppliers.get(recordId);
+    case "stock_entry":
+      return db.stockEntries.get(recordId);
+    case "customer":
+      return db.customers.get(recordId);
+    case "day_close":
+      return db.dayCloses.get(recordId);
+    case "ledger":
+      return db.ledger.get(recordId);
+    case "unit_type":
+      return db.unitTypes.get(recordId);
+    case "unit":
+      return db.units.get(recordId);
+    case "stay":
+      return db.stays.get(recordId);
+    case "night_audit":
+      return db.nightAudits.get(recordId);
   }
 }
 
-type PushRow = { restaurant_id: string; kind: string; record_id: string; payload: Json; deleted: boolean };
+type PushRow = {
+  restaurant_id: string;
+  kind: string;
+  record_id: string;
+  payload: Json;
+  deleted: boolean;
+};
 
 async function upsert(rows: PushRow[]) {
   if (!rows.length) return null;
-  const { error } = await supabase.from("restaurant_records").upsert(rows, { onConflict: "restaurant_id,kind,record_id" });
+  const { error } = await supabase
+    .from("restaurant_records")
+    .upsert(rows, { onConflict: "restaurant_id,kind,record_id" });
   return error;
 }
 
 /** The cloud said no (a role rule), as opposed to "couldn't reach the cloud". */
 export function isRefusal(error: { code?: string; message?: string } | null | undefined): boolean {
   if (!error) return false;
-  return error.code === "42501" || /row-level security|only the owner or a manager|made before launch/i.test(error.message ?? "");
+  return (
+    error.code === "42501" ||
+    /row-level security|only the owner or a manager|made before launch/i.test(error.message ?? "")
+  );
 }
 
 /**
@@ -144,7 +186,8 @@ export function isRefusal(error: { code?: string; message?: string } | null | un
  */
 type RefusedRow = PushRow & { prelaunch?: boolean };
 
-const UNNUMBERED = /Update the POS app before creating numbered records|number was not allocated for this submission/i;
+const UNNUMBERED =
+  /Update the POS app before creating numbered records|number was not allocated for this submission/i;
 
 /**
  * The cloud refuses a bill or kitchen ticket whose number it didn't hand out: one
@@ -160,22 +203,40 @@ async function renumberStuckRecord(row: PushRow, message: string | undefined): P
       const local = await db.orders.where("uid").equals(row.record_id).first();
       if (!local || local.id === undefined) return false;
       const { number, requestId } = await freshRestaurantNumber("POS");
-      await db.orders.put({ ...local, billNo: number, numberRequestId: requestId, ...(local.billNo !== number ? { printedBillNo: local.printedBillNo ?? local.billNo } : {}), synced: false });
+      await db.orders.put({
+        ...local,
+        billNo: number,
+        numberRequestId: requestId,
+        ...(local.billNo !== number ? { printedBillNo: local.printedBillNo ?? local.billNo } : {}),
+        synced: false,
+      });
       const tickets = await kotsForBill(local.uid, local.id);
       for (const k of tickets) if (k.id !== undefined) await db.kots.put({ ...k, billNo: number });
-      await markDirty(["order", row.record_id], ...tickets.map((k): [RecordKind, string] => ["kot", k.uid ?? ""]));
+      await markDirty(
+        ["order", row.record_id],
+        ...tickets.map((k): [RecordKind, string] => ["kot", k.uid ?? ""]),
+      );
       return true;
     }
     const local = await db.kots.where("uid").equals(row.record_id).first();
     if (!local || local.id === undefined) return false;
-    const submissionId = local.submissionId && /^[0-9a-f-]{36}$/i.test(local.submissionId) ? local.submissionId : crypto.randomUUID();
+    const submissionId =
+      local.submissionId && /^[0-9a-f-]{36}$/i.test(local.submissionId)
+        ? local.submissionId
+        : crypto.randomUUID();
     const { number: kotNo, requestId: numberRequestId } = await freshRestaurantNumber("KOT");
     const siblings = local.submissionId
       ? await db.kots.where("submissionId").equals(local.submissionId).toArray()
       : [local];
     for (const k of siblings) {
       if (k.id === undefined) continue;
-      await db.kots.put({ ...k, submissionId, numberRequestId, kotNo, ...(k.kotNo && k.kotNo !== kotNo ? { printedKotNo: k.printedKotNo ?? k.kotNo } : {}) });
+      await db.kots.put({
+        ...k,
+        submissionId,
+        numberRequestId,
+        kotNo,
+        ...(k.kotNo && k.kotNo !== kotNo ? { printedKotNo: k.printedKotNo ?? k.kotNo } : {}),
+      });
     }
     await markDirty(...siblings.map((k): [RecordKind, string] => ["kot", k.uid ?? ""]));
     return true;
@@ -206,26 +267,58 @@ async function restoreRefused(restaurantId: string, refused: RefusedRow[]): Prom
   for (const r of refused) byKind.set(r.kind, [...(byKind.get(r.kind) ?? []), r.record_id]);
   const rows: RemoteRow[] = [];
   for (const [kind, ids] of byKind) {
-    const { data, error } = await supabase.from("restaurant_records").select("kind, record_id, payload, deleted, updated_at")
-      .eq("restaurant_id", restaurantId).eq("kind", kind).in("record_id", ids);
+    const { data, error } = await supabase
+      .from("restaurant_records")
+      .select("kind, record_id, payload, deleted, updated_at")
+      .eq("restaurant_id", restaurantId)
+      .eq("kind", kind)
+      .in("record_id", ids);
     if (error) throw error;
     const found = (data ?? []) as RemoteRow[];
     rows.push(...found);
     // Refused new records exist only here. Bills and kitchen tickets are financial/kitchen
     // history and may already be on paper: never erase them; keep them local for recovery.
     if (kind === "order" || kind === "kot") {
-      const keep = ids.filter((id) => !found.some((f) => f.record_id === id) && !refused.some((r) => r.record_id === id && r.prelaunch));
+      const keep = ids.filter(
+        (id) =>
+          !found.some((f) => f.record_id === id) &&
+          !refused.some((r) => r.record_id === id && r.prelaunch),
+      );
       if (keep.length) await holdRecords(kind, keep);
       // Pre-launch test bills/KOTs are not the restaurant's books: those are still removed.
-      for (const id of ids) if (!keep.includes(id) && !found.some((f) => f.record_id === id)) rows.push({ kind, record_id: id, payload: {} as Json, deleted: true, updated_at: new Date(0).toISOString() });
+      for (const id of ids)
+        if (!keep.includes(id) && !found.some((f) => f.record_id === id))
+          rows.push({
+            kind,
+            record_id: id,
+            payload: {} as Json,
+            deleted: true,
+            updated_at: new Date(0).toISOString(),
+          });
       continue;
     }
-    for (const id of ids) if (!found.some((f) => f.record_id === id)) rows.push({ kind, record_id: id, payload: {} as Json, deleted: true, updated_at: new Date(0).toISOString() });
+    for (const id of ids)
+      if (!found.some((f) => f.record_id === id))
+        rows.push({
+          kind,
+          record_id: id,
+          payload: {} as Json,
+          deleted: true,
+          updated_at: new Date(0).toISOString(),
+        });
   }
   await applyRemote(rows);
   const db = getDb();
   const prelaunch = refused.filter((r) => r.prelaunch).length;
-  await db.meta.put({ key: "syncNotice", value: JSON.stringify({ at: Date.now(), count: refused.length - prelaunch, kinds: [...new Set(refused.filter((r) => !r.prelaunch).map((r) => r.kind))], prelaunch }) });
+  await db.meta.put({
+    key: "syncNotice",
+    value: JSON.stringify({
+      at: Date.now(),
+      count: refused.length - prelaunch,
+      kinds: [...new Set(refused.filter((r) => !r.prelaunch).map((r) => r.kind))],
+      prelaunch,
+    }),
+  });
 }
 
 async function push(restaurantId: string): Promise<void> {
@@ -233,7 +326,11 @@ async function push(restaurantId: string): Promise<void> {
   // Numbers the counter gave offline are claimed in order before their bills and tickets go up.
   // A failed claim must never hold back every other upload: the bills still go up, and any
   // number the cloud won't accept is replaced with a fresh one by renumberStuckRecord.
-  try { await flushOfflineClaims(); } catch (error) { console.warn("Offline number claims will retry on the next sync", error); }
+  try {
+    await flushOfflineClaims();
+  } catch (error) {
+    console.warn("Offline number claims will retry on the next sync", error);
+  }
   for (;;) {
     const entries: OutboxEntry[] = await db.outbox.orderBy("at").limit(PUSH_BATCH).toArray();
     if (!entries.length) return;
@@ -295,34 +392,69 @@ let deviceAwarePush = true;
 async function pushUnits(restaurantId: string, units: unknown) {
   if (deviceAwarePush) {
     let device: string | null = null;
-    try { device = await getDeviceId(); } catch { /* storage unavailable */ }
-    const res = await supabase.rpc("push_restaurant_records_from" as never, { _restaurant_id: restaurantId, _units: units, _device: device } as never);
+    try {
+      device = await getDeviceId();
+    } catch {
+      /* storage unavailable */
+    }
+    const res = await supabase.rpc(
+      "push_restaurant_records_from" as never,
+      { _restaurant_id: restaurantId, _units: units, _device: device } as never,
+    );
     // Only an older cloud without the device-aware call turns it off; any other error is the push's own.
-    if (!(res.error && isMissingRpc(res.error) && /push_restaurant_records_from/.test(res.error.message ?? ""))) return res;
+    if (!(
+      res.error &&
+      isMissingRpc(res.error) &&
+      /push_restaurant_records_from/.test(res.error.message ?? "")
+    ))
+      return res;
     deviceAwarePush = false;
   }
-  return supabase.rpc("push_restaurant_records" as never, { _restaurant_id: restaurantId, _units: units } as never);
+  return supabase.rpc(
+    "push_restaurant_records" as never,
+    { _restaurant_id: restaurantId, _units: units } as never,
+  );
 }
 
-async function pushVersioned(restaurantId: string, entries: OutboxEntry[], rows: PushRow[]): Promise<"legacy" | "stalled" | "done"> {
+async function pushVersioned(
+  restaurantId: string,
+  entries: OutboxEntry[],
+  rows: PushRow[],
+): Promise<"legacy" | "stalled" | "done"> {
   const db = getDb();
   const unitRows: UnitRow[] = [];
   for (const row of rows) {
     const base = await readBaseVersion(row.kind as RecordKind, row.record_id);
-    unitRows.push({ kind: row.kind as RecordKind, record_id: row.record_id, payload: row.payload, deleted: row.deleted, base_version: base?.version ?? null });
+    unitRows.push({
+      kind: row.kind as RecordKind,
+      record_id: row.record_id,
+      payload: row.payload,
+      deleted: row.deleted,
+      base_version: base?.version ?? null,
+    });
   }
   const grouped = buildUnits(unitRows);
   const units = grouped.map((unit) => ({ rows: unit }));
   const siblingsOf = new Map<string, string[]>();
   for (const unit of grouped) {
     const keys = unit.map((r) => outboxKey(r.kind, r.record_id));
-    for (const k of keys) siblingsOf.set(k, keys.filter((x) => x !== k));
+    for (const k of keys)
+      siblingsOf.set(
+        k,
+        keys.filter((x) => x !== k),
+      );
   }
   const rowByKey = new Map(rows.map((r) => [outboxKey(r.kind as RecordKind, r.record_id), r]));
   const { data, error } = await pushUnits(restaurantId, units);
-  if (error && isMissingRpc(error)) { versionedServer = false; return "legacy"; }
+  if (error && isMissingRpc(error)) {
+    versionedServer = false;
+    return "legacy";
+  }
   if (error) throw error;
-  if (!isPushResults(data)) { versionedServer = false; return "legacy"; }
+  if (!isPushResults(data)) {
+    versionedServer = false;
+    return "legacy";
+  }
   versionedServer = true;
 
   const results = data as PushResult[];
@@ -355,30 +487,71 @@ async function pushVersioned(restaurantId: string, entries: OutboxEntry[], rows:
         if (!isRefusal(result)) {
           // The server already committed unrelated units. A bad bill must remain
           // queued, but must not prevent acknowledging those successful uploads.
-          validationError ??= Object.assign(new Error(result.message ?? "Sync failed"), { code: result.code });
+          validationError ??= Object.assign(new Error(result.message ?? "Sync failed"), {
+            code: result.code,
+          });
           break;
         }
-        if (sent && await renumberStuckRecord(sent, result.message)) { done.add(key); break; }
-        if (sent) refused.push(/made before launch/i.test(result.message ?? "") ? { ...sent, prelaunch: true } : sent);
+        if (sent && (await renumberStuckRecord(sent, result.message))) {
+          done.add(key);
+          break;
+        }
+        if (sent)
+          refused.push(
+            /made before launch/i.test(result.message ?? "") ? { ...sent, prelaunch: true } : sent,
+          );
         done.add(key);
         // A settlement unit is all-or-nothing: its stock entry and table go back to the cloud copy too.
-        for (const sib of siblingsOf.get(key) ?? []) { const r = rowByKey.get(sib); if (r) { refused.push(r); done.add(sib); } }
+        for (const sib of siblingsOf.get(key) ?? []) {
+          const r = rowByKey.get(sib);
+          if (r) {
+            refused.push(r);
+            done.add(sib);
+          }
+        }
         break;
       case "conflict": {
         if (result.race || typeof result.version !== "number") break; // insert race: just retry
-        const remote = { version: result.version, payload: result.payload ?? {}, deleted: !!result.deleted };
+        const remote = {
+          version: result.version,
+          payload: result.payload ?? {},
+          deleted: !!result.deleted,
+        };
         const attempts = (mergeAttempts.get(key) ?? 0) + 1;
         mergeAttempts.set(key, attempts);
-        const resolved = attempts <= MAX_MERGES_PER_SYNC && await tryAutoMerge(result.kind, result.record_id, remote);
-        if (resolved) { progressed = true; break; } // re-queued against the new base
+        const resolved =
+          attempts <= MAX_MERGES_PER_SYNC &&
+          (await tryAutoMerge(result.kind, result.record_id, remote));
+        if (resolved) {
+          progressed = true;
+          break;
+        } // re-queued against the new base
         const local = await readLocal(result.kind, result.record_id);
-        const reasons = result.kind === "order" && isOrderPayload(local) && isOrderPayload(remote.payload)
-          ? mergeOrder(parseBaseOrder(await readBaseVersion(result.kind, result.record_id)), local, remote.payload).conflicts
-          : [`${result.kind} changed on another device`];
-        const label = result.kind === "order" && isOrderPayload(local) ? `Bill ${local.billNo}` : `${result.kind} ${result.record_id}`;
+        const reasons =
+          result.kind === "order" && isOrderPayload(local) && isOrderPayload(remote.payload)
+            ? mergeOrder(
+                parseBaseOrder(await readBaseVersion(result.kind, result.record_id)),
+                local,
+                remote.payload,
+              ).conflicts
+            : [`${result.kind} changed on another device`];
+        const label =
+          result.kind === "order" && isOrderPayload(local)
+            ? `Bill ${local.billNo}`
+            : `${result.kind} ${result.record_id}`;
         const next = conflicts.filter((c) => c.key !== key);
         const related = siblingsOf.get(key) ?? [];
-        next.push({ key, kind: result.kind, recordId: result.record_id, label, reasons: reasons.length ? reasons : ["Changed on another device"], local: local ?? null, remote, at: Date.now(), ...(related.length ? { related } : {}) });
+        next.push({
+          key,
+          kind: result.kind,
+          recordId: result.record_id,
+          label,
+          reasons: reasons.length ? reasons : ["Changed on another device"],
+          local: local ?? null,
+          remote,
+          at: Date.now(),
+          ...(related.length ? { related } : {}),
+        });
         for (const sib of related) done.add(sib); // held back with the bill so stock/table never commit without it
         conflicts.splice(0, conflicts.length, ...next);
         done.add(key); // leaves the outbox; local copy is kept and shown in the conflict alert
@@ -405,7 +578,11 @@ function parseBaseOrder(base: { payload?: unknown } | null): Order | undefined {
 }
 
 /** Merge a running bill edited on two devices; on success the merged copy is queued again. */
-async function tryAutoMerge(kind: RecordKind, recordId: string, remote: { version: number; payload: unknown; deleted: boolean }): Promise<boolean> {
+async function tryAutoMerge(
+  kind: RecordKind,
+  recordId: string,
+  remote: { version: number; payload: unknown; deleted: boolean },
+): Promise<boolean> {
   const db = getDb();
   if (kind !== "order") {
     // Tables, menu, stock and other records keep their established last-writer-wins rule,
@@ -420,7 +597,12 @@ async function tryAutoMerge(kind: RecordKind, recordId: string, remote: { versio
   const base = parseBaseOrder(await readBaseVersion(kind, recordId));
   const { order } = mergeOrder(base, local, { ...remote.payload, uid: recordId });
   if (!order) return false;
-  await db.orders.put({ ...order, ...(local.id !== undefined ? { id: local.id } : {}), uid: recordId, synced: false });
+  await db.orders.put({
+    ...order,
+    ...(local.id !== undefined ? { id: local.id } : {}),
+    uid: recordId,
+    synced: false,
+  });
   await writeBase(kind, recordId, remote.version, remote.payload);
   await markDirty(["order", recordId]);
   return true;
@@ -435,23 +617,52 @@ export async function resolveSyncConflict(key: string, choice: "mine" | "cloud")
   const conflict = conflicts.find((c) => c.key === key);
   if (!conflict) return;
   await writeConflicts(conflicts.filter((c) => c.key !== key));
-  const related = (conflict.related ?? []).map((k) => { const at = k.indexOf(":"); return [k.slice(0, at), k.slice(at + 1)] as [RecordKind, string]; });
+  const related = (conflict.related ?? []).map((k) => {
+    const at = k.indexOf(":");
+    return [k.slice(0, at), k.slice(at + 1)] as [RecordKind, string];
+  });
   if (choice === "mine") {
-    if (conflict.remote) await writeBase(conflict.kind, conflict.recordId, conflict.remote.version, conflict.remote.payload);
+    if (conflict.remote)
+      await writeBase(
+        conflict.kind,
+        conflict.recordId,
+        conflict.remote.version,
+        conflict.remote.payload,
+      );
     await markDirty([conflict.kind, conflict.recordId], ...related);
     return;
   }
   if (conflict.remote) {
-    await applyRemote([{ kind: conflict.kind, record_id: conflict.recordId, payload: conflict.remote.payload as Json, deleted: conflict.remote.deleted, updated_at: new Date().toISOString(), version: conflict.remote.version }]);
+    await applyRemote([
+      {
+        kind: conflict.kind,
+        record_id: conflict.recordId,
+        payload: conflict.remote.payload as Json,
+        deleted: conflict.remote.deleted,
+        updated_at: new Date().toISOString(),
+        version: conflict.remote.version,
+      },
+    ]);
   }
   // Held-back stock entry / table: replace with the cloud's copies (local-only ones are removed).
   const restaurantId = (await getDb().meta.get("restaurantId"))?.value;
   if (related.length && typeof restaurantId === "string" && restaurantId) {
-    await restoreRefused(restaurantId, related.map(([kind, record_id]) => ({ restaurant_id: restaurantId, kind, record_id, payload: {} as Json, deleted: false })));
+    await restoreRefused(
+      restaurantId,
+      related.map(([kind, record_id]) => ({
+        restaurant_id: restaurantId,
+        kind,
+        record_id,
+        payload: {} as Json,
+        deleted: false,
+      })),
+    );
   }
 }
 
-export async function listSyncConflicts(): Promise<SyncConflict[]> { return readConflicts(); }
+export async function listSyncConflicts(): Promise<SyncConflict[]> {
+  return readConflicts();
+}
 
 /**
  * Bills set aside as conflicts stop following the cloud until staff choose. Each sync
@@ -462,23 +673,42 @@ export async function listSyncConflicts(): Promise<SyncConflict[]> { return read
 async function healConflicts(restaurantId: string): Promise<void> {
   const conflicts = (await readConflicts()).filter((c) => c.kind === "order");
   if (!conflicts.length) return;
-  const { data, error } = await supabase.from("restaurant_records").select("kind, record_id, payload, deleted, updated_at, version")
-    .eq("restaurant_id", restaurantId).eq("kind", "order").in("record_id", conflicts.map((c) => c.recordId));
+  const { data, error } = await supabase
+    .from("restaurant_records")
+    .select("kind, record_id, payload, deleted, updated_at, version")
+    .eq("restaurant_id", restaurantId)
+    .eq("kind", "order")
+    .in(
+      "record_id",
+      conflicts.map((c) => c.recordId),
+    );
   if (error) return; // try again next sync
   const db = getDb();
   for (const c of conflicts) {
     const row = (data ?? []).find((r) => r.record_id === c.recordId) as RemoteRow | undefined;
-    if (!row || row.deleted || !isOrderPayload(row.payload) || typeof row.version !== "number") continue;
+    if (!row || row.deleted || !isOrderPayload(row.payload) || typeof row.version !== "number")
+      continue;
     const local = await db.orders.where("uid").equals(c.recordId).first();
     const remote = { ...(row.payload as unknown as Order), uid: c.recordId };
-    const merged = local ? mergeOrder(parseBaseOrder(await readBaseVersion("order", c.recordId)), local, remote).order : remote;
+    const merged = local
+      ? mergeOrder(parseBaseOrder(await readBaseVersion("order", c.recordId)), local, remote).order
+      : remote;
     if (!merged) continue; // a real clash: staff still decide
     await writeConflicts((await readConflicts()).filter((x) => x.key !== c.key));
     const { id: _localId, ...mergedShared } = merged;
-    if (!local || JSON.stringify(toSharedPayload("order", mergedShared)) === JSON.stringify(toSharedPayload("order", remote))) {
+    if (
+      !local ||
+      JSON.stringify(toSharedPayload("order", mergedShared)) ===
+        JSON.stringify(toSharedPayload("order", remote))
+    ) {
       await applyRemote([row]); // the cloud copy already holds everything
     } else {
-      await db.orders.put({ ...merged, ...(local.id !== undefined ? { id: local.id } : {}), uid: c.recordId, synced: false });
+      await db.orders.put({
+        ...merged,
+        ...(local.id !== undefined ? { id: local.id } : {}),
+        uid: c.recordId,
+        synced: false,
+      });
       await writeBase("order", c.recordId, row.version, row.payload);
       await markDirty(["order", c.recordId]);
     }
@@ -491,11 +721,22 @@ async function healConflicts(restaurantId: string): Promise<void> {
  * applied (applyRemote still skips local unsent edits, conflicts and older versions); the follow-up
  * sync still runs and stays the source of truth.
  */
-export async function applyLiveChange(change: { eventType?: string; new?: unknown }): Promise<boolean> {
+export async function applyLiveChange(change: {
+  eventType?: string;
+  new?: unknown;
+}): Promise<boolean> {
   if (change.eventType !== "INSERT" && change.eventType !== "UPDATE") return false;
   const row = change.new as Partial<RemoteRow> | null | undefined;
-  if (!row || typeof row.kind !== "string" || typeof row.record_id !== "string" || typeof row.version !== "number" ||
-    typeof row.deleted !== "boolean" || row.payload === undefined || row.payload === null) return false;
+  if (
+    !row ||
+    typeof row.kind !== "string" ||
+    typeof row.record_id !== "string" ||
+    typeof row.version !== "number" ||
+    typeof row.deleted !== "boolean" ||
+    row.payload === undefined ||
+    row.payload === null
+  )
+    return false;
   if (!isKind(row.kind)) return false;
   await applyRemote([row as RemoteRow]);
   return true;
@@ -504,8 +745,12 @@ export async function applyLiveChange(change: { eventType?: string; new?: unknow
 /** Fetch one bill (and its KOTs) from the cloud for a link opened on a device that doesn't have it yet. RLS limits it to the member's restaurant. */
 export async function fetchBillFromCloud(billUid: string): Promise<boolean> {
   if (!navigator.onLine || !/^[0-9a-f-]{36}$/i.test(billUid)) return false;
-  const { data, error } = await supabase.from("restaurant_records").select("kind, record_id, payload, deleted, updated_at, version")
-    .eq("kind", "order").eq("record_id", billUid).limit(1);
+  const { data, error } = await supabase
+    .from("restaurant_records")
+    .select("kind, record_id, payload, deleted, updated_at, version")
+    .eq("kind", "order")
+    .eq("record_id", billUid)
+    .limit(1);
   if (error || !data?.length) return false;
   await applyRemote(data as unknown as RemoteRow[]);
   return true;
@@ -514,123 +759,170 @@ export async function fetchBillFromCloud(billUid: string): Promise<boolean> {
 async function applyRemote(rows: RemoteRow[]): Promise<void> {
   const db = getDb();
   // The outbox is read inside the same transaction, so a local edit can't slip in between the check and the write.
-  await db.transaction("rw", [db.outbox, db.menu, db.restTables, db.inventory, db.orders, db.kots, db.meta, db.materials, db.suppliers, db.stockEntries, db.customers, db.dayCloses, db.materialLevels, db.ledger, db.unitTypes, db.units, db.stays], async () => {
-    const pending = new Set((await db.outbox.toCollection().primaryKeys()).map(String));
-    const conflicted = new Set(parseConflicts((await db.meta.get(CONFLICTS_KEY))?.value).map((c) => c.key));
-    for (const row of rows) {
-      if (!isKind(row.kind)) continue;
-      const key = outboxKey(row.kind, row.record_id);
-      // Local edits that haven't been pushed yet win; they'll be pushed against their recorded base version.
-      // Records awaiting a staff conflict decision keep this device's copy on screen.
-      if (pending.has(key) || conflicted.has(key)) continue;
-      if (typeof row.version === "number") {
-        // Realtime and pulls can arrive out of order: never let an older copy replace a newer one.
-        const known = parseBase((await db.meta.get(baseKey(row.kind, row.record_id)))?.value);
-        if (known && known.version > row.version) continue;
-        await db.meta.put({ key: baseKey(row.kind, row.record_id), value: JSON.stringify(keepsBasePayload(row.kind) ? { version: row.version, payload: row.payload } : { version: row.version }) });
-      }
-      const payload: unknown = row.payload;
-      const id = row.record_id;
+  await db.transaction(
+    "rw",
+    [
+      db.outbox,
+      db.menu,
+      db.restTables,
+      db.inventory,
+      db.orders,
+      db.kots,
+      db.meta,
+      db.materials,
+      db.suppliers,
+      db.stockEntries,
+      db.customers,
+      db.dayCloses,
+      db.materialLevels,
+      db.ledger,
+      db.unitTypes,
+      db.units,
+      db.stays,
+      db.nightAudits,
+    ],
+    async () => {
+      const pending = new Set((await db.outbox.toCollection().primaryKeys()).map(String));
+      const conflicted = new Set(
+        parseConflicts((await db.meta.get(CONFLICTS_KEY))?.value).map((c) => c.key),
+      );
+      for (const row of rows) {
+        if (!isKind(row.kind)) continue;
+        const key = outboxKey(row.kind, row.record_id);
+        // Local edits that haven't been pushed yet win; they'll be pushed against their recorded base version.
+        // Records awaiting a staff conflict decision keep this device's copy on screen.
+        if (pending.has(key) || conflicted.has(key)) continue;
+        if (typeof row.version === "number") {
+          // Realtime and pulls can arrive out of order: never let an older copy replace a newer one.
+          const known = parseBase((await db.meta.get(baseKey(row.kind, row.record_id)))?.value);
+          if (known && known.version > row.version) continue;
+          await db.meta.put({
+            key: baseKey(row.kind, row.record_id),
+            value: JSON.stringify(
+              keepsBasePayload(row.kind)
+                ? { version: row.version, payload: row.payload }
+                : { version: row.version },
+            ),
+          });
+        }
+        const payload: unknown = row.payload;
+        const id = row.record_id;
 
-      switch (row.kind) {
-        case "settings":
-          if (!row.deleted && isSettingsPayload(payload)) await db.meta.put({ key: "restaurantSettings", value: JSON.stringify(payload) });
-          break;
-        case "menu":
-          if (row.deleted) await db.menu.delete(id);
-          else if (isMenuPayload(payload)) await db.menu.put({ ...payload, id });
-          break;
-        case "table":
-          if (row.deleted) await db.restTables.delete(id);
-          else if (isTablePayload(payload)) await db.restTables.put({ ...payload, id });
-          break;
-        case "inventory":
-          if (row.deleted) await db.inventory.delete(id);
-          else if (isInventoryPayload(payload)) {
-            const item: InventoryItem = { ...payload, id, synced: true };
-            await db.inventory.put(item);
-          }
-          break;
-        case "order": {
-          const existing = await db.orders.where("uid").equals(id).first();
-          if (row.deleted) {
-            if (existing?.id !== undefined) await db.orders.delete(existing.id);
+        switch (row.kind) {
+          case "settings":
+            if (!row.deleted && isSettingsPayload(payload))
+              await db.meta.put({ key: "restaurantSettings", value: JSON.stringify(payload) });
+            break;
+          case "menu":
+            if (row.deleted) await db.menu.delete(id);
+            else if (isMenuPayload(payload)) await db.menu.put({ ...payload, id });
+            break;
+          case "table":
+            if (row.deleted) await db.restTables.delete(id);
+            else if (isTablePayload(payload)) await db.restTables.put({ ...payload, id });
+            break;
+          case "inventory":
+            if (row.deleted) await db.inventory.delete(id);
+            else if (isInventoryPayload(payload)) {
+              const item: InventoryItem = { ...payload, id, synced: true };
+              await db.inventory.put(item);
+            }
+            break;
+          case "order": {
+            const existing = await db.orders.where("uid").equals(id).first();
+            if (row.deleted) {
+              if (existing?.id !== undefined) await db.orders.delete(existing.id);
+              break;
+            }
+            if (!isOrderPayload(payload)) break;
+            const { id: _ignored, ...rest } = payload;
+            // Bills from older app versions may lack the guest index; add it so guest lookups stay indexed.
+            const order: Order = withCustomerId(
+              existing?.id !== undefined
+                ? { ...rest, id: existing.id, uid: id, synced: true }
+                : { ...rest, uid: id, synced: true },
+            );
+            const orderId = Number(await db.orders.put(order));
+            // Tickets can arrive before their bill (they are older); link them now, otherwise
+            // the counter would treat already-sent items as "not sent" and offer to send them again.
+            await db.kots
+              .where("orderId")
+              .equals(0)
+              .filter((k) => k.orderUid === id)
+              .modify((k) => {
+                k.orderId = orderId;
+              });
             break;
           }
-          if (!isOrderPayload(payload)) break;
-          const { id: _ignored, ...rest } = payload;
-          // Bills from older app versions may lack the guest index; add it so guest lookups stay indexed.
-          const order: Order = withCustomerId(existing?.id !== undefined
-            ? { ...rest, id: existing.id, uid: id, synced: true }
-            : { ...rest, uid: id, synced: true });
-          const orderId = Number(await db.orders.put(order));
-          // Tickets can arrive before their bill (they are older); link them now, otherwise
-          // the counter would treat already-sent items as "not sent" and offer to send them again.
-          await db.kots.where("orderId").equals(0).filter((k) => k.orderUid === id)
-            .modify((k) => { k.orderId = orderId; });
-          break;
-        }
-        case "kot": {
-          const existing = await db.kots.where("uid").equals(id).first();
-          if (row.deleted) {
-            if (existing?.id !== undefined) await db.kots.delete(existing.id);
+          case "kot": {
+            const existing = await db.kots.where("uid").equals(id).first();
+            if (row.deleted) {
+              if (existing?.id !== undefined) await db.kots.delete(existing.id);
+              break;
+            }
+            if (!isKotPayload(payload)) break;
+            const parent = payload.orderUid
+              ? await db.orders.where("uid").equals(payload.orderUid).first()
+              : undefined;
+            const { id: _ignored, ...rest } = payload;
+            const kot: Kot =
+              existing?.id !== undefined
+                ? { ...rest, id: existing.id, uid: id, orderId: parent?.id ?? existing.orderId }
+                : { ...rest, uid: id, orderId: parent?.id ?? 0 };
+            await db.kots.put(kot);
             break;
           }
-          if (!isKotPayload(payload)) break;
-          const parent = payload.orderUid ? await db.orders.where("uid").equals(payload.orderUid).first() : undefined;
-          const { id: _ignored, ...rest } = payload;
-          const kot: Kot = existing?.id !== undefined
-            ? { ...rest, id: existing.id, uid: id, orderId: parent?.id ?? existing.orderId }
-            : { ...rest, uid: id, orderId: parent?.id ?? 0 };
-          await db.kots.put(kot);
-          break;
+          case "material":
+            if (row.deleted) await db.materials.delete(id);
+            else if (isMaterialPayload(payload)) await db.materials.put({ ...payload, id });
+            break;
+          case "supplier":
+            if (row.deleted) await db.suppliers.delete(id);
+            else if (isSupplierPayload(payload)) await db.suppliers.put({ ...payload, id });
+            break;
+          case "stock_entry":
+            // Ledger entries also move the cached stock levels; re-applying the same entry is a no-op.
+            if (row.deleted) {
+              await applyEntryToLevels(db, id, null);
+              await db.stockEntries.delete(id);
+            } else if (isStockEntryPayload(payload)) {
+              const entry = { ...payload, id };
+              await applyEntryToLevels(db, id, entry);
+              await db.stockEntries.put(entry);
+            }
+            break;
+          case "customer":
+            if (row.deleted) await db.customers.delete(id);
+            else if (isCustomerPayload(payload)) await db.customers.put({ ...payload, id });
+            break;
+          case "day_close":
+            if (row.deleted) await db.dayCloses.delete(id);
+            else if (isDayClosePayload(payload)) await db.dayCloses.put({ ...payload, id });
+            break;
+          case "ledger":
+            if (row.deleted) await db.ledger.delete(id);
+            else if (isLedgerPayload(payload)) await db.ledger.put({ ...payload, id });
+            break;
+          case "unit_type":
+            if (row.deleted) await db.unitTypes.delete(id);
+            else if (isUnitTypePayload(payload)) await db.unitTypes.put({ ...payload, id });
+            break;
+          case "unit":
+            if (row.deleted) await db.units.delete(id);
+            else if (isUnitPayload(payload)) await db.units.put({ ...payload, id });
+            break;
+          case "stay":
+            if (row.deleted) await db.stays.delete(id);
+            else if (isStayPayload(payload)) await db.stays.put({ ...payload, id });
+            break;
+          case "night_audit":
+            if (row.deleted) await db.nightAudits.delete(id);
+            else if (isNightAuditPayload(payload)) await db.nightAudits.put({ ...payload, id });
+            break;
         }
-        case "material":
-          if (row.deleted) await db.materials.delete(id);
-          else if (isMaterialPayload(payload)) await db.materials.put({ ...payload, id });
-          break;
-        case "supplier":
-          if (row.deleted) await db.suppliers.delete(id);
-          else if (isSupplierPayload(payload)) await db.suppliers.put({ ...payload, id });
-          break;
-        case "stock_entry":
-          // Ledger entries also move the cached stock levels; re-applying the same entry is a no-op.
-          if (row.deleted) {
-            await applyEntryToLevels(db, id, null);
-            await db.stockEntries.delete(id);
-          } else if (isStockEntryPayload(payload)) {
-            const entry = { ...payload, id };
-            await applyEntryToLevels(db, id, entry);
-            await db.stockEntries.put(entry);
-          }
-          break;
-        case "customer":
-          if (row.deleted) await db.customers.delete(id);
-          else if (isCustomerPayload(payload)) await db.customers.put({ ...payload, id });
-          break;
-        case "day_close":
-          if (row.deleted) await db.dayCloses.delete(id);
-          else if (isDayClosePayload(payload)) await db.dayCloses.put({ ...payload, id });
-          break;
-        case "ledger":
-          if (row.deleted) await db.ledger.delete(id);
-          else if (isLedgerPayload(payload)) await db.ledger.put({ ...payload, id });
-          break;
-        case "unit_type":
-          if (row.deleted) await db.unitTypes.delete(id);
-          else if (isUnitTypePayload(payload)) await db.unitTypes.put({ ...payload, id });
-          break;
-        case "unit":
-          if (row.deleted) await db.units.delete(id);
-          else if (isUnitPayload(payload)) await db.units.put({ ...payload, id });
-          break;
-        case "stay":
-          if (row.deleted) await db.stays.delete(id);
-          else if (isStayPayload(payload)) await db.stays.put({ ...payload, id });
-          break;
       }
-    }
-  });
+    },
+  );
 }
 
 async function pull(restaurantId: string): Promise<void> {
@@ -646,16 +938,25 @@ async function pull(restaurantId: string): Promise<void> {
   for (;;) {
     let query = supabase
       .from("restaurant_records")
-      .select(versionedServer === false ? "kind,record_id,payload,deleted,updated_at" : "kind,record_id,payload,deleted,updated_at,version")
+      .select(
+        versionedServer === false
+          ? "kind,record_id,payload,deleted,updated_at"
+          : "kind,record_id,payload,deleted,updated_at,version",
+      )
       .eq("restaurant_id", restaurantId)
       .order("updated_at", { ascending: true })
       .limit(PULL_PAGE);
     if (from) query = query.gte("updated_at", from);
     const { data, error } = await query;
-    if (error && error.code === "42703" && versionedServer !== false) { versionedServer = false; continue; } // column not deployed yet
+    if (error && error.code === "42703" && versionedServer !== false) {
+      versionedServer = false;
+      continue;
+    } // column not deployed yet
     if (error) throw error;
     const page = (data ?? []) as unknown as RemoteRow[];
-    const rows = page.filter((r) => !(r.updated_at === from && seenAtFrom.has(`${r.kind}:${r.record_id}`)));
+    const rows = page.filter(
+      (r) => !(r.updated_at === from && seenAtFrom.has(`${r.kind}:${r.record_id}`)),
+    );
     if (rows.length) {
       await applyRemote(rows);
       const last = rows[rows.length - 1]!.updated_at;
@@ -677,13 +978,18 @@ async function syncOnce(restaurantId: string): Promise<void> {
   const db = getDb();
   const bound = (await db.meta.get("restaurantId"))?.value;
   if (typeof bound === "string" && bound && bound !== restaurantId) {
-    throw new Error("This device holds another restaurant's data. An owner can reset this device in Settings to switch restaurants.");
+    throw new Error(
+      "This device holds another restaurant's data. An owner can reset this device in Settings to switch restaurants.",
+    );
   }
   if (!bound) await db.meta.put({ key: "restaurantId", value: restaurantId });
 
   // Fetch owner-issued numbering before pushing so old offline copies cannot
   // put the retained invoice back under its previous number.
-  const numbering = await supabase.from("counter_numbering").select("*").eq("restaurant_id", restaurantId);
+  const numbering = await supabase
+    .from("counter_numbering")
+    .select("*")
+    .eq("restaurant_id", restaurantId);
   if (numbering.error) throw numbering.error;
   for (const rule of numbering.data ?? []) {
     await db.transaction("rw", db.meta, db.orders, db.kots, async () => {
@@ -692,14 +998,25 @@ async function syncOnce(restaurantId: string): Promise<void> {
       const source = (await db.meta.get("deviceCode"))?.value;
       await db.meta.put({ key, value: rule.series });
       if (source === rule.source_series || source === rule.series) {
-        await db.meta.put({ key: `billSeries:${rule.series}:${rule.financial_year}`, value: rule.series });
+        await db.meta.put({
+          key: `billSeries:${rule.series}:${rule.financial_year}`,
+          value: rule.series,
+        });
         const seq = (await db.meta.get("billSeq"))?.value;
-        await db.meta.put({ key: "billSeq", value: already ? Math.max(typeof seq === "number" ? seq : 0, rule.last_sequence) : rule.last_sequence });
+        await db.meta.put({
+          key: "billSeq",
+          value: already
+            ? Math.max(typeof seq === "number" ? seq : 0, rule.last_sequence)
+            : rule.last_sequence,
+        });
       }
       if (rule.retained_uid) {
         const billNo = `${rule.series}/${rule.financial_year}/0001`;
         await db.orders.where("uid").equals(rule.retained_uid).modify({ billNo });
-        await db.kots.toCollection().filter((kot) => kot.orderUid === rule.retained_uid).modify({ billNo });
+        await db.kots
+          .toCollection()
+          .filter((kot) => kot.orderUid === rule.retained_uid)
+          .modify({ billNo });
       }
     });
   }
@@ -721,10 +1038,15 @@ let queued = false;
 function withDeviceLock<T>(restaurantId: string, work: () => Promise<T>): Promise<T> {
   // The real Web Locks signature resolves to the callback's own result; typing it as Promise<T>
   // made the return Promise<Promise<T>>. Await it so the awaited type is T either way.
-  const locks = typeof navigator !== "undefined"
-    ? (navigator as Navigator & { locks?: { request: (name: string, cb: () => Promise<T>) => Promise<Awaited<T>> } }).locks
-    : undefined;
-  return locks ? locks.request(`xtsy-sync-${restaurantId}`, work) as Promise<T> : work();
+  const locks =
+    typeof navigator !== "undefined"
+      ? (
+          navigator as Navigator & {
+            locks?: { request: (name: string, cb: () => Promise<T>) => Promise<Awaited<T>> };
+          }
+        ).locks
+      : undefined;
+  return locks ? (locks.request(`xtsy-sync-${restaurantId}`, work) as Promise<T>) : work();
 }
 
 /** Push local changes and pull the latest restaurant data. Concurrent calls share one run. */
@@ -756,10 +1078,14 @@ function setLiveStatus(next: LiveStatus) {
   liveStatus = next;
   for (const l of liveListeners) l();
 }
-export function getLiveStatus(): LiveStatus { return liveStatus; }
+export function getLiveStatus(): LiveStatus {
+  return liveStatus;
+}
 export function onLiveStatus(listener: () => void): () => void {
   liveListeners.add(listener);
-  return () => { liveListeners.delete(listener); };
+  return () => {
+    liveListeners.delete(listener);
+  };
 }
 
 /**
@@ -782,17 +1108,29 @@ export function startLiveSync(restaurantId: string): () => void {
         throw error;
       }
     },
-    { now: () => Date.now(), setTimeout: (fn, ms) => window.setTimeout(fn, ms), clearTimeout: (h) => window.clearTimeout(h as number) },
+    {
+      now: () => Date.now(),
+      setTimeout: (fn, ms) => window.setTimeout(fn, ms),
+      clearTimeout: (h) => window.clearTimeout(h as number),
+    },
   );
 
   // Kitchen tickets push at once so the kitchen screen updates instantly; offline they stay in the outbox until "online" fires.
-  const stopLocal = onLocalChange((kinds) => scheduler.request(kinds.includes("kot") || kinds.includes("order") ? 0 : 250));
+  const stopLocal = onLocalChange((kinds) =>
+    scheduler.request(kinds.includes("kot") || kinds.includes("order") ? 0 : 250),
+  );
   const wake = () => scheduler.request(0);
-  const onOnline = () => { void requeueHeldRecords().finally(wake); };
+  const onOnline = () => {
+    void requeueHeldRecords().finally(wake);
+  };
   // Another terminal tapped Sync now (or found a new app version): sync this one at once too.
-  const stopSignals = startTerminalSignals(restaurantId, () => { void requeueHeldRecords().finally(wake); });
+  const stopSignals = startTerminalSignals(restaurantId, () => {
+    void requeueHeldRecords().finally(wake);
+  });
   void requeueHeldRecords();
-  const onVisible = () => { if (document.visibilityState === "visible") wake(); };
+  const onVisible = () => {
+    if (document.visibilityState === "visible") wake();
+  };
   window.addEventListener("online", onOnline);
   window.addEventListener("focus", wake);
   window.addEventListener("pageshow", wake);
@@ -807,10 +1145,21 @@ export function startLiveSync(restaurantId: string): () => void {
     setLiveStatus(attempts ? "reconnecting" : "connecting");
     const current = supabase
       .channel(`restaurant-records-${restaurantId}-${Date.now()}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_records", filter: `restaurant_id=eq.${restaurantId}` }, (change) => {
-        // Paint the change at once from the notice itself, then confirm with a full sync.
-        void applyLiveChange(change as { eventType?: string; new?: unknown }).catch(() => undefined).finally(() => scheduler.request(0));
-      });
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "restaurant_records",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        (change) => {
+          // Paint the change at once from the notice itself, then confirm with a full sync.
+          void applyLiveChange(change as { eventType?: string; new?: unknown })
+            .catch(() => undefined)
+            .finally(() => scheduler.request(0));
+        },
+      );
     channel = current;
     current.subscribe((status: string) => {
       if (stopped || channel !== current) return;
@@ -824,11 +1173,14 @@ export function startLiveSync(restaurantId: string): () => void {
         setLiveStatus("reconnecting");
         attempts += 1;
         window.clearTimeout(reconnectTimer);
-        reconnectTimer = window.setTimeout(() => {
-          if (stopped || channel !== current) return;
-          void supabase.removeChannel(current);
-          connect();
-        }, Math.min(30_000, 1_000 * 2 ** Math.min(attempts, 5)));
+        reconnectTimer = window.setTimeout(
+          () => {
+            if (stopped || channel !== current) return;
+            void supabase.removeChannel(current);
+            connect();
+          },
+          Math.min(30_000, 1_000 * 2 ** Math.min(attempts, 5)),
+        );
       }
     });
   };
@@ -855,7 +1207,10 @@ export function startLiveSync(restaurantId: string): () => void {
  * Deduct stock for a settled bill: portions of dishes counted directly, and
  * raw materials from each dish's recipe (as a ledger entry tied to the bill).
  */
-export async function applyLocalStockSale(soldLines: Order["lines"], ref?: { orderUid: string; billNo: string; by?: string | undefined }): Promise<void> {
+export async function applyLocalStockSale(
+  soldLines: Order["lines"],
+  ref?: { orderUid: string; billNo: string; by?: string | undefined },
+): Promise<void> {
   const db = getDb();
   const items = await db.inventory.toArray();
   const changed = deductInventory(soldLines, items).filter((item) => item.synced === false);
@@ -884,7 +1239,13 @@ export async function getSyncSnapshot() {
   };
 }
 
-const KIND_WORDS: Record<string, string> = { settings: "restaurant details", menu: "menu", material: "purchase items", supplier: "suppliers", order: "settled bills" };
+const KIND_WORDS: Record<string, string> = {
+  settings: "restaurant details",
+  menu: "menu",
+  material: "purchase items",
+  supplier: "suppliers",
+  order: "settled bills",
+};
 
 /** Plain words for changes the cloud refused and this device put back. */
 export function describeNotice(value: unknown): string {
@@ -892,27 +1253,40 @@ export function describeNotice(value: unknown): string {
   try {
     const n = JSON.parse(value) as { count?: number; kinds?: string[]; prelaunch?: number };
     const parts: string[] = [];
-    if (n.prelaunch) parts.push(`${n.prelaunch} test record${n.prelaunch === 1 ? "" : "s"} from before launch (old bills or kitchen tickets) ${n.prelaunch === 1 ? "was" : "were"} removed from this device. They are not part of the restaurant's books.`);
+    if (n.prelaunch)
+      parts.push(
+        `${n.prelaunch} test record${n.prelaunch === 1 ? "" : "s"} from before launch (old bills or kitchen tickets) ${n.prelaunch === 1 ? "was" : "were"} removed from this device. They are not part of the restaurant's books.`,
+      );
     if (n.count) {
       const what = (n.kinds ?? []).map((k) => KIND_WORDS[k] ?? k).join(", ");
-      parts.push(`${n.count} change${n.count === 1 ? "" : "s"} to ${what || "records"} ${n.count === 1 ? "was" : "were"} undone: only the owner or a manager can make ${n.count === 1 ? "it" : "them"}.`);
+      parts.push(
+        `${n.count} change${n.count === 1 ? "" : "s"} to ${what || "records"} ${n.count === 1 ? "was" : "were"} undone: only the owner or a manager can make ${n.count === 1 ? "it" : "them"}.`,
+      );
     }
     return parts.length ? `${parts.join(" ")} Everything else synced normally.` : "";
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }
 
 /* Bills and kitchen tickets the cloud refused stay on this device and are re-sent on Retry/reconnect. */
 const HELD_KEY = "heldRecords";
 async function readHeld(): Promise<[RecordKind, string][]> {
   const v = (await getDb().meta.get(HELD_KEY))?.value;
-  try { return typeof v === "string" ? (JSON.parse(v) as [RecordKind, string][]) : []; } catch { return []; }
+  try {
+    return typeof v === "string" ? (JSON.parse(v) as [RecordKind, string][]) : [];
+  } catch {
+    return [];
+  }
 }
 async function holdRecords(kind: "order" | "kot", ids: string[]) {
   const held = await readHeld();
   for (const id of ids) if (!held.some(([k, r]) => k === kind && r === id)) held.push([kind, id]);
   await getDb().meta.put({ key: HELD_KEY, value: JSON.stringify(held) });
 }
-export async function heldRecordCount(): Promise<number> { return (await readHeld()).length; }
+export async function heldRecordCount(): Promise<number> {
+  return (await readHeld()).length;
+}
 /** Re-queue held bills/KOTs so the next sync tries again (and renumbers them if needed). */
 export async function requeueHeldRecords(): Promise<number> {
   const held = await readHeld();
@@ -922,13 +1296,19 @@ export async function requeueHeldRecords(): Promise<number> {
   return held.length;
 }
 
-export async function clearSyncNotice() { await getDb().meta.delete("syncNotice"); }
+export async function clearSyncNotice() {
+  await getDb().meta.delete("syncNotice");
+}
 
 export async function saveSyncError(error: unknown) {
-  const message = error instanceof Error
-    ? error.message
-    : typeof error === "object" && error !== null && "message" in error && typeof (error as { message: unknown }).message === "string"
-      ? (error as { message: string }).message
-      : "Sync could not be completed.";
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof (error as { message: unknown }).message === "string"
+        ? (error as { message: string }).message
+        : "Sync could not be completed.";
   await getDb().meta.put({ key: "syncError", value: message.slice(0, 500) });
 }

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { DeskSetup } from "@/components/pms/DeskSetup";
+import { ExtrasEditor, RatePlans } from "@/components/pms/PlansAndExtras";
 import { usePms } from "@/lib/pms/use-pms";
 import { isAdmin, useStaff } from "@/lib/staff";
 import { SILENT_PARAMS } from "@/lib/silent-route";
@@ -21,9 +22,22 @@ function PropertyPage() {
         <header>
           <p className="xt-eyebrow text-primary">Property</p>
           <h1 className="text-4xl">Rooms & rates</h1>
-          <p className="text-sm text-muted-foreground">Base rates are per bed or room per night, before GST. Change single nights under Rates & availability.</p>
+          <p className="text-sm text-muted-foreground">
+            Base rates are per bed or room per night, before GST. Change single nights under Rates &
+            availability.
+          </p>
         </header>
-        {isAdmin(user) ? <DeskSetup types={types} units={units} /> : <p className="text-sm text-muted-foreground">The owner or a manager sets up rooms and rates.</p>}
+        {isAdmin(user) ? (
+          <>
+            <DeskSetup types={types} units={units} />
+            {types.length ? <RatePlans types={types} /> : null}
+            <ExtrasEditor />
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            The owner or a manager sets up rooms and rates.
+          </p>
+        )}
       </div>
     </AppShell>
   );

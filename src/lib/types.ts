@@ -193,6 +193,8 @@ export interface Kot {
 
 export interface RestaurantSettings {
   name: string;
+  /** Hostel POS: extras sold on the folio (bike, breakfast, laundry…). */
+  pmsExtras?: import("./pms/types").StayExtra[];
   businessType?: "hotel" | "restaurant";
   legalName?: string;
   address?: string;

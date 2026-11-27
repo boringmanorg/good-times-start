@@ -6,6 +6,7 @@ import { syncAppModeFromUrl, useChosenApp } from "@/lib/app-mode";
 import { allowAppWorker, installKind, type InstallKind } from "@/lib/app-install-logic";
 import { useInstallPrompt, watchInstallPrompt } from "@/lib/install-prompt";
 import { SITE_PATH } from "@/lib/site-config";
+import { appSpace } from "@/lib/app-space";
 
 /**
  * Three installable screens from one cloud codebase:
@@ -20,30 +21,55 @@ const APP_META: Record<InstallKind, { title: string; theme: string }> = {
   pos: { title: "POS Billdesk", theme: "#000000" },
   waiter: { title: "Waiter Pro", theme: "#000000" },
 };
+/** Hostel POS installs as its own apps, opening on its own screens (never the restaurant's /tables). */
+const STAY_META: Partial<Record<InstallKind, { title: string; theme: string }>> = {
+  manager: { title: "Property Manager", theme: "#1f2230" },
+  pos: { title: "Front Desk", theme: "#1f2230" },
+};
 
 function shouldRegisterServiceWorker(): boolean {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return false;
   if (window.location.protocol !== "https:") return false;
-  return allowAppWorker(import.meta.env.PROD, window.location.hostname, window.self !== window.top, window.location.search);
+  return allowAppWorker(
+    import.meta.env.PROD,
+    window.location.hostname,
+    window.self !== window.top,
+    window.location.search,
+  );
 }
 
 const noopSubscribe = () => () => {};
 function isIos(): boolean {
   if (typeof navigator === "undefined") return false;
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return (
+    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
 }
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    (navigator as unknown as { standalone?: boolean }).standalone === true
+  );
 }
 
 /** Head tags for the current app, plus service worker registration. Mounted once in the root. */
 export function AppInstall() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const chosen = useChosenApp();
-  useEffect(() => { syncAppModeFromUrl(); }, [pathname]);
+  useEffect(() => {
+    syncAppModeFromUrl();
+  }, [pathname]);
   const app = installKind(pathname, chosen);
-  const meta = APP_META[app];
+  // Read after mount: the server always renders the restaurant's tags, so hydration matches.
+  const [stayTab, setStayTab] = useState(false);
+  useEffect(() => {
+    setStayTab(appSpace() === "stay");
+  }, []);
+  const stayMeta = stayTab ? STAY_META[app] : undefined;
+  const meta = stayMeta ?? APP_META[app];
+  const manifest = stayMeta ? `/manifest-stay-${app}.webmanifest` : `/manifest-${app}.webmanifest`;
   // The marketing website is not an installable staff app.
   const website = pathname === SITE_PATH || pathname.startsWith(`${SITE_PATH}/`);
 
@@ -51,12 +77,23 @@ export function AppInstall() {
     if (website) return;
     const stopWatching = watchInstallPrompt();
     if (shouldRegisterServiceWorker()) {
-      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => { /* offline support is a bonus, never a blocker */ });
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
+        /* offline support is a bonus, never a blocker */
+      });
     } else if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(registrations.filter((r) => {
-        const worker = r.active ?? r.waiting ?? r.installing;
-        return worker && new URL(worker.scriptURL).pathname === "/sw.js";
-      }).map((r) => r.unregister()))).catch(() => {});
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          Promise.all(
+            registrations
+              .filter((r) => {
+                const worker = r.active ?? r.waiting ?? r.installing;
+                return worker && new URL(worker.scriptURL).pathname === "/sw.js";
+              })
+              .map((r) => r.unregister()),
+          ),
+        )
+        .catch(() => {});
     }
     return stopWatching;
   }, [website]);
@@ -67,7 +104,7 @@ export function AppInstall() {
   // React 19 hoists these into <head> and updates them when the app changes.
   return (
     <>
-      <link rel="manifest" href={`/manifest-${app}.webmanifest`} crossOrigin="use-credentials" />
+      <link rel="manifest" href={manifest} crossOrigin="use-credentials" />
       <link rel="apple-touch-icon" href={`/icons/${app}-apple-180.png`} />
       <meta name="theme-color" content={meta.theme} />
       <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -79,22 +116,52 @@ export function AppInstall() {
 }
 
 /** "Install" button; on iPhone and iPad shows how to add it to the home screen. */
-export function InstallButton({ label = "Install", className = "" }: { label?: string; className?: string }) {
+export function InstallButton({
+  label = "Install",
+  className = "",
+}: {
+  label?: string;
+  className?: string;
+}) {
   const { available, install } = useInstallPrompt();
   const [iosHelp, setIosHelp] = useState(false);
   // Read without a state update on mount, so remounts can never chain re-renders.
   const standalone = useSyncExternalStore(noopSubscribe, isStandalone, () => true);
   if (standalone) return null;
-  if (available) return <Button size="sm" variant="outline" className={className} onClick={() => void install()}><Download />{label}</Button>;
+  if (available)
+    return (
+      <Button size="sm" variant="outline" className={className} onClick={() => void install()}>
+        <Download />
+        {label}
+      </Button>
+    );
   if (!isIos()) return null;
   return (
     <>
-      <Button size="sm" variant="outline" className={className} onClick={() => setIosHelp(true)}><Download />{label}</Button>
+      <Button size="sm" variant="outline" className={className} onClick={() => setIosHelp(true)}>
+        <Download />
+        {label}
+      </Button>
       {iosHelp ? (
-        <div role="dialog" aria-label="Add to Home Screen" className="fixed inset-x-3 bottom-3 z-50 rounded-2xl bg-card p-4 text-card-foreground shadow-2xl ring-1 ring-border">
-          <Button variant="ghost" size="icon" aria-label="Close" className="absolute right-3 top-3" onClick={() => setIosHelp(false)}><X className="size-4" /></Button>
+        <div
+          role="dialog"
+          aria-label="Add to Home Screen"
+          className="fixed inset-x-3 bottom-3 z-50 rounded-2xl bg-card p-4 text-card-foreground shadow-2xl ring-1 ring-border"
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close"
+            className="absolute right-3 top-3"
+            onClick={() => setIosHelp(false)}
+          >
+            <X className="size-4" />
+          </Button>
           <p className="font-semibold">Add to your Home Screen</p>
-          <p className="mt-1 text-sm text-muted-foreground">In Safari, tap <Share className="inline size-4 align-text-bottom" /> Share, then <strong>Add to Home Screen</strong>. It opens full screen, like installed software.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            In Safari, tap <Share className="inline size-4 align-text-bottom" /> Share, then{" "}
+            <strong>Add to Home Screen</strong>. It opens full screen, like installed software.
+          </p>
         </div>
       ) : null}
     </>

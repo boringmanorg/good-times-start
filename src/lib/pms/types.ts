@@ -30,6 +30,28 @@ export interface UnitType {
   archived?: boolean;
   /** Per-night changes from the rates & availability calendar: a different rate, or closed to sale. */
   calendar?: Record<IsoDate, NightPlan>;
+  /** Rate plans sold on top of the room: room only, with breakfast, non-refundable… (rates.ts). */
+  plans?: RatePlan[];
+}
+
+/** What a rate plan includes. */
+export type MealPlan = "room_only" | "breakfast" | "half_board" | "full_board";
+
+/**
+ * A way of selling a room type: its nightly rate is the room's rate for that night plus `adjust`
+ * rupees (or `adjustPct` percent; negative for a discount). Channel managers map these one to one.
+ */
+export interface RatePlan {
+  id: string;
+  name: string;
+  meal: MealPlan;
+  /** False for a non-refundable rate: cancelling keeps the money (the property's policy decides). */
+  refundable: boolean;
+  adjust?: number;
+  adjustPct?: number;
+  /** The id the channel manager knows this plan by. */
+  channelRef?: string;
+  active: boolean;
 }
 
 /** One night of one room type on the rates & availability calendar. */
@@ -38,6 +60,11 @@ export interface NightPlan {
   rate?: number;
   /** Stop-sell: not offered to the website or booking sites that night (the desk can still book). */
   closed?: boolean;
+  /** Minimum nights for a stay arriving this night (online; the desk sees a warning). */
+  minStay?: number;
+  /** Closed to arrival / departure: online stays may not start / end on this night. */
+  cta?: boolean;
+  ctd?: boolean;
 }
 
 export type Housekeeping = "clean" | "dirty" | "inspect" | "out_of_order";
@@ -52,6 +79,10 @@ export interface Unit {
   housekeeping: Housekeeping;
   /** Why it's out of order, or a housekeeping note. */
   note?: string;
+  /** Housekeeping task on the board: who is on it and since when. */
+  task?: { assignee: string; at: number; by: string };
+  /** When it was last made clean. */
+  cleanedAt?: number;
   archived?: boolean;
 }
 
@@ -68,6 +99,9 @@ export interface StayLine {
   rate: number;
   /** Beds/rooms given to this line; filled at booking or at check-in. */
   unitIds: string[];
+  /** Rate plan sold (room only, with breakfast…), kept with its name as booked. */
+  planId?: string;
+  planName?: string;
 }
 
 export interface StayCharge {
@@ -78,6 +112,9 @@ export interface StayCharge {
   gstPct: number;
   at: number;
   by: string;
+  /** From the property's extras list (bike, breakfast, laundry…), with the quantity sold. */
+  extraId?: string;
+  qty?: number;
 }
 
 export interface StayPayment {
@@ -126,4 +163,38 @@ export interface Stay {
   formIII?: { at: number; by: string; reference?: string };
   /** POS room bills settled with this stay at check-out (bill uids). */
   roomBills?: string[];
+  /** Strict GST stay invoice taken at check-out from the cloud series (STAY/0001). */
+  invoice?: { no: string; at: number };
+  /** What changed after booking (room moves, new dates), oldest first. */
+  history?: { at: number; by: string; what: string }[];
+  /** Made by the integration sandbox (test property only): never a real guest. */
+  sandbox?: boolean;
+}
+
+/** An extra the property sells on the folio (Settings → Extras). */
+export interface StayExtra {
+  id: string;
+  label: string;
+  /** Rupees before GST, per unit of `per`. */
+  price: number;
+  gstPct: number;
+  per: "item" | "night" | "guest_night";
+  active: boolean;
+}
+
+/** One closed day: what the night audit found and did. */
+export interface NightAudit {
+  id: string;
+  /** The business day closed (property-local). */
+  date: IsoDate;
+  at: number;
+  by: string;
+  arrivals: number;
+  departures: number;
+  inHouse: number;
+  occupancyPct: number;
+  roomRevenue: number;
+  collected: Record<string, number>;
+  noShows: string[];
+  notes?: string;
 }
