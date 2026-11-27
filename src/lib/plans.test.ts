@@ -10,7 +10,7 @@ describe("plans", () => {
   // Standby copy only: the site reads the cloud catalogue and falls back to this (public-plans.ts).
   it("keeps the standby price list in step with the catalogue", () => {
     expect(PUBLIC_PLANS.map((p) => [p.id, p.price, p.seats.pos, p.seats.waiter, p.seats.manager])).toEqual([
-      ["basic", 199, 1, 0, 1], ["pro_lite", 399, 3, 0, 1], ["pro", 599, 6, 2, 2], ["enterprise", 999, null, null, 4],
+      ["basic", 449, 1, 0, 1], ["pro_lite", 899, 3, 0, 1], ["pro", 1299, 6, 2, 2], ["enterprise", 1999, null, null, 4],
     ]);
   });
 

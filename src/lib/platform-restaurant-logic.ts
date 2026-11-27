@@ -33,7 +33,11 @@ export const isOnboardingPlan = (v: string): v is OnboardingPlan => (ONBOARDING_
 export const STAY_PILOT_PLAN = "stay_pilot";
 const STAY_PRODUCT_IDS = ["hotel_pos", "resort_pos", "hostel_pos"];
 export const isStayProduct = (product: string | undefined) => !!product && STAY_PRODUCT_IDS.includes(product);
+/** Hostel POS plans (27 Nov 2026): per property per month. */
+export const HOSTEL_PLAN_IDS = ["hostel_essential", "hostel_connect", "hostel_group"] as const;
+
 export function onboardingPlansFor(product: string | undefined): readonly string[] {
+  if (product === "hostel_pos") return [STAY_PILOT_PLAN, ...HOSTEL_PLAN_IDS];
   return isStayProduct(product) ? [STAY_PILOT_PLAN] : ONBOARDING_PLANS;
 }
 

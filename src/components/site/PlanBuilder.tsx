@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
-import { featureName, type PublicPlan } from "@/lib/plans";
+import { featureName, type PublicPlan, STAY_FEATURE_STATE } from "@/lib/plans";
 import { SITE_MODELS, STATUS_LABEL } from "@/lib/site-models";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +47,7 @@ export function PlanBuilder({ plansByModel, onStart }: { plansByModel: Record<st
               <div className="mt-4 text-sm">
                 <p className="opacity-75">{before ? `Everything in ${before.name}, plus:` : "Includes:"}</p>
                 <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                  {adds.slice(0, 6).map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-[#E8B4C0]" />{featureName(f, stay)}</li>)}
+                  {adds.slice(0, 6).map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-[#E8B4C0]" />{featureName(f, stay)}{stay && STAY_FEATURE_STATE[f] ? ` (${STAY_FEATURE_STATE[f]!.toLowerCase()})` : ""}</li>)}
                 </ul>
               </div>
             );
@@ -72,7 +72,7 @@ export function PlanBuilder({ plansByModel, onStart }: { plansByModel: Record<st
           <p className="text-sm font-bold text-[#E8B4C0]">{STATUS_LABEL[model.status]}</p>
           <p className="font-brand mt-1 text-3xl leading-none">{model.name}</p>
           <p className="mt-2 text-sm opacity-80">{model.line}</p>
-          <p className="mt-4 rounded-2xl bg-[#FAF7F2]/10 p-4 text-sm">{model.status === "pilot" ? "In its pilot: the XTSY team sets up each property by invitation, and prices are set after the pilot." : "Coming next. Join the waitlist to hear the launch prices first."}</p>
+          <p className="mt-4 rounded-2xl bg-[#FAF7F2]/10 p-4 text-sm">{model.status === "pilot" ? "In its pilot: the XTSY team sets up each property by invitation." : "Coming next. Join the waitlist to hear the launch prices first."}</p>
           <button type="button" onClick={() => onStart(model.name, "")} className="mt-5 w-full rounded-full bg-[#FAF7F2] py-3.5 font-extrabold text-[#1F2230] hover:bg-white">{model.cta}</button>
         </div>
       )}

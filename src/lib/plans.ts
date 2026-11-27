@@ -13,7 +13,9 @@ export type Feature =
   | "insights" | "purchases" | "vendors" | "loyalty" | "bookings" | "admin_approval"
   | "waiter_app" | "qr_ordering" | "online_ordering" | "marketing"
   | "recipes" | "gift_cards" | "feedback" | "kds" | "accounting"
-  | "audit_log" | "multi_outlet" | "aggregators" | "pms";
+  | "audit_log" | "multi_outlet" | "aggregators" | "pms"
+  // Stay products only (Hostel/Hotel/Resort POS): each POS model has its own feature set.
+  | "booking_engine" | "channel_manager" | "rate_suggestions" | "multi_property" | "restaurant_link";
 export type SeatApp = "manager" | "pos" | "waiter";
 
 /** Every feature switch, in the order plans list them. Prices are per outlet. */
@@ -22,6 +24,7 @@ export const FEATURES: Feature[] = [
   "purchases", "vendors", "recipes", "loyalty", "bookings", "admin_approval", "aggregators",
   "waiter_app", "qr_ordering", "online_ordering", "marketing", "gift_cards", "feedback",
   "kds", "accounting", "audit_log", "multi_outlet", "pms",
+  "booking_engine", "channel_manager", "rate_suggestions", "multi_property", "restaurant_link",
 ];
 
 export const FEATURE_NAMES: Record<Feature, string> = {
@@ -48,6 +51,11 @@ export const FEATURE_NAMES: Record<Feature, string> = {
   aggregators: "Swiggy and Zomato orders on the POS",
   pms: "Front desk: rooms, beds and stays (PMS by XTSY)",
   multi_outlet: "Several outlets under one brand",  // the Brand screen: sales together, add an outlet, push the menu
+  booking_engine: "Booking engine for your own website",
+  channel_manager: "Channel manager (booking sites through ZimmerStack)",
+  rate_suggestions: "Smart rate suggestions",
+  multi_property: "Several properties under one account",
+  restaurant_link: "Restaurant POS link: room bills and guests synced with your café",
 };
 
 /**
@@ -57,15 +65,37 @@ export const FEATURE_NAMES: Record<Feature, string> = {
  * property. Stay plans are the `stay_` rows in the catalogue.
  */
 export const STAY_FEATURES: Feature[] = [
-  "pms", "gst_reports", "manager_app", "insights",
-  "purchases", "vendors", "loyalty", "admin_approval", "marketing", "feedback",
-  "accounting", "audit_log",
+  "pms", "gst_reports", "manager_app", "insights", "booking_engine",
+  "channel_manager", "rate_suggestions", "loyalty", "admin_approval", "audit_log",
+  "purchases", "vendors", "marketing", "feedback", "accounting", "multi_property",
+  "restaurant_link",
 ];
-export const RESTAURANT_FEATURES: Feature[] = FEATURES.filter((f) => f !== "pms");
+/** Features that exist only in the stay products; Restaurant POS never shows them. */
+export const STAY_ONLY: Feature[] = ["pms", "booking_engine", "channel_manager", "rate_suggestions", "multi_property", "restaurant_link"];
+export const RESTAURANT_FEATURES: Feature[] = FEATURES.filter((f) => !STAY_ONLY.includes(f));
+
+/**
+ * Where a stay feature stands, shown beside it on price cards and in the console. Never call a
+ * feature live before it ships (owner's rule): the channel manager and booking engine are being
+ * connected; the rest have no Hostel POS screen yet.
+ */
+export const STAY_FEATURE_STATE: Partial<Record<Feature, "Rolling out" | "Coming" | "Add-on · coming">> = {
+  booking_engine: "Rolling out",
+  channel_manager: "Rolling out",
+  multi_property: "Coming",
+  purchases: "Coming",
+  vendors: "Coming",
+  accounting: "Coming",
+  marketing: "Coming",
+  restaurant_link: "Add-on · coming",
+};
+
+/** Add-ons: sold on top of any plan of that product, switched on per property by XTSY. */
+export const STAY_ADDONS: Feature[] = ["restaurant_link"];
 export const featuresFor = (stay: boolean): Feature[] => (stay ? STAY_FEATURES : RESTAURANT_FEATURES);
 
 const STAY_NAMES: Partial<Record<Feature, string>> = {
-  pms: "PMS: rooms and beds, rates, bookings, front desk, channel manager and booking engine",
+  pms: "PMS: rooms and beds, rates, bookings and front desk",
   gst_reports: "GST folios and reports",
   manager_app: "Property Manager app",
   insights: "Dashboard, occupancy and rate suggestions",
@@ -144,14 +174,31 @@ const PRO: Feature[] = [...PRO_LITE, "waiter_app", "qr_ordering", "online_orderi
  * so keep it in step with the plans table but never treat it as the published price.
  */
 export const PUBLIC_PLANS: PublicPlan[] = [
-  { id: "basic", name: "Basic", price: 199, tagline: "Billing, menu, GST reports and your sales dashboard",
+  { id: "basic", name: "Basic", price: 449, tagline: "Billing, menu, GST reports and your sales dashboard",
     seats: { pos: 1, waiter: 0, manager: 1 }, features: BASIC },
-  { id: "pro_lite", name: "Pro Lite", price: 399, tagline: "Adds purchases, vendors, recipe costing, loyalty and reservations",
+  { id: "pro_lite", name: "Pro Lite", price: 899, tagline: "Adds purchases, vendors, recipe costing, loyalty and reservations",
     seats: { pos: 3, waiter: 0, manager: 1 }, features: PRO_LITE },
-  { id: "pro", name: "Pro", price: 599, tagline: "Adds Waiter Pro, QR ordering, gift cards, guest feedback and marketing", highlight: true,
+  { id: "pro", name: "Pro", price: 1299, tagline: "Adds Waiter Pro, QR ordering, gift cards, guest feedback and marketing", highlight: true,
     seats: { pos: 6, waiter: 2, manager: 2 }, features: PRO },
-  { id: "enterprise", name: "Enterprise / Brand", price: 999, tagline: "Everything in Pro, unlimited counters and waiters, several outlets under one brand, audit logs",
+  { id: "enterprise", name: "Enterprise / Brand", price: 1999, tagline: "Everything in Pro, unlimited counters and waiters, several outlets under one brand, audit logs",
     seats: { pos: null, waiter: null, manager: 4 }, features: [...PRO, "accounting", "audit_log", "multi_outlet"] },
+];
+
+/**
+ * Hostel POS plans (per property per month; owner approved 27 Nov 2026, benchmarked against eZee,
+ * Stayflexi, Aiosell and Djubo). The cloud `hostel_*` rows are the truth; this is the ladder the
+ * console's drift check compares them with. Restaurant link is an add-on, on no plan.
+ */
+const HOSTEL_ESSENTIAL: Feature[] = ["pms", "gst_reports", "manager_app", "insights", "booking_engine"];
+const HOSTEL_CONNECT: Feature[] = [...HOSTEL_ESSENTIAL, "channel_manager", "rate_suggestions", "loyalty", "admin_approval", "audit_log"];
+const HOSTEL_GROUP: Feature[] = [...HOSTEL_CONNECT, "multi_property", "accounting", "purchases", "vendors"];
+export const HOSTEL_PLANS: PublicPlan[] = [
+  { id: "hostel_essential" as PlanId, name: "Essential", price: 1299, tagline: "PMS and your own booking engine",
+    seats: { pos: 2, waiter: 0, manager: 1 }, features: HOSTEL_ESSENTIAL },
+  { id: "hostel_connect" as PlanId, name: "Connect", price: 2299, tagline: "Adds the channel manager and smart rates", highlight: true,
+    seats: { pos: 4, waiter: 0, manager: 2 }, features: HOSTEL_CONNECT },
+  { id: "hostel_group" as PlanId, name: "Group", price: 3999, tagline: "Several properties, accounts and purchases",
+    seats: { pos: null, waiter: 0, manager: 4 }, features: HOSTEL_GROUP },
 ];
 
 /** "₹199 / month", or "Call for quote". */
@@ -190,7 +237,7 @@ export interface Entitlements {
  * screen is switched on per restaurant by XTSY and is not sold with a plan, and accounting belongs
  * to Enterprise / Brand alone — neither should appear by itself on a cloud that hasn't been updated.
  */
-export const DEFAULT_OFF: Feature[] = ["kds", "accounting", "pms"];
+export const DEFAULT_OFF: Feature[] = ["kds", "accounting", "pms", "booking_engine", "channel_manager", "multi_property", "restaurant_link"];
 
 /**
  * Whether a feature is on. Unknown (offline before the first check, or an older cloud) means on,

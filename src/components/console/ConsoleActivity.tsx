@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { loadActivity, loadPlans, savePlan, type PlanRow } from "@/lib/console-api";
 import { activityDay, actorText, AREAS, catalogueDrift, describeActivity, type ActivityArea, type ActivityLine } from "@/lib/activity-logic";
-import { FEATURES, FEATURE_NAMES, PUBLIC_PLANS, type Feature } from "@/lib/plans";
+import { FEATURES, FEATURE_NAMES, HOSTEL_PLANS, PUBLIC_PLANS, type Feature } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { Failed, Loading } from "./ConsoleBits";
 
@@ -85,7 +85,7 @@ export function ConsoleActivity({ restaurantId = null, compact = false }: { rest
   );
 }
 
-const LADDER: Record<string, string[]> = Object.fromEntries(PUBLIC_PLANS.map((p) => [p.id, p.features as string[]]));
+const LADDER: Record<string, string[]> = Object.fromEntries([...PUBLIC_PLANS, ...HOSTEL_PLANS].map((p) => [p.id, p.features as string[]]));
 
 /**
  * Warns when the plan catalogue in the cloud no longer matches the plan ladder (plans.ts), and

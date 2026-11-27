@@ -1,5 +1,5 @@
 import { Check, X } from "lucide-react";
-import { FEATURE_NAMES, PUBLIC_FEATURES, SEAT_NAMES, STAY_FEATURES, featureName, priceText, type Feature, type PublicPlan, type SeatApp, seatAppsFor } from "@/lib/plans";
+import { FEATURE_NAMES, PUBLIC_FEATURES, STAY_ADDONS, STAY_FEATURES, STAY_FEATURE_STATE, featureName, priceText, type Feature, type PublicPlan, seatAppsFor } from "@/lib/plans";
 import type { SiteModel } from "@/lib/site-models";
 import { cn } from "@/lib/utils";
 
@@ -10,14 +10,24 @@ import { cn } from "@/lib/utils";
  */
 
 const STAY_IDS = ["hostel_pos", "hotel_pos", "resort_pos"];
-const nameOf = (model: SiteModel, f: Feature) => featureName(f, STAY_IDS.includes(model.id));
-const listed = (model: SiteModel): Feature[] => (STAY_IDS.includes(model.id) ? STAY_FEATURES : PUBLIC_FEATURES);
+const isStay = (model: SiteModel) => STAY_IDS.includes(model.id);
+/** The feature's name, with where it stands for stays ("Channel manager … (rolling out)"). Never call it live early. */
+const nameOf = (model: SiteModel, f: Feature) => {
+  const state = isStay(model) ? STAY_FEATURE_STATE[f] : undefined;
+  return `${featureName(f, isStay(model))}${state ? ` (${state.toLowerCase()})` : ""}`;
+};
+const listed = (model: SiteModel): Feature[] => (isStay(model) ? STAY_FEATURES.filter((f) => !STAY_ADDONS.includes(f)) : PUBLIC_FEATURES);
 
 export function PlanBills({ model, plans, onPick }: { model: SiteModel; plans: PublicPlan[]; onPick: (plan: string) => void }) {
   if (!plans.length) return <PricesOnRequest model={model} onPick={() => onPick("")} />;
   return (
     <div className={cn("grid items-start gap-6 sm:grid-cols-2", plans.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
       {plans.map((p, i) => <PlanBill key={p.id} model={model} plan={p} before={plans[i - 1]} onPick={() => onPick(p.name)} />)}
+      {isStay(model) ? (
+        <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-full">
+          Add-on for any plan: {STAY_ADDONS.map((f) => nameOf(model, f)).join(", ")}. Switched on only if you ask; a café keeps its own Restaurant POS subscription and sign-in.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -73,7 +83,7 @@ function PricesOnRequest({ model, onPick }: { model: SiteModel; onPick: () => vo
       <Slip>
         <p className="text-xs">{model.name.toUpperCase()}</p>
         <h3 className="mt-1 text-[2rem] leading-none" style={{ fontFamily: "var(--font-brand)" }}>{model.status === "soon" ? "Launch prices" : "Pilot prices"}</h3>
-        <p className="mt-1.5 text-xs leading-snug">{model.status === "soon" ? "Set before launch. Join the waitlist and you hear them first." : "Pilot properties are set up by the XTSY team; prices are set after the pilot."}</p>
+        <p className="mt-1.5 text-xs leading-snug">{model.status === "soon" ? "Set before launch. Join the waitlist and you hear them first." : "Pilot properties are set up by the XTSY team. Prices are published here once the plans are live."}</p>
         {rule}
         <ul className="space-y-1 text-[13px]">{model.features.slice(0, 5).map((f) => <li key={f.title}>{f.title}{f.state ? ` (${f.state.toLowerCase()})` : ""}</li>)}</ul>
         {rule}

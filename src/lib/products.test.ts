@@ -61,7 +61,8 @@ describe("per-product console and features", () => {
     // Hostel POS is a PMS + channel manager + booking engine, not a restaurant platform: no café either.
     for (const f of ["aggregators", "waiter_app", "kds", "recipes", "bookings", "gift_cards", "online_ordering", "billing", "menu", "qr_ordering"] as const) expect(STAY_FEATURES).not.toContain(f);
     expect(STAY_FEATURES[0]).toBe("pms");
-    expect(featureName("pms", true)).toMatch(/channel manager and booking engine/);
+    expect(featureName("pms", true)).toMatch(/front desk/);
+    expect(featureName("channel_manager", true)).toMatch(/Channel manager/);
     expect(featureName("billing", false)).toBe("Billing, KOTs and tables");
     expect(isStayPlan("stay_pilot")).toBe(true);
     expect(isStayPlan("pro")).toBe(false);
@@ -75,5 +76,25 @@ describe("each model has its own device seats", () => {
     expect(seatAppsFor("restaurant_pos").map(([a]) => a)).toEqual(["pos", "waiter", "manager"]);
     expect(seatAppsFor("hostel_pos")).toEqual([["pos", "Front Desk"], ["manager", "Property Manager"]]);
     expect(seatAppsFor("tourism_pos").map(([, n]) => n)).toEqual(["Booking desk", "Tour Manager"]);
+  });
+});
+
+describe("each POS model has its own features and prices (27 Nov 2026)", async () => {
+  const { HOSTEL_PLANS, PUBLIC_PLANS, RESTAURANT_FEATURES, STAY_ONLY, STAY_FEATURE_STATE, DEFAULT_OFF } = await import("./plans");
+  it("Restaurant POS never shows a stay feature, Hostel plans never carry a restaurant one", () => {
+    for (const f of STAY_ONLY) expect(RESTAURANT_FEATURES).not.toContain(f);
+    for (const p of HOSTEL_PLANS) for (const f of ["billing", "menu", "waiter_app", "qr_ordering", "kds", "aggregators"] as const) expect(p.features).not.toContain(f);
+    for (const p of HOSTEL_PLANS) expect(p.seats.waiter).toBe(0);
+  });
+  it("approved prices, and the hostel ladder only adds as you go up", () => {
+    expect(PUBLIC_PLANS.map((p) => p.price)).toEqual([449, 899, 1299, 1999]);
+    expect(HOSTEL_PLANS.map((p) => p.price)).toEqual([1299, 2299, 3999]);
+    for (let i = 1; i < HOSTEL_PLANS.length; i++) for (const f of HOSTEL_PLANS[i - 1]!.features) expect(HOSTEL_PLANS[i]!.features).toContain(f);
+  });
+  it("the restaurant link is an add-on on no plan, off unless switched on; unshipped features are labelled", () => {
+    for (const p of HOSTEL_PLANS) expect(p.features).not.toContain("restaurant_link");
+    expect(DEFAULT_OFF).toContain("restaurant_link");
+    expect(STAY_FEATURE_STATE.channel_manager).toBe("Rolling out");
+    expect(STAY_FEATURE_STATE.booking_engine).toBe("Rolling out");
   });
 });

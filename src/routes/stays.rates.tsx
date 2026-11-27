@@ -9,6 +9,8 @@ import { saveRates } from "@/lib/pms/actions";
 import { addDays, localDate, shortDay } from "@/lib/pms/dates";
 import { rateGrid } from "@/lib/pms/rates";
 import { usePms } from "@/lib/pms/use-pms";
+import { featureOn } from "@/lib/plans";
+import { useEntitlements } from "@/lib/use-entitlements";
 import { isAdmin, useStaff } from "@/lib/staff";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,7 @@ const field = "mt-1 h-10 w-full rounded-xl border border-input bg-card px-3 text
 
 function RatesPage() {
   const { user } = useStaff();
+  const plan = useEntitlements();
   const admin = isAdmin(user);
   const { types, units, stays } = usePms();
   const today = localDate();
@@ -111,7 +114,7 @@ function RatesPage() {
           {!types.length ? <p className="p-6 text-center text-sm text-muted-foreground">Add room types under Property first.</p> : null}
         </div>
 
-        {types.length ? <SmartRates types={types} units={units} stays={stays} today={today} canApply={admin} /> : null}
+        {types.length && featureOn(plan, "rate_suggestions") ? <SmartRates types={types} units={units} stays={stays} today={today} canApply={admin} /> : null}
 
         {admin && types.length ? (
           <section className="rounded-2xl border border-border bg-card p-4">

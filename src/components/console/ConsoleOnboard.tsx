@@ -82,7 +82,7 @@ export function ConsoleOnboard({ plans, product = "restaurant_pos" }: { plans: P
       <p className="mt-1 text-xs text-muted-foreground">
         Creates the account, the outlet and its owner login together.{" "}
         {isStayProduct(product)
-          ? "Stay properties go on the complimentary pilot plan with the front desk switched on; their own prices come after the pilot."
+          ? "Stay properties go on the complimentary pilot plan with the front desk switched on; or pick one of the Hostel POS plans (Essential, Connect, Group)."
           : "It starts on a 14-day trial of the plan you choose — record the first payment under Renewal and payment to make it live."}
       </p>
 

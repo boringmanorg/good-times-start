@@ -48,7 +48,7 @@ export function EnquiryForm({ product, setProduct, plan, setPlan, plansByModel }
       <label className="text-sm font-semibold">Plan
         {plans.length ? (
           <select value={value.plan} onChange={set("plan")} className={input}><option value="">Help me choose</option>{plans.map((p) => <option key={p.id} value={p.name}>{p.name} · {priceText(p.price)}</option>)}</select>
-        ) : <span className="mt-1 flex min-h-[3.1rem] items-center rounded-xl bg-[#F1EBE1] px-3.5 text-sm text-muted-foreground">{model.status === "soon" ? "Waitlist: prices before launch" : "Pilot: prices after the pilot"}</span>}
+        ) : <span className="mt-1 flex min-h-[3.1rem] items-center rounded-xl bg-[#F1EBE1] px-3.5 text-sm text-muted-foreground">{model.status === "soon" ? "Waitlist: prices before launch" : "Pilot: prices on request"}</span>}
       </label>
       <label className="text-sm font-semibold">Your name *<input autoComplete="name" value={value.name} onChange={set("name")} className={input} /></label>
       <label className="text-sm font-semibold">{restaurant ? "Restaurant / brand *" : "Business name *"}<input autoComplete="organization" value={value.business} onChange={set("business")} className={input} /></label>
